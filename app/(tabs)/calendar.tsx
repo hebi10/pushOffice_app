@@ -1,15 +1,17 @@
 /**
- * Calendar 화면 – 월간 달력 + 일정 리스트 + 빠른 추가
+ * Calendar 화면 – 월간 달력 + 일정 리스트 + 브리핑 기록 + 빠른 추가
  */
 import { EmptyState } from '@/src/components/EmptyState';
 import { Loading } from '@/src/components/Loading';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showError, showToast } from '@/src/components/ui/toast';
+import { useMonthDigests } from '@/src/features/digest';
 import { canScheduleMore, scheduleNotification } from '@/src/features/notifications';
 import { useCreateSchedule, useMonthSchedules } from '@/src/features/schedules';
 import { dayjs } from '@/src/lib/time';
 import { useAppSelector } from '@/src/store/store';
-import type { RepeatType, ScheduleDoc } from '@/src/types';
+import type { DigestDoc, RepeatType, ScheduleDoc } from '@/src/types';
+import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
     Alert,
@@ -35,6 +37,7 @@ export default function CalendarScreen() {
   const [currentMonth, setCurrentMonth] = useState(dayjs().month() + 1);
 
   const { data: schedules, isLoading } = useMonthSchedules(currentYear, currentMonth);
+  const { data: digests } = useMonthDigests(currentYear, currentMonth);
   const createMutation = useCreateSchedule();
 
   // 빠른 추가 모달
@@ -43,27 +46,40 @@ export default function CalendarScreen() {
   const [quickHour, setQuickHour] = useState('9');
   const [quickMinute, setQuickMinute] = useState('0');
 
-  // 마킹: 일정이 있는 날짜에 dot
+  // 마킹: 일정 dot(파란색) + 브리핑 dot(초록색)
   const markedDates = useMemo(() => {
     const marks: Record<string, any> = {};
 
     (schedules ?? []).forEach((s) => {
       const dateKey = dayjs(s.startAt?.toDate?.()).format('YYYY-MM-DD');
       if (!marks[dateKey]) {
-        marks[dateKey] = { marked: true, dotColor: '#4A90D9' };
+        marks[dateKey] = { dots: [] };
+      }
+      // 일정 dot이 아직 없으면 추가
+      if (!marks[dateKey].dots.find((d: any) => d.key === 'schedule')) {
+        marks[dateKey].dots.push({ key: 'schedule', color: '#4A90D9' });
+      }
+    });
+
+    (digests ?? []).forEach((d) => {
+      if (!marks[d.dateKey]) {
+        marks[d.dateKey] = { dots: [] };
+      }
+      if (!marks[d.dateKey].dots.find((dt: any) => dt.key === 'digest')) {
+        marks[d.dateKey].dots.push({ key: 'digest', color: '#27AE60' });
       }
     });
 
     // 선택된 날짜
     marks[selectedDate] = {
-      ...(marks[selectedDate] || {}),
+      ...(marks[selectedDate] || { dots: [] }),
       selected: true,
       selectedColor: '#4A90D9',
       selectedTextColor: '#FFF',
     };
 
     return marks;
-  }, [schedules, selectedDate]);
+  }, [schedules, digests, selectedDate]);
 
   // 선택된 날짜의 일정
   const daySchedules = useMemo<ScheduleDoc[]>(() => {
@@ -73,6 +89,12 @@ export default function CalendarScreen() {
       return dateKey === selectedDate;
     });
   }, [schedules, selectedDate]);
+
+  // 선택된 날짜의 브리핑
+  const dayDigests = useMemo<DigestDoc[]>(() => {
+    if (!digests) return [];
+    return digests.filter((d) => d.dateKey === selectedDate);
+  }, [digests, selectedDate]);
 
   const handleMonthChange = useCallback((date: DateData) => {
     setCurrentYear(date.year);
@@ -141,6 +163,7 @@ export default function CalendarScreen() {
         onMonthChange={handleMonthChange}
         onDayPress={handleDayPress}
         markedDates={markedDates}
+        markingType="multi-dot"
         theme={{
           backgroundColor: '#F5F5F5',
           calendarBackground: '#FAFAFA',
@@ -150,7 +173,6 @@ export default function CalendarScreen() {
           textMonthFontSize: 16,
           textDayHeaderFontSize: 12,
           selectedDayBackgroundColor: '#4A90D9',
-          dotColor: '#4A90D9',
         }}
       />
 
@@ -170,12 +192,57 @@ export default function CalendarScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 일정 리스트 */}
+      {/* 일정 + 브리핑 리스트 */}
       <FlatList
-        data={daySchedules}
-        keyExtractor={(item) => item.id ?? ''}
-        renderItem={({ item }) => <ScheduleItem schedule={item} />}
-        ListEmptyComponent={<EmptyState message="이 날짜의 일정이 없습니다." />}
+        data={[]}
+        renderItem={null}
+        ListHeaderComponent={
+          <View>
+            {/* 일정 섹션 */}
+            <Text style={styles.sectionLabel}>일정</Text>
+            {daySchedules.length === 0 ? (
+              <EmptyState message="이 날짜의 일정이 없습니다." />
+            ) : (
+              daySchedules.map((item) => (
+                <ScheduleItem key={item.id} schedule={item} />
+              ))
+            )}
+
+            {/* 브리핑 기록 섹션 */}
+            <Text style={styles.sectionLabel}>브리핑 기록</Text>
+            {dayDigests.length === 0 ? (
+              <View style={styles.emptyDigest}>
+                <Text style={styles.emptyDigestText}>브리핑 기록 없음</Text>
+                <TouchableOpacity
+                  style={styles.genBtn}
+                  onPress={() =>
+                    router.push(`/(tabs)/briefing?date=${selectedDate}` as any)
+                  }
+                >
+                  <Text style={styles.genBtnText}>브리핑 보기</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              dayDigests.map((d) => (
+                <TouchableOpacity
+                  key={d.id || d.dateKey}
+                  style={styles.digestItem}
+                  onPress={() =>
+                    router.push(`/(tabs)/briefing?date=${d.dateKey}` as any)
+                  }
+                >
+                  <View style={styles.digestDot} />
+                  <View style={styles.digestContent}>
+                    <Text style={styles.digestTitle}>{d.title}</Text>
+                    <Text style={styles.digestSummary} numberOfLines={2}>
+                      {d.summary}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+        }
         contentContainerStyle={styles.listContent}
       />
 
@@ -260,6 +327,50 @@ const styles = StyleSheet.create({
   },
   addBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
   listContent: { paddingBottom: 16 },
+
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#555',
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+
+  emptyDigest: {
+    alignItems: 'center',
+    paddingVertical: 16,
+  },
+  emptyDigestText: { fontSize: 13, color: '#999', marginBottom: 8 },
+  genBtn: {
+    backgroundColor: '#27AE60',
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  genBtnText: { color: '#FFF', fontSize: 13, fontWeight: '600' },
+
+  digestItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 14,
+    marginVertical: 4,
+    marginHorizontal: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#E5E5E5',
+  },
+  digestDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#27AE60',
+    marginRight: 12,
+  },
+  digestContent: { flex: 1 },
+  digestTitle: { fontSize: 15, fontWeight: '500', color: '#111', marginBottom: 2 },
+  digestSummary: { fontSize: 12, color: '#888' },
 
   /* Modal */
   modalOverlay: {

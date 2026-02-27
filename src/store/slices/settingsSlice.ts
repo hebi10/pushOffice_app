@@ -1,12 +1,17 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getUserTimezone } from '../../lib/time';
-import type { UserSettings } from '../../types';
+import type { DigestTypes, UserSettings } from '../../types';
 
 const initialState: UserSettings = {
   timezone: getUserTimezone(),
   pushEnabled: true,
   dailyBriefingEnabled: false,
   dailyBriefingTime: { hour: 8, minute: 0 },
+  digestTypes: { weather: true, stocks: false, news: false },
+  digestCity: 'Seoul',
+  stockTickers: [],
+  newsLanguage: 'ko',
+  newsKeywords: [],
 };
 
 const settingsSlice = createSlice({
@@ -27,8 +32,32 @@ const settingsSlice = createSlice({
       if (action.payload.hour !== undefined) state.dailyBriefingTime.hour = action.payload.hour;
       if (action.payload.minute !== undefined) state.dailyBriefingTime.minute = action.payload.minute;
     },
+    setDigestTypes(state, action: PayloadAction<Partial<DigestTypes>>) {
+      state.digestTypes = { ...state.digestTypes, ...action.payload };
+    },
+    setDigestCity(state, action: PayloadAction<string>) {
+      state.digestCity = action.payload;
+    },
+    setStockTickers(state, action: PayloadAction<string[]>) {
+      state.stockTickers = action.payload.slice(0, 5);
+    },
+    setNewsLanguage(state, action: PayloadAction<string>) {
+      state.newsLanguage = action.payload;
+    },
+    setNewsKeywords(state, action: PayloadAction<string[]>) {
+      state.newsKeywords = action.payload;
+    },
   },
 });
 
-export const { updateSettings, setPushEnabled, setDailyBriefing } = settingsSlice.actions;
+export const {
+  updateSettings,
+  setPushEnabled,
+  setDailyBriefing,
+  setDigestTypes,
+  setDigestCity,
+  setStockTickers,
+  setNewsLanguage,
+  setNewsKeywords,
+} = settingsSlice.actions;
 export default settingsSlice.reducer;

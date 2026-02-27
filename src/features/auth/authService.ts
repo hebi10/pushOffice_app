@@ -21,15 +21,20 @@ export async function ensureUserDoc(uid: string): Promise<void> {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    const newUser: Omit<UserDoc, 'createdAt' | 'updatedAt'> & {
-      createdAt: ReturnType<typeof serverTimestamp>;
-      updatedAt: ReturnType<typeof serverTimestamp>;
-    } = {
+    const newUser: Record<string, any> = {
       uid,
       timezone: getUserTimezone(),
       pushEnabled: true,
       dailyBriefingEnabled: false,
       dailyBriefingTime: { hour: 8, minute: 0 },
+      digestTypes: { weather: true, stocks: false, news: false },
+      digestCity: 'Seoul',
+      stockTickers: [],
+      newsLanguage: 'ko',
+      newsKeywords: [],
+      expoPushTokens: [],
+      digestLastSentDateKey: '',
+      digestLastSentAt: null,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     };
@@ -48,7 +53,7 @@ export async function getUserDoc(uid: string): Promise<UserDoc | null> {
 /** 유저 설정 업데이트 */
 export async function updateUserSettings(
   uid: string,
-  settings: Partial<UserSettings>,
+  settings: Partial<UserSettings & Record<string, any>>,
 ): Promise<void> {
   const ref = doc(db, 'users', uid);
   await setDoc(ref, { ...settings, updatedAt: serverTimestamp() }, { merge: true });

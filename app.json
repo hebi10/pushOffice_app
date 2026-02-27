@@ -45,7 +45,9 @@
         {
           "sounds": []
         }
-      ]
+      ],
+      "expo-background-fetch",
+      "expo-task-manager"
     ],
     "experiments": {
       "typedRoutes": true,
