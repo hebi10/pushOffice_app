@@ -12,6 +12,9 @@ export function useAuthInit() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
+    // useEffect 클린업에서 호출할 unsubscribe를 IIFE 바깥에 선언
+    let unsubscribe: (() => void) | undefined;
+
     dispatch(setLoading(true));
 
     (async () => {
@@ -40,7 +43,8 @@ export function useAuthInit() {
       }
       dispatch(setMode('firebase'));
 
-      const unsubscribe = subscribeAuth(async (user) => {
+      // unsubscribe를 IIFE 바깥 변수에 저장해야 useEffect 클린업에서 해제 가능
+      unsubscribe = subscribeAuth(async (user) => {
         if (user) {
           dispatch(setUser({ uid: user.uid, isAnonymous: user.isAnonymous }));
           await ensureUserDoc(user.uid);
@@ -62,18 +66,41 @@ export function useAuthInit() {
               }),
             );
           }
+          // Firebase 인증 성공 후 로딩 해제
+          dispatch(setLoading(false));
         } else {
-          // 인증 상태 없으면 익명 로그인
+          // 인증 상태 없으면 익명 로그인 시도
           try {
             await signInAnon();
-          } catch (error) {
-            console.error('익명 로그인 실패:', error);
-            dispatch(clearUser());
+          } catch (error: any) {
+            // admin-restricted-operation / operation-not-allowed:
+            // Firebase 콘솔에서 익명 로그인이 비활성화된 경우 → 로컬 모드로 조용히 전환
+            if (
+              error?.code === 'auth/admin-restricted-operation' ||
+              error?.code === 'auth/operation-not-allowed'
+            ) {
+              console.warn('[Auth] 익명 로그인 비활성화 → 로컬 모드로 전환합니다.');
+              await setStorageMode('local');
+              const key = await getOrCreateDeviceKey();
+              dispatch(setMode('local'));
+              dispatch(setDeviceKey(key));
+              const localSettings = await localGetSettings();
+              if (localSettings) dispatch(updateSettings(localSettings));
+              dispatch(setLoading(false));
+              if (unsubscribe) unsubscribe();
+            } else {
+              console.error('익명 로그인 실패:', error);
+              dispatch(clearUser());
+              dispatch(setLoading(false));
+            }
           }
         }
       });
-
-      return () => unsubscribe();
     })();
+
+    // useEffect 클린업: 컴포넌트 언마운트 시 리스너 해제
+    return () => {
+      unsubscribe?.();
+    };
   }, [dispatch]);
 }

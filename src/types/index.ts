@@ -3,6 +3,13 @@ import { Timestamp } from 'firebase/firestore';
 // ─── 저장 모드 ───
 export type StorageMode = 'firebase' | 'local';
 
+// ─── 테마 / 폰트 ───
+export type ThemeMode = 'system' | 'light' | 'dark';
+export type FontFamily = 'pretendard' | 'noto-sans' | 'nanum-gothic' | 'nanum-myeongjo';
+
+// ─── 일정 타입 ───
+export type ScheduleType = 'schedule' | 'reminder' | 'memo';
+
 // ─── Firestore 모델 ───
 export interface UserDoc {
   uid: string;
@@ -41,8 +48,11 @@ export type RepeatType = 'none' | 'monthly' | 'yearly';
 export interface ScheduleDoc {
   id?: string;
   userId: string;
+  type: ScheduleType;
   title: string;
   startAt: Timestamp;
+  endAt?: Timestamp | null;
+  isAllDay?: boolean;
   repeatType: RepeatType;
   notificationEnabled: boolean;
   notificationId: string | null;
@@ -91,6 +101,26 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   scheduleData?: Partial<ParseResult>;
+  /** 연결된 일정 ID (채팅 내역에서 수정/취소용) */
+  scheduleId?: string;
+  /** 취소 여부 */
+  cancelled?: boolean;
+}
+
+// ─── 채팅 히스토리 (영속) ───
+export interface ChatHistoryDoc {
+  id?: string;
+  userId: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+// ─── 날씨 지역 ───
+export interface WeatherRegion {
+  sido: string;
+  gugun: string;
+  dong?: string;
 }
 
 // ─── 날씨 ───
@@ -109,7 +139,23 @@ export interface UserSettings {
   dailyBriefingTime: { hour: number; minute: number };
   digestTypes: DigestTypes;
   digestCity: string;
+  /** 날씨 지역 (행정구역 선택) */
+  weatherRegion: WeatherRegion | null;
   stockTickers: string[];
   newsLanguage: string;
   newsKeywords: string[];
+  /** 뉴스 카테고리 */
+  newsCategories: string[];
+  themeMode: ThemeMode;
+  fontFamily: FontFamily;
+}
+
+// ─── 다중 일정 미리보기 ───
+export interface SchedulePreviewItem {
+  title: string;
+  startAtISO: string;
+  endAtISO?: string | null;
+  isAllDay: boolean;
+  repeatType: RepeatType;
+  selected: boolean;
 }

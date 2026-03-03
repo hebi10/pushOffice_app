@@ -1,6 +1,6 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { getUserTimezone } from '../../lib/time';
-import type { DigestTypes, UserSettings } from '../../types';
+import type { DigestTypes, FontFamily, ThemeMode, UserSettings, WeatherRegion } from '../../types';
 
 const initialState: UserSettings = {
   timezone: getUserTimezone(),
@@ -9,9 +9,13 @@ const initialState: UserSettings = {
   dailyBriefingTime: { hour: 8, minute: 0 },
   digestTypes: { weather: true, stocks: false, news: false },
   digestCity: 'Seoul',
+  weatherRegion: null,
   stockTickers: [],
   newsLanguage: 'ko',
   newsKeywords: [],
+  newsCategories: [],
+  themeMode: 'system',
+  fontFamily: 'pretendard',
 };
 
 const settingsSlice = createSlice({
@@ -47,6 +51,18 @@ const settingsSlice = createSlice({
     setNewsKeywords(state, action: PayloadAction<string[]>) {
       state.newsKeywords = action.payload;
     },
+    setNewsCategories(state, action: PayloadAction<string[]>) {
+      state.newsCategories = action.payload;
+    },
+    setWeatherRegion(state, action: PayloadAction<WeatherRegion | null>) {
+      state.weatherRegion = action.payload;
+    },
+    setThemeMode(state, action: PayloadAction<ThemeMode>) {
+      state.themeMode = action.payload;
+    },
+    setFontFamily(state, action: PayloadAction<FontFamily>) {
+      state.fontFamily = action.payload;
+    },
   },
 });
 
@@ -59,5 +75,9 @@ export const {
   setStockTickers,
   setNewsLanguage,
   setNewsKeywords,
+  setNewsCategories,
+  setWeatherRegion,
+  setThemeMode,
+  setFontFamily,
 } = settingsSlice.actions;
 export default settingsSlice.reducer;

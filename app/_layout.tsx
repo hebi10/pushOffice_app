@@ -1,4 +1,5 @@
 import { Loading } from '@/src/components/Loading';
+import { ThemeProvider, useTheme } from '@/src/contexts/ThemeContext';
 import { useAuthInit } from '@/src/features/auth/useAuthInit';
 import { getInitialNotificationRoute, useNotificationListener } from '@/src/features/notifications';
 import { store, useAppSelector } from '@/src/store/store';
@@ -6,6 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
 const queryClient = new QueryClient({
@@ -19,6 +21,7 @@ function InnerLayout() {
   useNotificationListener();
 
   const { isLoading, isAuthenticated } = useAppSelector((s) => s.auth);
+  const { colors } = useTheme();
 
   // 알림으로 시작된 경우 해당 라우트로 이동
   useEffect(() => {
@@ -36,13 +39,13 @@ function InnerLayout() {
 
   return (
     <>
-      <StatusBar style="dark" />
+      <StatusBar style={colors.statusBar} />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: '#FAFAFA' },
-          headerTintColor: '#333',
+          headerStyle: { backgroundColor: colors.headerBackground },
+          headerTintColor: colors.text,
           headerTitleStyle: { fontWeight: '600' },
-          contentStyle: { backgroundColor: '#F5F5F5' },
+          contentStyle: { backgroundColor: colors.background },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -57,7 +60,11 @@ export default function RootLayout() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <InnerLayout />
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <InnerLayout />
+          </ThemeProvider>
+        </SafeAreaProvider>
       </QueryClientProvider>
     </Provider>
   );

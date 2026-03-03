@@ -24,20 +24,26 @@ export interface CreateScheduleInput {
   userId: string;
   title: string;
   startAt: Date;
+  endAt?: Date | null;
+  isAllDay?: boolean;
   repeatType: RepeatType;
   notificationEnabled: boolean;
   notificationId: string | null;
   sourceText: string;
+  type?: 'schedule' | 'reminder' | 'memo';
 }
 
 /** 일정 생성 */
 export async function createSchedule(input: CreateScheduleInput): Promise<string> {
-  const ref = await addDoc(collection(db, COLLECTION), {
+  const data: Record<string, any> = {
     ...input,
     startAt: Timestamp.fromDate(input.startAt),
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  });
+  };
+  if (input.endAt) data.endAt = Timestamp.fromDate(input.endAt);
+  if (input.isAllDay !== undefined) data.isAllDay = input.isAllDay;
+  const ref = await addDoc(collection(db, COLLECTION), data);
   return ref.id;
 }
 

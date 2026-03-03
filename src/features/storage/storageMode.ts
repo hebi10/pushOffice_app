@@ -2,8 +2,7 @@
  * 저장 모드 관리 – firebase | local
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import 'react-native-get-random-values';
-import { v4 as uuidv4 } from 'uuid';
+import * as Crypto from 'expo-crypto';
 import type { StorageMode } from '../../types';
 
 const STORAGE_MODE_KEY = '@pushoffice/storageMode';
@@ -25,7 +24,7 @@ export async function setStorageMode(mode: StorageMode): Promise<void> {
 export async function getOrCreateDeviceKey(): Promise<string> {
   let key = await AsyncStorage.getItem(DEVICE_KEY_KEY);
   if (!key) {
-    key = uuidv4();
+    key = Crypto.randomUUID();
     await AsyncStorage.setItem(DEVICE_KEY_KEY, key);
   }
   return key;

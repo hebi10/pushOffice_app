@@ -5,24 +5,27 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { Loading } from '@/src/components/Loading';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showError, showToast } from '@/src/components/ui/toast';
+import { useTheme } from '@/src/contexts/ThemeContext';
 import { useMonthDigests } from '@/src/features/digest';
 import { canScheduleMore, scheduleNotification } from '@/src/features/notifications';
 import { useCreateSchedule, useMonthSchedules } from '@/src/features/schedules';
 import { dayjs } from '@/src/lib/time';
 import { useAppSelector } from '@/src/store/store';
 import type { DigestDoc, RepeatType, ScheduleDoc } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  Platform,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -30,6 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function CalendarScreen() {
   const uid = useAppSelector((s) => s.auth.uid);
   const tz = useAppSelector((s) => s.settings.timezone);
+  const { colors, isDark } = useTheme();
 
   const today = dayjs().format('YYYY-MM-DD');
   const [selectedDate, setSelectedDate] = useState(today);
@@ -45,6 +49,9 @@ export default function CalendarScreen() {
   const [quickTitle, setQuickTitle] = useState('');
   const [quickHour, setQuickHour] = useState('9');
   const [quickMinute, setQuickMinute] = useState('0');
+  const [quickIsAllDay, setQuickIsAllDay] = useState(false);
+  const [quickEndHour, setQuickEndHour] = useState('');
+  const [quickEndMinute, setQuickEndMinute] = useState('');
 
   // 마킹: 일정 dot(파란색) + 브리핑 dot(초록색)
   const markedDates = useMemo(() => {
@@ -55,9 +62,8 @@ export default function CalendarScreen() {
       if (!marks[dateKey]) {
         marks[dateKey] = { dots: [] };
       }
-      // 일정 dot이 아직 없으면 추가
       if (!marks[dateKey].dots.find((d: any) => d.key === 'schedule')) {
-        marks[dateKey].dots.push({ key: 'schedule', color: '#4A90D9' });
+        marks[dateKey].dots.push({ key: 'schedule', color: colors.primary });
       }
     });
 
@@ -66,22 +72,20 @@ export default function CalendarScreen() {
         marks[d.dateKey] = { dots: [] };
       }
       if (!marks[d.dateKey].dots.find((dt: any) => dt.key === 'digest')) {
-        marks[d.dateKey].dots.push({ key: 'digest', color: '#27AE60' });
+        marks[d.dateKey].dots.push({ key: 'digest', color: colors.success });
       }
     });
 
-    // 선택된 날짜
     marks[selectedDate] = {
       ...(marks[selectedDate] || { dots: [] }),
       selected: true,
-      selectedColor: '#4A90D9',
+      selectedColor: colors.primary,
       selectedTextColor: '#FFF',
     };
 
     return marks;
-  }, [schedules, digests, selectedDate]);
+  }, [schedules, digests, selectedDate, colors]);
 
-  // 선택된 날짜의 일정
   const daySchedules = useMemo<ScheduleDoc[]>(() => {
     if (!schedules) return [];
     return schedules.filter((s) => {
@@ -90,7 +94,6 @@ export default function CalendarScreen() {
     });
   }, [schedules, selectedDate]);
 
-  // 선택된 날짜의 브리핑
   const dayDigests = useMemo<DigestDoc[]>(() => {
     if (!digests) return [];
     return digests.filter((d) => d.dateKey === selectedDate);
@@ -112,9 +115,23 @@ export default function CalendarScreen() {
       return;
     }
 
-    const hour = parseInt(quickHour, 10) || 9;
-    const minute = parseInt(quickMinute, 10) || 0;
-    const startAt = dayjs(selectedDate).hour(hour).minute(minute).second(0).toDate();
+    let startAt: Date;
+    let endAt: Date | null = null;
+
+    if (quickIsAllDay) {
+      startAt = dayjs(selectedDate).startOf('day').toDate();
+    } else {
+      const hour = parseInt(quickHour, 10) || 9;
+      const minute = parseInt(quickMinute, 10) || 0;
+      startAt = dayjs(selectedDate).hour(hour).minute(minute).second(0).toDate();
+
+      // 종료 시간이 입력된 경우
+      if (quickEndHour.trim()) {
+        const endH = parseInt(quickEndHour, 10) || 0;
+        const endM = parseInt(quickEndMinute, 10) || 0;
+        endAt = dayjs(selectedDate).hour(endH).minute(endM).second(0).toDate();
+      }
+    }
 
     try {
       const canSch = await canScheduleMore();
@@ -135,8 +152,11 @@ export default function CalendarScreen() {
 
       await createMutation.mutateAsync({
         userId: uid,
+        type: 'schedule' as const,
         title: quickTitle.trim(),
         startAt,
+        endAt,
+        isAllDay: quickIsAllDay,
         repeatType: 'none' as RepeatType,
         notificationEnabled: !!notificationId,
         notificationId,
@@ -148,15 +168,18 @@ export default function CalendarScreen() {
       setQuickTitle('');
       setQuickHour('9');
       setQuickMinute('0');
+      setQuickIsAllDay(false);
+      setQuickEndHour('');
+      setQuickEndMinute('');
     } catch (error) {
       showError(error, '일정 추가에 실패했습니다.');
     }
-  }, [uid, quickTitle, quickHour, quickMinute, selectedDate, createMutation]);
+  }, [uid, quickTitle, quickHour, quickMinute, quickIsAllDay, quickEndHour, quickEndMinute, selectedDate, createMutation]);
 
   if (isLoading) return <Loading />;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
       {/* 캘린더 */}
       <Calendar
         current={`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`}
@@ -164,31 +187,36 @@ export default function CalendarScreen() {
         onDayPress={handleDayPress}
         markedDates={markedDates}
         markingType="multi-dot"
+        key={isDark ? 'dark' : 'light'}
         theme={{
-          backgroundColor: '#F5F5F5',
-          calendarBackground: '#FAFAFA',
-          todayTextColor: '#4A90D9',
-          arrowColor: '#4A90D9',
+          backgroundColor: colors.background,
+          calendarBackground: colors.surface,
+          todayTextColor: colors.primary,
+          arrowColor: colors.primary,
+          dayTextColor: colors.text,
+          monthTextColor: colors.text,
+          textSectionTitleColor: colors.textSecondary,
+          textDisabledColor: colors.textTertiary,
           textDayFontSize: 14,
           textMonthFontSize: 16,
           textDayHeaderFontSize: 12,
-          selectedDayBackgroundColor: '#4A90D9',
+          selectedDayBackgroundColor: colors.primary,
         }}
       />
 
-      {/* 구분선 */}
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
       {/* 선택된 날짜 헤더 */}
       <View style={styles.dateHeader}>
-        <Text style={styles.dateHeaderText}>
+        <Text style={[styles.dateHeaderText, { color: colors.text }]}>
           {dayjs(selectedDate).format('M월 D일 (ddd)')}
         </Text>
         <TouchableOpacity
-          style={styles.addBtn}
+          style={[styles.addBtn, { backgroundColor: colors.primary }]}
           onPress={() => setShowModal(true)}
         >
-          <Text style={styles.addBtnText}>+ 추가</Text>
+          <Ionicons name="add" size={14} color="#FFF" />
+          <Text style={styles.addBtnText}>추가</Text>
         </TouchableOpacity>
       </View>
 
@@ -198,8 +226,7 @@ export default function CalendarScreen() {
         renderItem={null}
         ListHeaderComponent={
           <View>
-            {/* 일정 섹션 */}
-            <Text style={styles.sectionLabel}>일정</Text>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>일정</Text>
             {daySchedules.length === 0 ? (
               <EmptyState message="이 날짜의 일정이 없습니다." />
             ) : (
@@ -208,13 +235,12 @@ export default function CalendarScreen() {
               ))
             )}
 
-            {/* 브리핑 기록 섹션 */}
-            <Text style={styles.sectionLabel}>브리핑 기록</Text>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>브리핑 기록</Text>
             {dayDigests.length === 0 ? (
               <View style={styles.emptyDigest}>
-                <Text style={styles.emptyDigestText}>브리핑 기록 없음</Text>
+                <Text style={[styles.emptyDigestText, { color: colors.textTertiary }]}>브리핑 기록 없음</Text>
                 <TouchableOpacity
-                  style={styles.genBtn}
+                  style={[styles.genBtn, { backgroundColor: colors.success }]}
                   onPress={() =>
                     router.push(`/(tabs)/briefing?date=${selectedDate}` as any)
                   }
@@ -226,15 +252,15 @@ export default function CalendarScreen() {
               dayDigests.map((d) => (
                 <TouchableOpacity
                   key={d.id || d.dateKey}
-                  style={styles.digestItem}
+                  style={[styles.digestItem, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
                   onPress={() =>
                     router.push(`/(tabs)/briefing?date=${d.dateKey}` as any)
                   }
                 >
-                  <View style={styles.digestDot} />
+                  <View style={[styles.digestDot, { backgroundColor: colors.success }]} />
                   <View style={styles.digestContent}>
-                    <Text style={styles.digestTitle}>{d.title}</Text>
-                    <Text style={styles.digestSummary} numberOfLines={2}>
+                    <Text style={[styles.digestTitle, { color: colors.text }]}>{d.title}</Text>
+                    <Text style={[styles.digestSummary, { color: colors.textSecondary }]} numberOfLines={2}>
                       {d.summary}
                     </Text>
                   </View>
@@ -249,51 +275,90 @@ export default function CalendarScreen() {
       {/* 빠른 추가 모달 */}
       <Modal visible={showModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>빠른 일정 추가</Text>
-            <Text style={styles.modalDate}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>빠른 일정 추가</Text>
+            <Text style={[styles.modalDate, { color: colors.textSecondary }]}>
               {dayjs(selectedDate).format('YYYY년 M월 D일')}
             </Text>
 
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput, { borderColor: colors.inputBorder, color: colors.text, backgroundColor: colors.inputBackground }]}
               placeholder="일정 제목"
-              placeholderTextColor="#BBB"
+              placeholderTextColor={colors.textTertiary}
               value={quickTitle}
               onChangeText={setQuickTitle}
               autoFocus
             />
 
-            <View style={styles.timeRow}>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="시"
-                placeholderTextColor="#BBB"
-                value={quickHour}
-                onChangeText={setQuickHour}
-                keyboardType="number-pad"
-                maxLength={2}
-              />
-              <Text style={styles.timeSep}>:</Text>
-              <TextInput
-                style={styles.timeInput}
-                placeholder="분"
-                placeholderTextColor="#BBB"
-                value={quickMinute}
-                onChangeText={setQuickMinute}
-                keyboardType="number-pad"
-                maxLength={2}
+            {/* 하루 종일 토글 */}
+            <View style={styles.allDayRow}>
+              <Text style={[styles.allDayLabel, { color: colors.text }]}>하루 종일</Text>
+              <Switch
+                value={quickIsAllDay}
+                onValueChange={setQuickIsAllDay}
+                trackColor={{ false: colors.divider, true: colors.primary }}
               />
             </View>
 
+            {/* 시간 입력 (하루 종일이 아닌 경우만) */}
+            {!quickIsAllDay && (
+              <>
+                <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>시작 시간</Text>
+                <View style={styles.timeRow}>
+                  <TextInput
+                    style={[styles.timeInput, { borderColor: colors.inputBorder, color: colors.text, backgroundColor: colors.inputBackground }]}
+                    placeholder="시"
+                    placeholderTextColor={colors.textTertiary}
+                    value={quickHour}
+                    onChangeText={setQuickHour}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={[styles.timeSep, { color: colors.textSecondary }]}>:</Text>
+                  <TextInput
+                    style={[styles.timeInput, { borderColor: colors.inputBorder, color: colors.text, backgroundColor: colors.inputBackground }]}
+                    placeholder="분"
+                    placeholderTextColor={colors.textTertiary}
+                    value={quickMinute}
+                    onChangeText={setQuickMinute}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+
+                <Text style={[styles.timeLabel, { color: colors.textSecondary }]}>종료 시간 (선택)</Text>
+                <View style={styles.timeRow}>
+                  <TextInput
+                    style={[styles.timeInput, { borderColor: colors.inputBorder, color: colors.text, backgroundColor: colors.inputBackground }]}
+                    placeholder="시"
+                    placeholderTextColor={colors.textTertiary}
+                    value={quickEndHour}
+                    onChangeText={setQuickEndHour}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  <Text style={[styles.timeSep, { color: colors.textSecondary }]}>:</Text>
+                  <TextInput
+                    style={[styles.timeInput, { borderColor: colors.inputBorder, color: colors.text, backgroundColor: colors.inputBackground }]}
+                    placeholder="분"
+                    placeholderTextColor={colors.textTertiary}
+                    value={quickEndMinute}
+                    onChangeText={setQuickEndMinute}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                </View>
+              </>
+            )}
+
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={styles.cancelBtn}
+                style={[styles.cancelBtn, { borderColor: colors.inputBorder }]}
                 onPress={() => setShowModal(false)}
               >
-                <Text style={styles.cancelBtnText}>취소</Text>
+                <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>취소</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.saveBtn} onPress={handleQuickAdd}>
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleQuickAdd}>
                 <Text style={styles.saveBtnText}>저장</Text>
               </TouchableOpacity>
             </View>
@@ -305,10 +370,9 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F5F5' },
+  container: { flex: 1 },
   divider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: '#DDD',
     marginHorizontal: 16,
   },
   dateHeader: {
@@ -318,9 +382,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
   },
-  dateHeaderText: { fontSize: 15, fontWeight: '600', color: '#333' },
+  dateHeaderText: { fontSize: 15, fontWeight: '600' },
   addBtn: {
-    backgroundColor: '#4A90D9',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     borderRadius: 16,
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -331,7 +397,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#555',
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 4,
@@ -341,9 +406,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
   },
-  emptyDigestText: { fontSize: 13, color: '#999', marginBottom: 8 },
+  emptyDigestText: { fontSize: 13, marginBottom: 8 },
   genBtn: {
-    backgroundColor: '#27AE60',
     borderRadius: 10,
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -353,24 +417,21 @@ const styles = StyleSheet.create({
   digestItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFF',
     borderRadius: 12,
     padding: 14,
     marginVertical: 4,
     marginHorizontal: 16,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#E5E5E5',
   },
   digestDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#27AE60',
     marginRight: 12,
   },
   digestContent: { flex: 1 },
-  digestTitle: { fontSize: 15, fontWeight: '500', color: '#111', marginBottom: 2 },
-  digestSummary: { fontSize: 12, color: '#888' },
+  digestTitle: { fontSize: 15, fontWeight: '500', marginBottom: 2 },
+  digestSummary: { fontSize: 12 },
 
   /* Modal */
   modalOverlay: {
@@ -379,53 +440,61 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.3)',
   },
   modalContent: {
-    backgroundColor: '#FFF',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
   },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: '#222', marginBottom: 4 },
-  modalDate: { fontSize: 13, color: '#888', marginBottom: 16 },
+  modalTitle: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
+  modalDate: { fontSize: 13, marginBottom: 16 },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
     borderRadius: 10,
     padding: 12,
     fontSize: 15,
     marginBottom: 12,
-    color: '#333',
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 12,
+  },
+  timeLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    marginBottom: 6,
+  },
+  allDayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  allDayLabel: {
+    fontSize: 15,
+    fontWeight: '500',
   },
   timeInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
     borderRadius: 10,
     padding: 12,
     width: 60,
     textAlign: 'center',
     fontSize: 16,
-    color: '#333',
   },
-  timeSep: { fontSize: 20, marginHorizontal: 8, color: '#666' },
+  timeSep: { fontSize: 20, marginHorizontal: 8 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10 },
   cancelBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#DDD',
   },
-  cancelBtnText: { color: '#666', fontSize: 14 },
+  cancelBtnText: { fontSize: 14 },
   saveBtn: {
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#4A90D9',
   },
   saveBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
 });

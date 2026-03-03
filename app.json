@@ -23,7 +23,6 @@
       "package": "com.hebi96.pushOffice_app"
     },
     "web": {
-      "output": "static",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
