@@ -31,6 +31,10 @@ export function useChatHistory() {
       return docs[0]?.messages ?? [];
     },
     enabled: mode === 'local' || !!uid,
+    // 탭 전환 시 항상 최신 데이터 표시
+    staleTime: 0,
+    // 앱이 포그라운드로 돌아올 때 자동 refetch
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -47,8 +51,11 @@ export function useSaveChatMessages() {
       } else if (uid) {
         await fbSaveChatMessages(uid, messages);
       }
+      return messages;
     },
-    onSuccess: () => {
+    onSuccess: (messages) => {
+      // 캐시를 즉시 업데이트해 채팅내역 탭이 바로 반영되도록
+      queryClient.setQueryData([QUERY_KEY, uid, mode], messages);
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
   });

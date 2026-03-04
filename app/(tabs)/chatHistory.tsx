@@ -13,7 +13,7 @@ import { useDeleteSchedule } from '@/src/features/schedules';
 import { dayjs } from '@/src/lib/time';
 import type { ChatMessage } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useMemo, useRef } from 'react';
 import {
     FlatList,
@@ -34,10 +34,17 @@ type ListItem = DateGroup | ChatMessage;
 
 export default function ChatHistoryScreen() {
   const { colors } = useTheme();
-  const { data: messages, isLoading } = useChatHistory();
+  const { data: messages, isLoading, refetch } = useChatHistory();
   const deleteMutation = useDeleteSchedule();
   const updateChatMsg = useUpdateChatMessage();
   const flatListRef = useRef<FlatList>(null);
+
+  // 탭 포커스 시마다 최신 채팅 내역 불러오기
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   /** 날짜 구분선 포함 데이터 */
   const listData = useMemo<ListItem[]>(() => {

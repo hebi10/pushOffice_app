@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // 사용자 개인 영역
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    // 공개 파일 영역 (예: 앱 기본 이미지)
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // 그 외 모든 경로 차단
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

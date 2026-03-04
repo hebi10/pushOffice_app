@@ -8,10 +8,10 @@ import { showError, showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useSaveChatMessages } from '@/src/features/chat';
 import {
-  canScheduleMore,
-  requestNotificationPermission,
-  rescheduleOverdueRepeating,
-  scheduleNotification,
+    canScheduleMore,
+    requestNotificationPermission,
+    rescheduleOverdueRepeating,
+    scheduleNotification,
 } from '@/src/features/notifications';
 import { aiParse, localParse } from '@/src/features/parsing';
 import { useCreateSchedule, useSchedules } from '@/src/features/schedules';
@@ -22,18 +22,18 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -69,7 +69,9 @@ export default function HomeScreen() {
   const [showPreview, setShowPreview] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
-  const chatRef = useRef<ChatMessage[]>([]);
+  // mutate 함수를 ref로 저장해 effect dependency에서 제외
+  const saveChatMutateRef = useRef(saveChatMutation.mutate);
+  useEffect(() => { saveChatMutateRef.current = saveChatMutation.mutate; });
 
   // 앱 진입 시 반복 일정 재스케줄
   useEffect(() => {
@@ -79,11 +81,10 @@ export default function HomeScreen() {
     }
   }, [uid]);
 
-  // 채팅 메시지 변경 시 저장
+  // 채팅 메시지 변경 시 저장 (ref를 통해 무한루프 방지)
   useEffect(() => {
     if (chatMessages.length > 0) {
-      chatRef.current = chatMessages;
-      saveChatMutation.mutate(chatMessages);
+      saveChatMutateRef.current(chatMessages);
     }
   }, [chatMessages]);
 

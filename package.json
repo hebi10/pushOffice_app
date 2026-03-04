@@ -7,7 +7,14 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "lint": "expo lint"
+    "lint": "expo lint",
+
+    "fb:login": "firebase login",
+    "fb:init": "firebase init",
+    "fb:deploy": "firebase deploy",
+    "fb:hosting": "firebase deploy --only hosting",
+    "fb:functions": "firebase deploy --only functions",
+    "fb:firestore": "firebase deploy --only firestore"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

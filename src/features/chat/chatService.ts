@@ -5,10 +5,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     collection,
     doc,
+    getDoc,
     getDocs,
     orderBy,
     query,
     setDoc,
+    updateDoc,
     where
 } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -34,16 +36,21 @@ export async function fbSaveChatMessages(
   messages: ChatMessage[],
 ): Promise<void> {
   const ref = doc(db, COLLECTION, userId);
-  await setDoc(
-    ref,
-    {
+  // 문서가 없을 때는 createdAt 포함 생성, 있을 때는 messages/updatedAt만 갱신
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
       userId,
       messages,
+      createdAt: Date.now(),
       updatedAt: Date.now(),
-      createdAt: Date.now(), // setDoc merge won't overwrite
-    },
-    { merge: true },
-  );
+    });
+  } else {
+    await updateDoc(ref, {
+      messages,
+      updatedAt: Date.now(),
+    });
+  }
 }
 
 export async function fbUpdateChatMessage(
