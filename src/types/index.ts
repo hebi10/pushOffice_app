@@ -74,6 +74,35 @@ export interface DigestDoc {
   sources: Array<{ label: string; url?: string }>;
   createdAt: number;
   updatedAt: number;
+
+  /** 구조화된 날씨 데이터 (브리핑 카드용) */
+  weatherData?: {
+    temp: number;
+    feelsLike: number;
+    tempMin: number;
+    tempMax: number;
+    description: string;
+    city: string;
+    comment: string;
+  } | null;
+
+  /** 구조화된 뉴스 데이터 */
+  newsData?: Array<{
+    title: string;
+    description: string;
+    source: string;
+    url?: string;
+  }> | null;
+
+  /** 구조화된 주식 데이터 */
+  stockData?: Array<{
+    symbol: string;
+    price: string;
+    changePercent: string;
+  }> | null;
+
+  /** AI 한줄 브리핑 (3~5문장) */
+  aiBriefing?: string;
 }
 
 // ─── 파싱 결과 ───
@@ -82,6 +111,8 @@ export interface ParseResult {
   startAtISO: string | null;
   repeatType: RepeatType;
   missingFields: string[];
+  /** 시간 미입력 또는 생일 등 하루 종일 일정 여부 */
+  isAllDay?: boolean;
 }
 
 export interface AIParseResponse {
@@ -126,9 +157,17 @@ export interface WeatherRegion {
 // ─── 날씨 ───
 export interface WeatherData {
   temp: number;
+  /** 최저 기온 */
+  tempMin?: number;
+  /** 최고 기온 */
+  tempMax?: number;
+  /** 체감 온도 */
+  feelsLike?: number;
   description: string;
   icon: string;
   city: string;
+  /** 짧은 코멘트 (예: '우산 챙기세요') */
+  comment?: string;
 }
 
 // ─── 설정 ───

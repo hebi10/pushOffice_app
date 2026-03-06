@@ -16,6 +16,7 @@ export {
     scheduleNotification,
     scheduleReminder1Hour,
     scheduleReminderNextMonth,
+    scheduleReminderNextYear,
     scheduleReminderTomorrow
 } from './scheduler';
 

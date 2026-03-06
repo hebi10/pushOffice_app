@@ -136,13 +136,21 @@ export function localParse(text: string, tz?: string): ParseResult {
   // ── 누락 필드 판별 ──
   if (!titleCandidate) missingFields.push('title');
   if (day === null) missingFields.push('date');
-  if (hour === null) missingFields.push('time');
+
+  // ── 하루 종일 여부 판정 ──
+  // 생일 관련 키워드가 있거나 시간이 입력되지 않은 경우 하루 종일로 처리
+  const isBirthday = /생일|birthday/i.test(text);
+  const isAllDay = isBirthday || hour === null;
+
+  // 하루 종일이면 'time' 누락 필드에 추가하지 않음 (시간 불필요)
+  if (!isAllDay && hour === null) missingFields.push('time');
 
   // ── ISO 생성 ──
   let startAtISO: string | null = null;
   if (year !== null && month !== null && day !== null) {
-    const h = hour ?? 9; // 기본 9시
-    const m = minute ?? 0;
+    // 하루 종일은 00:00 기준, 시간 있으면 해당 시간 사용
+    const h = isAllDay ? 0 : (hour ?? 9);
+    const m = isAllDay ? 0 : (minute ?? 0);
     const d = dayjs()
       .year(year)
       .month(month - 1)
@@ -154,5 +162,5 @@ export function localParse(text: string, tz?: string): ParseResult {
     startAtISO = d.toISOString();
   }
 
-  return { titleCandidate, startAtISO, repeatType, missingFields };
+  return { titleCandidate, startAtISO, repeatType, missingFields, isAllDay };
 }

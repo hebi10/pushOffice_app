@@ -52,6 +52,8 @@ export interface BriefingOutput {
   weather: WeatherResult | null;
   news: NewsItem[] | null;
   stock: StockResult | null;
+  /** 복수 종목 결과 */
+  stocks: StockResult[];
 }
 
 // ─── 메인 브리핑 생성 ──────────────────────────────────────
@@ -69,21 +71,34 @@ export async function generateBriefing(
     lon = coords.lon;
   }
 
-  // 3개 서비스 병렬 호출 (Promise.allSettled → 하나가 실패해도 나머지 계속)
-  const [weatherResult, newsResult, stockResult] = await Promise.allSettled([
-    types.weather ? fetchWeather(lat, lon) : Promise.resolve(null),
-    types.news ? fetchNews("kr", 5) : Promise.resolve(null),
-    types.stocks
-      ? fetchStock(input.stockTickers?.[0] ?? "TSLA")
-      : Promise.resolve(null),
-  ]);
+  // 종목 목록 (기본: TSLA)
+  const tickers = input.stockTickers?.length
+    ? input.stockTickers
+    : ["TSLA"];
+
+  // 서비스 병렬 호출 (Promise.allSettled → 하나가 실패해도 나머지 계속)
+  const [weatherResult, newsResult, ...stockResults] =
+    await Promise.allSettled([
+      types.weather ? fetchWeather(lat, lon) : Promise.resolve(null),
+      types.news ? fetchNews("kr", 5) : Promise.resolve(null),
+      ...(types.stocks
+        ? tickers.map((t) => fetchStock(t))
+        : [Promise.resolve(null)]),
+    ]);
 
   const weather =
     weatherResult.status === "fulfilled" ? weatherResult.value : null;
   const news =
     newsResult.status === "fulfilled" ? newsResult.value : null;
-  const stock =
-    stockResult.status === "fulfilled" ? stockResult.value : null;
+
+  // 복수 종목 결과
+  const stocks: StockResult[] = stockResults
+    .filter(
+      (r): r is PromiseFulfilledResult<StockResult> =>
+        r.status === "fulfilled" && r.value != null,
+    )
+    .map((r) => r.value);
+  const stock = stocks[0] ?? null;
 
   // 실패 로그
   if (weatherResult.status === "rejected") {
@@ -92,12 +107,14 @@ export async function generateBriefing(
   if (newsResult.status === "rejected") {
     logger.error("뉴스 서비스 실패", newsResult.reason);
   }
-  if (stockResult.status === "rejected") {
-    logger.error("주식 서비스 실패", stockResult.reason);
-  }
+  stockResults.forEach((r, i) => {
+    if (r.status === "rejected") {
+      logger.error(`주식 서비스 실패 [${tickers[i]}]`, r.reason);
+    }
+  });
 
   // AI 요약 생성 (OpenAI 키 없으면 기본 템플릿)
-  const briefingText = await generateAISummary({weather, news, stock});
+  const briefingText = await generateAISummary({weather, news, stocks});
 
   return {
     generatedAt: new Date().toISOString(),
@@ -105,5 +122,6 @@ export async function generateBriefing(
     weather,
     news,
     stock,
+    stocks,
   };
 }

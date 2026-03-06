@@ -82,6 +82,24 @@ export async function scheduleReminderNextMonth(
   );
 }
 
+/** 재알림: 1년 뒤 같은 날짜/시간 */
+export async function scheduleReminderNextYear(
+  scheduleId: string,
+  title: string,
+  originalDate: Date,
+): Promise<string> {
+  const orig = dayjs(originalDate);
+  const nextYear = orig.year() + 1;
+  const day = clampDayToMonth(nextYear, orig.month() + 1, orig.date());
+  const target = orig.year(nextYear).date(day).toDate();
+  return scheduleNotification(
+    title,
+    '1년 뒤 재알림',
+    target,
+    { route: `/schedule/${scheduleId}` },
+  );
+}
+
 /** 일일 브리핑 알림 (매일 반복) */
 export async function scheduleDailyBriefing(
   hour: number,

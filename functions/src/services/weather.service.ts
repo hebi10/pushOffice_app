@@ -13,6 +13,8 @@ export interface WeatherResult {
   location: string;
   temperature: number;
   feelsLike: number;
+  tempMin: number;
+  tempMax: number;
   description: string;
 }
 
@@ -41,7 +43,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
 
       const data = await response.json() as {
         name: string;
-        main: {temp: number; feels_like: number};
+        main: {temp: number; feels_like: number; temp_min: number; temp_max: number};
         weather: Array<{description: string}>;
       };
 
@@ -49,6 +51,8 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
         location: data.name,
         temperature: Math.round(data.main.temp),
         feelsLike: Math.round(data.main.feels_like),
+        tempMin: Math.round(data.main.temp_min),
+        tempMax: Math.round(data.main.temp_max),
         description: data.weather?.[0]?.description ?? "",
       };
     }, "Weather");

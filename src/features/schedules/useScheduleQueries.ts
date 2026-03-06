@@ -10,6 +10,7 @@ import {
     deleteSchedule,
     getSchedule,
     getSchedulesByRange,
+    getSchedulesByTitle,
     getSchedulesByUser,
     updateSchedule,
 } from './scheduleService';
@@ -83,5 +84,17 @@ export function useDeleteSchedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
+  });
+}
+
+/** 같은 제목 관련 일정 */
+export function useRelatedSchedules(title: string | undefined, excludeId: string | undefined) {
+  const uid = useAppSelector((s) => s.auth.uid);
+
+  return useQuery<ScheduleDoc[]>({
+    queryKey: [QUERY_KEY, 'related', uid, title],
+    queryFn: () =>
+      uid && title ? getSchedulesByTitle(uid, title, excludeId) : Promise.resolve([]),
+    enabled: !!uid && !!title,
   });
 }

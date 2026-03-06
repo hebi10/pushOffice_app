@@ -16,16 +16,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Alert,
-  FlatList,
-  Modal,
-  Platform,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    FlatList,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -179,7 +180,7 @@ export default function CalendarScreen() {
   if (isLoading) return <Loading />;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {/* 캘린더 */}
       <Calendar
         current={`${currentYear}-${String(currentMonth).padStart(2, '0')}-01`}
@@ -274,7 +275,10 @@ export default function CalendarScreen() {
 
       {/* 빠른 추가 모달 */}
       <Modal visible={showModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>빠른 일정 추가</Text>
             <Text style={[styles.modalDate, { color: colors.textSecondary }]}>
@@ -363,7 +367,7 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

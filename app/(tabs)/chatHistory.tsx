@@ -181,7 +181,7 @@ export default function ChatHistoryScreen() {
   if (isLoading) return <Loading />;
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       {(!messages || messages.length === 0) ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubbles-outline" size={48} color={colors.textTertiary} />

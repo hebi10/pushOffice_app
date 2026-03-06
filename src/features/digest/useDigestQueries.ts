@@ -13,6 +13,11 @@ import {
 
 const QUERY_KEY = 'digests';
 
+export interface GenerateDigestMutationInput {
+  input: GenerateDigestInput;
+  force?: boolean;
+}
+
 /** 월간 digests 조회 */
 export function useMonthDigests(year: number, month: number) {
   const uid = useAppSelector((s) => s.auth.uid);
@@ -48,7 +53,8 @@ export function useGenerateDigest() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: GenerateDigestInput) => generateAndSaveDigest(input),
+    mutationFn: ({ input, force }: GenerateDigestMutationInput) =>
+      generateAndSaveDigest(input, force),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },

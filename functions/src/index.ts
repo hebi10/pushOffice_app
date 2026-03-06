@@ -99,6 +99,36 @@ export const generateDigest = onRequest(
         sources.push({label: `주식: ${result.stock.symbol}`});
       }
 
+      // 구조화된 데이터 (브리핑 카드용)
+      const weatherData = result.weather
+        ? {
+            temp: result.weather.temperature,
+            feelsLike: result.weather.feelsLike,
+            tempMin: result.weather.tempMin,
+            tempMax: result.weather.tempMax,
+            description: result.weather.description,
+            city: result.weather.location,
+            comment: "",
+          }
+        : null;
+
+      const newsData = result.news
+        ? result.news.map((n) => ({
+            title: n.title,
+            description: n.description,
+            source: n.source,
+            url: n.url,
+          }))
+        : null;
+
+      const stockData = result.stocks.length > 0
+        ? result.stocks.map((s) => ({
+            symbol: s.symbol,
+            price: s.latestPrice,
+            changePercent: s.changePercent,
+          }))
+        : null;
+
       res.status(200).json({
         title: "오늘의 브리핑",
         summary:
@@ -107,6 +137,10 @@ export const generateDigest = onRequest(
             : result.briefingText,
         contentMarkdown: result.briefingText,
         sources,
+        weatherData,
+        newsData,
+        stockData,
+        aiBriefing: result.briefingText,
       });
     } catch (err) {
       logger.error("generateDigest 오류", err);

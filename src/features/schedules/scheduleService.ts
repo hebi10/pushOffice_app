@@ -116,3 +116,19 @@ export async function countNotificationsForDate(
   const snap = await getDocs(q);
   return snap.size;
 }
+
+/** 같은 제목의 일정 모아보기 (정관적 문자열 일치) */
+export async function getSchedulesByTitle(
+  userId: string,
+  title: string,
+  excludeId?: string,
+): Promise<ScheduleDoc[]> {
+  // Firestore는 부분 문자열 검색이 없으므로 전체 조회 후 필터
+  const all = await getSchedulesByUser(userId);
+  const keyword = title.replace(/\d{4}|\d{1,2}월|\d{1,2}일/g, '').trim();
+  return all.filter((s) => {
+    if (s.id === excludeId) return false;
+    const t = s.title.replace(/\d{4}|\d{1,2}월|\d{1,2}일/g, '').trim();
+    return t === keyword || s.title === title;
+  });
+}

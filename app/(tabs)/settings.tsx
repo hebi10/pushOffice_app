@@ -2,6 +2,7 @@
  * Settings 화면 – 테마/폰트/알림/브리핑/저장 모드 설정
  */
 import { Card } from '@/src/components/Card';
+import { KeyboardLayout } from '@/src/components/KeyboardLayout';
 import { showError, showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { signInAnon, updateUserSettings } from '@/src/features/auth/authService';
@@ -360,7 +361,8 @@ export default function SettingsScreen() {
   }, [dispatch]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <KeyboardLayout insideTab>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 테마 모드 */}
         <Card>
@@ -757,6 +759,7 @@ export default function SettingsScreen() {
           <Text style={[styles.infoText, { color: colors.textTertiary }]}>Expo + Firebase</Text>
         </Card>
       </ScrollView>
+      </KeyboardLayout>
     </SafeAreaView>
   );
 }

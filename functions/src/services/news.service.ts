@@ -12,6 +12,8 @@ import { withRetry } from "../utils/retry.js";
 export interface NewsItem {
   title: string;
   description: string;
+  source: string;
+  url: string;
   publishedAt: string;
 }
 
@@ -44,6 +46,8 @@ export async function fetchNews(
         articles: Array<{
           title: string;
           description: string | null;
+          source?: {name?: string};
+          url?: string;
           publishedAt: string;
         }>;
       };
@@ -51,6 +55,8 @@ export async function fetchNews(
       return data.articles.map((a) => ({
         title: a.title,
         description: a.description ?? "",
+        source: a.source?.name ?? "",
+        url: a.url ?? "",
         publishedAt: a.publishedAt,
       }));
     }, "News");

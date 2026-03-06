@@ -29,37 +29,32 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '홈',
+          title: '브리핑',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size ?? 22} color={color} />
+            <Ionicons name="sunny-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
-          title: '캘린더',
+          title: '일정',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
+      {/* 채팅 내역 · 브리핑(구) 탭은 숨기되 라우트는 유지 */}
       <Tabs.Screen
         name="chatHistory"
         options={{
-          title: '채팅 내역',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles-outline" size={size ?? 22} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="briefing"
         options={{
-          title: '브리핑',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="newspaper-outline" size={size ?? 22} color={color} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
