@@ -1,0 +1,16 @@
+{
+  "package": "com.hebi96.pushOffice_app",
+  "version": "1.1.0",
+  "version_code": 3,
+  "console_completed_tasks": 7,
+  "console_total_tasks": 11,
+  "store_listing": "saved_ready_to_send_for_review",
+  "aab_uploaded": false,
+  "aab_signing": "pending_existing_upload_key",
+  "unsigned_aab_sha256": "9bd3019f930894be116c8d4636d722034618093432a1e10025f60ab2a46f6ec4",
+  "internal_release_url": "https://play.google.com/console/u/0/developers/5537932067090246638/app/4973839358608212790/tracks/4701347459059543444/releases/4/prepare",
+  "privacy_policy": "draft_not_published",
+  "data_safety": "partial_draft",
+  "support_email": "pending_user_input",
+  "iarc_terms_accepted": false
+}

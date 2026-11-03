@@ -5,7 +5,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import { arrayUnion, doc, setDoc } from 'firebase/firestore';
 import { Platform } from 'react-native';
-import { db } from '../../lib/firebase';
+import { getFirebaseDb } from '../../lib/firebase';
 
 /** Push Token 획득 */
 export async function getExpoPushToken(): Promise<string | null> {
@@ -53,7 +53,7 @@ export async function registerPushToken(uid: string): Promise<string | null> {
   if (!token) return null;
 
   try {
-    const ref = doc(db, 'users', uid);
+    const ref = doc(getFirebaseDb(), 'users', uid);
     await setDoc(ref, { expoPushTokens: arrayUnion(token) }, { merge: true });
     return token;
   } catch (e) {

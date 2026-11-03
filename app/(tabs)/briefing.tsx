@@ -22,6 +22,8 @@ import { showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import type { GenerateDigestInput } from '@/src/features/digest';
 import { isFallbackDigest, useDateDigest, useGenerateDigest } from '@/src/features/digest';
+import { useClock } from '@/src/features/notifications/useNativeAssistant';
+import { hydrateSchedule, projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
 import { useSchedules } from '@/src/features/schedules';
 import { useWeather } from '@/src/features/weather';
 import { dayjs } from '@/src/lib/time';
@@ -101,7 +103,8 @@ export default function BriefingScreen() {
   const { date } = useLocalSearchParams<{ date?: string }>();
   const { colors } = useTheme();
 
-  const targetDate = date || dayjs().format('YYYY-MM-DD');
+  const now = useClock();
+  const targetDate = date || dayjs(now).format('YYYY-MM-DD');
   const isToday = targetDate === dayjs().format('YYYY-MM-DD');
 
   // ─── 데이터 훅 ─────────────────────────────────────────
@@ -109,7 +112,7 @@ export default function BriefingScreen() {
   const {
     data: weather,
     isLoading: weatherLoading,
-  } = useWeather();
+  } = useWeather(false);
   const {
     data: digest,
     isLoading: digestLoading,
@@ -171,6 +174,7 @@ export default function BriefingScreen() {
   }, [digest, targetDate]);
 
   // ─── 일정 필터링 ──────────────────────────────────────
+  const viewSchedules = useMemo(() => projectOccurrences((schedules ?? []).map(toNativeSchedule), dayjs(targetDate).startOf('day').toDate(), dayjs(targetDate).add(2, 'day').startOf('day').toDate()).map(hydrateSchedule), [schedules, targetDate]);
   const todayStart = dayjs(targetDate).startOf('day');
   const todayEnd = dayjs(targetDate).endOf('day');
   const tomorrowStart = dayjs(targetDate).add(1, 'day').startOf('day');
@@ -178,20 +182,20 @@ export default function BriefingScreen() {
 
   const todaySchedules = useMemo(
     () =>
-      (schedules ?? []).filter((s) => {
+      viewSchedules.filter((s) => {
         const d = dayjs(s.startAt?.toDate?.());
-        return d.isAfter(todayStart) && d.isBefore(todayEnd);
+        return d.valueOf() >= todayStart.valueOf() && d.valueOf() <= todayEnd.valueOf();
       }),
-    [schedules, todayStart, todayEnd],
+    [viewSchedules, todayStart, todayEnd],
   );
 
   const tomorrowSchedules = useMemo(
     () =>
-      (schedules ?? []).filter((s) => {
+      viewSchedules.filter((s) => {
         const d = dayjs(s.startAt?.toDate?.());
-        return d.isAfter(tomorrowStart) && d.isBefore(tomorrowEnd);
+        return d.valueOf() >= tomorrowStart.valueOf() && d.valueOf() <= tomorrowEnd.valueOf();
       }),
-    [schedules, tomorrowStart, tomorrowEnd],
+    [viewSchedules, tomorrowStart, tomorrowEnd],
   );
 
   // ─── 로딩 ─────────────────────────────────────────────

@@ -13,7 +13,7 @@ import {
     updateDoc,
     where
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { getFirebaseDb } from '../../lib/firebase';
 import type { ChatHistoryDoc, ChatMessage } from '../../types';
 
 const COLLECTION = 'chatHistory';
@@ -23,7 +23,7 @@ const LOCAL_KEY = '@pushoffice/chatHistory';
 
 export async function fbGetChatHistory(userId: string): Promise<ChatHistoryDoc[]> {
   const q = query(
-    collection(db, COLLECTION),
+    collection(getFirebaseDb(), COLLECTION),
     where('userId', '==', userId),
     orderBy('updatedAt', 'desc'),
   );
@@ -35,7 +35,7 @@ export async function fbSaveChatMessages(
   userId: string,
   messages: ChatMessage[],
 ): Promise<void> {
-  const ref = doc(db, COLLECTION, userId);
+  const ref = doc(getFirebaseDb(), COLLECTION, userId);
   // 문서가 없을 때는 createdAt 포함 생성, 있을 때는 messages/updatedAt만 갱신
   const snap = await getDoc(ref);
   if (!snap.exists()) {

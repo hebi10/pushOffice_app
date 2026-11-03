@@ -1,12 +1,14 @@
 import { Loading } from '@/src/components/Loading';
 import { ThemeProvider, useTheme } from '@/src/contexts/ThemeContext';
+import { useNativeAssistantSync } from '@/src/features/notifications/useNativeAssistant';
 import { useAuthInit } from '@/src/features/auth/useAuthInit';
-import { getInitialNotificationRoute, useNotificationListener } from '@/src/features/notifications';
+import { useLaunchIntent } from '@/src/features/notifications/useLaunchIntent';
+import { useNotificationListener } from '@/src/features/notifications';
 import { store, useAppSelector } from '@/src/store/store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack, router } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
@@ -18,24 +20,12 @@ const queryClient = new QueryClient({
 
 function InnerLayout() {
   useAuthInit();
-  useNotificationListener();
-
+  useNativeAssistantSync();
   const { isLoading, isAuthenticated } = useAppSelector((s) => s.auth);
   const { colors } = useTheme();
 
-  // 알림으로 시작된 경우 해당 라우트로 이동
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    getInitialNotificationRoute().then((route) => {
-      if (route) {
-        setTimeout(() => router.push(route as any), 500);
-      }
-    });
-  }, [isAuthenticated]);
-
-  if (isLoading) {
-    return <Loading />;
-  }
+  const receiveLaunchRoute = useLaunchIntent(!isLoading && isAuthenticated);
+  useNotificationListener(receiveLaunchRoute);
 
   return (
     <>
@@ -52,6 +42,7 @@ function InnerLayout() {
         <Stack.Screen name="(auth)/sign-in" options={{ title: '로그인', presentation: 'modal' }} />
         <Stack.Screen name="schedule/[id]" options={{ title: '일정 상세' }} />
       </Stack>
+      {isLoading && <View style={StyleSheet.absoluteFill} accessibilityViewIsModal><Loading /></View>}
     </>
   );
 }

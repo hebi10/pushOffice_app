@@ -2,6 +2,7 @@
  * 로컬 저장소 (AsyncStorage) – schedules, digests, settings CRUD
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SettingsQueue } from './settingsRecoveryPolicy';
 import type { DigestDoc, ScheduleDoc, UserSettings } from '../../types';
 
 // ── Keys ──
@@ -115,9 +116,17 @@ export async function localGetSettings(): Promise<Partial<UserSettings> | null> 
   return raw ? JSON.parse(raw) : null;
 }
 
+const settingsQueue = new SettingsQueue();
+export const withSettingsLock = <T>(operation: () => Promise<T>): Promise<T> => settingsQueue.run(operation);
+/** Internal write; callers must hold withSettingsLock. */
+export async function writeLocalSettings(settings: Partial<UserSettings>): Promise<void> {
+  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
 export async function localSaveSettings(settings: Partial<UserSettings>): Promise<void> {
-  const existing = await localGetSettings();
-  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...existing, ...settings }));
+  await withSettingsLock(async () => {
+    const existing = await localGetSettings();
+    await writeLocalSettings({ ...existing, ...settings });
+  });
 }
 
 // ═══════════ Migration helpers ═══════════

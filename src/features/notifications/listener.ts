@@ -6,7 +6,9 @@ import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
 /** 알림 탭 시 라우팅 처리 */
-export function useNotificationListener() {
+export function useNotificationListener(onRoute?: (route: string) => void) {
+  const routeHandler = useRef(onRoute);
+  routeHandler.current = onRoute;
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
@@ -25,9 +27,9 @@ export function useNotificationListener() {
         (response) => {
           const route = response.notification.request.content.data?.route as string | undefined;
           if (route) {
-            setTimeout(() => {
-              router.push(route as any);
-            }, 300);
+            if (routeHandler.current) routeHandler.current(route);
+            else router.replace(route as never);
+            void Notifications.clearLastNotificationResponseAsync().catch(console.warn);
           }
         },
       );
@@ -47,7 +49,9 @@ export function useNotificationListener() {
 export async function getInitialNotificationRoute(): Promise<string | null> {
   try {
     const response = await Notifications.getLastNotificationResponseAsync();
-    return (response?.notification.request.content.data?.route as string) ?? null;
+    const route = (response?.notification.request.content.data?.route as string) ?? null;
+    if (route) await Notifications.clearLastNotificationResponseAsync();
+    return route;
   } catch {
     return null;
   }

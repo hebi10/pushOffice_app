@@ -1,9 +1,7 @@
 /**
  * Sign-In 화면 (옵션) – 익명 로그인이 기본이므로 최소 구현
  */
-import { showError } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { signInAnon } from '@/src/features/auth/authService';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -14,23 +12,18 @@ export default function SignInScreen() {
   const { colors } = useTheme();
 
   const handleAnonymousSignIn = async () => {
-    try {
-      await signInAnon();
-      router.replace('/(tabs)');
-    } catch (error) {
-      showError(error, '로그인에 실패했습니다.');
-    }
+    router.replace('/(tabs)');
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <Ionicons name="clipboard-outline" size={64} color={colors.primary} style={styles.logo} />
-        <Text style={[styles.title, { color: colors.text }]}>AI Push Assistant</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>일정을 등록하고 관리하세요</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Push Office</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>로그인 없이 내 기기에서 일정을 관리하세요</Text>
 
         <TouchableOpacity style={[styles.btn, { backgroundColor: colors.primary }]} onPress={handleAnonymousSignIn}>
-          <Text style={styles.btnText}>시작하기 (익명 로그인)</Text>
+          <Text style={styles.btnText}>로컬 일정 시작하기</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

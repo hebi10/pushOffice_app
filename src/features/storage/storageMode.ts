@@ -1,36 +1,24 @@
-/**
- * 저장 모드 관리 – firebase | local
- */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import type { StorageMode } from '../../types';
-
-const STORAGE_MODE_KEY = '@pushoffice/storageMode';
+import { activateLocalStorage as activatePolicy, LEGACY_CLOUD_KEY, STORAGE_MODE_KEY, type LegacyCloudState } from './recoveryPolicy';
 const DEVICE_KEY_KEY = '@pushoffice/deviceKey';
-
-/** 저장 모드 읽기 (없으면 null → 앱이 첫 실행 or 미설정) */
-export async function getStorageMode(): Promise<StorageMode | null> {
-  const val = await AsyncStorage.getItem(STORAGE_MODE_KEY);
-  if (val === 'firebase' || val === 'local') return val;
-  return null;
+/** All normal app services stay local, independently of any pending read-only legacy source. */
+export async function getStorageMode(): Promise<StorageMode | null> { return 'local'; }
+export async function setStorageMode(_mode: StorageMode): Promise<void> { await AsyncStorage.setItem(STORAGE_MODE_KEY, 'local'); }
+export async function activateLocalStorage(): Promise<void> {
+  await activatePolicy({ getItem: key => AsyncStorage.getItem(key), setItems: rows => AsyncStorage.multiSet(rows) });
 }
-
-/** 저장 모드 설정 */
-export async function setStorageMode(mode: StorageMode): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_MODE_KEY, mode);
+export async function getLegacyCloudState(): Promise<LegacyCloudState | null> {
+  const value = await AsyncStorage.getItem(LEGACY_CLOUD_KEY);
+  return value ? JSON.parse(value) as LegacyCloudState : null;
 }
-
-/** deviceKey 가져오기 (없으면 새로 생성) */
+export async function saveLegacyCloudState(state: LegacyCloudState): Promise<void> {
+  await AsyncStorage.setItem(LEGACY_CLOUD_KEY, JSON.stringify(state));
+}
 export async function getOrCreateDeviceKey(): Promise<string> {
   let key = await AsyncStorage.getItem(DEVICE_KEY_KEY);
-  if (!key) {
-    key = Crypto.randomUUID();
-    await AsyncStorage.setItem(DEVICE_KEY_KEY, key);
-  }
+  if (!key) { key = Crypto.randomUUID(); await AsyncStorage.setItem(DEVICE_KEY_KEY, key); }
   return key;
 }
-
-/** deviceKey 읽기만 (없으면 null) */
-export async function getDeviceKey(): Promise<string | null> {
-  return AsyncStorage.getItem(DEVICE_KEY_KEY);
-}
+export async function getDeviceKey(): Promise<string | null> { return AsyncStorage.getItem(DEVICE_KEY_KEY); }

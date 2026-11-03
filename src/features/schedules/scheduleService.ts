@@ -1,134 +1,69 @@
-/**
- * 일정 Firestore CRUD
- */
-import {
-    addDoc,
-    collection,
-    deleteDoc,
-    doc,
-    getDoc,
-    getDocs,
-    orderBy,
-    query,
-    serverTimestamp,
-    Timestamp,
-    updateDoc,
-    where,
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { Timestamp } from 'firebase/firestore';
+import * as Crypto from 'expo-crypto';
+import { PushOfficeNative, isPushOfficeNativeAvailable } from '../../../modules/push-office-native';
 import type { RepeatType, ScheduleDoc } from '../../types';
-
-const COLLECTION = 'schedules';
-
+import { localCreateSchedule, localUpdateSchedule, localDeleteSchedule } from '../storage/localStore';
+import { getDeviceSchedules } from '../storage/nativeStore';
+import { hydrateSchedule, projectOccurrences, toNativeSchedule } from './scheduleCodec';
 export interface CreateScheduleInput {
-  userId: string;
-  title: string;
-  startAt: Date;
-  endAt?: Date | null;
-  isAllDay?: boolean;
-  repeatType: RepeatType;
-  notificationEnabled: boolean;
-  notificationId: string | null;
-  sourceText: string;
-  type?: 'schedule' | 'reminder' | 'memo';
+    userId: string;
+    title: string;
+    startAt: Date;
+    endAt?: Date | null;
+    isAllDay?: boolean;
+    repeatType: RepeatType;
+    notificationEnabled: boolean;
+    notificationId: string | null;
+    sourceText: string;
+    type?: 'schedule' | 'reminder' | 'memo';
 }
-
-/** 일정 생성 */
 export async function createSchedule(input: CreateScheduleInput): Promise<string> {
-  const data: Record<string, any> = {
-    ...input,
-    startAt: Timestamp.fromDate(input.startAt),
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  };
-  if (input.endAt) data.endAt = Timestamp.fromDate(input.endAt);
-  if (input.isAllDay !== undefined) data.isAllDay = input.isAllDay;
-  const ref = await addDoc(collection(db, COLLECTION), data);
-  return ref.id;
+    if (!input.title.trim() || !Number.isFinite(input.startAt.getTime()))
+        throw new Error('제목과 날짜를 확인해 주세요.');
+    if (input.endAt && input.endAt <= input.startAt)
+        throw new Error('종료 시간은 시작 시간 이후여야 합니다.');
+    const id = Crypto.randomUUID();
+    const record = toNativeSchedule({ ...input, anchorZone: Intl.DateTimeFormat().resolvedOptions().timeZone, id, title: input.title.trim(), createdAt: Date.now(), updatedAt: Date.now() });
+    if (isPushOfficeNativeAvailable)
+        await PushOfficeNative.saveSchedule(record);
+    else
+        await localCreateSchedule(hydrateSchedule(record));
+    return id;
 }
-
-/** 일정 단건 조회 */
 export async function getSchedule(id: string): Promise<ScheduleDoc | null> {
-  const snap = await getDoc(doc(db, COLLECTION, id));
-  if (!snap.exists()) return null;
-  return { id: snap.id, ...snap.data() } as ScheduleDoc;
+    return (await getDeviceSchedules()).find(s => s.id === id) ?? null;
 }
-
-/** 유저의 전체 일정 조회 (startAt 오름차순) */
-export async function getSchedulesByUser(userId: string): Promise<ScheduleDoc[]> {
-  const q = query(
-    collection(db, COLLECTION),
-    where('userId', '==', userId),
-    orderBy('startAt', 'asc'),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleDoc));
+export async function getSchedulesByUser(_userId: string): Promise<ScheduleDoc[]> {
+    return (await getDeviceSchedules()).sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis());
 }
-
-/** 날짜 범위 일정 조회 (월간) */
-export async function getSchedulesByRange(
-  userId: string,
-  start: Date,
-  end: Date,
-): Promise<ScheduleDoc[]> {
-  const q = query(
-    collection(db, COLLECTION),
-    where('userId', '==', userId),
-    where('startAt', '>=', Timestamp.fromDate(start)),
-    where('startAt', '<=', Timestamp.fromDate(end)),
-    orderBy('startAt', 'asc'),
-  );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() } as ScheduleDoc));
+export async function getSchedulesByRange(userId: string, start: Date, end: Date): Promise<ScheduleDoc[]> {
+    return projectOccurrences((await getSchedulesByUser(userId)).map(toNativeSchedule), start, new Date(end.getTime() + 1)).map(hydrateSchedule);
 }
-
-/** 일정 업데이트 */
-export async function updateSchedule(
-  id: string,
-  data: Partial<Omit<ScheduleDoc, 'id' | 'createdAt'>>,
-): Promise<void> {
-  const ref = doc(db, COLLECTION, id);
-  await updateDoc(ref, { ...data, updatedAt: serverTimestamp() });
+export async function updateSchedule(id: string, data: Partial<Omit<ScheduleDoc, 'id' | 'createdAt'>>): Promise<void> {
+    const existing = await getSchedule(id);
+    if (!existing)
+        throw new Error('일정을 찾을 수 없습니다.');
+    const record = toNativeSchedule({ ...existing, ...data, id, updatedAt: Timestamp.now() });
+    if (!record.title.trim() || record.endAt != null && record.endAt <= record.startAt)
+        throw new Error('제목과 시작·종료 시간을 확인해 주세요.');
+    if (isPushOfficeNativeAvailable)
+        await PushOfficeNative.saveSchedule(record);
+    else
+        await localUpdateSchedule(id, hydrateSchedule(record));
 }
-
-/** 일정 삭제 */
 export async function deleteSchedule(id: string): Promise<void> {
-  await deleteDoc(doc(db, COLLECTION, id));
+    if (isPushOfficeNativeAvailable)
+        await PushOfficeNative.deleteSchedule(id);
+    else
+        await localDeleteSchedule(id);
 }
-
-/** 특정 날짜의 알림 개수 확인 */
-export async function countNotificationsForDate(
-  userId: string,
-  date: Date,
-): Promise<number> {
-  const start = new Date(date);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(date);
-  end.setHours(23, 59, 59, 999);
-
-  const q = query(
-    collection(db, COLLECTION),
-    where('userId', '==', userId),
-    where('startAt', '>=', Timestamp.fromDate(start)),
-    where('startAt', '<=', Timestamp.fromDate(end)),
-    where('notificationEnabled', '==', true),
-  );
-  const snap = await getDocs(q);
-  return snap.size;
+export async function countNotificationsForDate(userId: string, date: Date): Promise<number> {
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    return (await getSchedulesByRange(userId, start, end)).filter(s => s.notificationEnabled).length;
 }
-
-/** 같은 제목의 일정 모아보기 (정관적 문자열 일치) */
-export async function getSchedulesByTitle(
-  userId: string,
-  title: string,
-  excludeId?: string,
-): Promise<ScheduleDoc[]> {
-  // Firestore는 부분 문자열 검색이 없으므로 전체 조회 후 필터
-  const all = await getSchedulesByUser(userId);
-  const keyword = title.replace(/\d{4}|\d{1,2}월|\d{1,2}일/g, '').trim();
-  return all.filter((s) => {
-    if (s.id === excludeId) return false;
-    const t = s.title.replace(/\d{4}|\d{1,2}월|\d{1,2}일/g, '').trim();
-    return t === keyword || s.title === title;
-  });
+export async function getSchedulesByTitle(userId: string, title: string, excludeId?: string): Promise<ScheduleDoc[]> {
+    return (await getSchedulesByUser(userId)).filter(s => s.id !== excludeId && s.title === title);
 }

@@ -1,0 +1,180 @@
+{
+  "brand_blue": "#4B94DC",
+  "source_mark": "assets/images/push-office-mark.png",
+  "source_mark_sha256": "229294741cc6d3c5dca4e703c0448444a8aa69bc5b31e251e7b6e20f892d2e9c",
+  "mark_crop": [
+    294,
+    284,
+    957,
+    1034
+  ],
+  "adaptive_safe_circle_diameter": 620,
+  "screenshots": [
+    {
+      "source": "01-quick-settings.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "66358a1834d8f1ac18cdd716b65b8320350077d648cae6d6d5d4742851cf82e8",
+      "caption": "빠른 설정에서 바로 기록"
+    },
+    {
+      "source": "02-input-chooser.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "fce96ac6dffe95fd99e5385f5195a3dc292f83c4bf21bb22d17328b8afddadbd",
+      "caption": "텍스트·음성으로 일정 입력"
+    },
+    {
+      "source": "03-change-preview.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "df361bf57d73d4a45fc92aeb51890a4a90657cd124526be5889d48afc3fe1889",
+      "caption": "저장 전 변경 내용을 확인"
+    },
+    {
+      "source": "04-home-briefing.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "78a6e4d9975490ca5b1b0e73d2ce988c66d008c38e46de445a78bf0747740608",
+      "caption": "오늘의 일정과 브리핑"
+    },
+    {
+      "source": "05-calendar.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "56ae2bc74b0aac9be94f2c2a24ca60201dff2c9c23eb780888ce3fa06785cbfd",
+      "caption": "달력에서 일정을 한눈에"
+    },
+    {
+      "source": "07-home-widgets.png",
+      "source_width": 720,
+      "source_height": 1600,
+      "fitted_width": 693,
+      "fitted_height": 1540,
+      "x": 193,
+      "y": 330,
+      "source_sha256": "80fe25be332cc2a78d94830123e352ee6e839c05ed6045b00b6fa63037f31998",
+      "caption": "홈 화면 위젯으로 확인"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "assets/images/push-office-icon.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGB",
+      "sha256": "83fe7582b13ec56174281057ef31a1cd472f524db301580fed1a1cf282da8620"
+    },
+    {
+      "path": "assets/images/push-office-store-icon.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB",
+      "sha256": "f2b2a94d4f1af8b46767c89534b1632b8c7b9812102bc75d1656492ab1265803"
+    },
+    {
+      "path": "store-assets/ko-KR/app-icon.png",
+      "width": 512,
+      "height": 512,
+      "mode": "RGB",
+      "sha256": "f2b2a94d4f1af8b46767c89534b1632b8c7b9812102bc75d1656492ab1265803"
+    },
+    {
+      "path": "assets/images/push-office-adaptive-foreground.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "b4a2f3782b5e26bd4140fa741d2d672fa85f01ab1e2a902a25314b79935d2a18"
+    },
+    {
+      "path": "assets/images/push-office-adaptive-monochrome.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "71cda2eb63b088928432188b5e1be9ccb433e4ffbb80f138540cd22e8b367a00"
+    },
+    {
+      "path": "assets/images/push-office-favicon.png",
+      "width": 64,
+      "height": 64,
+      "mode": "RGB",
+      "sha256": "8ebe2903303ee94d849c6c4dd86d60672b069a6fddf9d10e53e62b71ab901916"
+    },
+    {
+      "path": "assets/images/push-office-splash.png",
+      "width": 1024,
+      "height": 1024,
+      "mode": "RGBA",
+      "sha256": "6d696572cdbd37140517a26ca25a4595a9665c3cc0d4a2b4c93641a4d2c8fed0"
+    },
+    {
+      "path": "store-assets/ko-KR/feature-graphic.png",
+      "width": 1024,
+      "height": 500,
+      "mode": "RGB",
+      "sha256": "335ef84069ca1ebf74c230c58d460d12fa278c739454141a55b3e0e250d54ef3"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/01-quick-settings.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "fd90bb777a8db5fbb8742e31fe291d6cd143a6f4c4d71754baba80f6620b0aca"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/02-input-chooser.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "1c5664e251ae85046be2191ad39aed034750598efb0e7d35c6167275f196ebf9"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/03-change-preview.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "b8917f774e0d341311dd179173a04d06e33705f2f5a0bf23a23a32085a06404f"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/04-home-briefing.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "899ff8bcf1041f66182243cdfa49457750f041406f93d6d55ab75b8723d0ff20"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/05-calendar.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "03d381e33989c41ae7281ebdb0e2d301b7ebaf1b2d93ff55e1ae5967efcb37c1"
+    },
+    {
+      "path": "store-assets/ko-KR/screenshots/07-home-widgets.png",
+      "width": 1080,
+      "height": 1920,
+      "mode": "RGB",
+      "sha256": "f82bba0e8da2b8c224bfc333e130b43799be731d0a5744fd4167ccdc320ab020"
+    }
+  ]
+}

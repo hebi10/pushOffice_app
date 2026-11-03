@@ -1,275 +1,93 @@
-/**
- * Home 화면 – 출근 전 30초 모닝 브리핑
- *
- * AI 요약 → 날씨 → 뉴스 → 주식 → 오늘/내일 일정 카드 표시
- * - 진입 시 자동 생성 (당일 digest 없으면)
- * - pull-to-refresh 재생성
- */
-import {
-  BriefingAISummaryCard,
-  BriefingNewsCard,
-  BriefingScheduleCard,
-  BriefingStockCard,
-  BriefingWeatherCard,
-} from '@/src/components/briefing';
-import { Loading } from '@/src/components/Loading';
+import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
+import { ScheduleItem } from '@/src/components/ScheduleItem';
+import { BriefingNewsCard, BriefingStockCard, BriefingWeatherCard } from '@/src/components/briefing';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import type { GenerateDigestInput } from '@/src/features/digest';
-import { isFallbackDigest, useDateDigest, useGenerateDigest } from '@/src/features/digest';
-import {
-  requestNotificationPermission,
-  rescheduleOverdueRepeating,
-} from '@/src/features/notifications';
+import { useGenerateDigest } from '@/src/features/digest';
 import { useSchedules } from '@/src/features/schedules';
-import { useWeather } from '@/src/features/weather';
+import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
+import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { dayjs } from '@/src/lib/time';
 import { useAppSelector } from '@/src/store/store';
-import type { ScheduleDoc } from '@/src/types';
-import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useRef } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
+import { PushOfficeNative } from '@/modules/push-office-native';
+import { showError } from '@/src/components/ui/toast';
+import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { ForegroundRequest, runForegroundRequest } from '@/src/features/notifications/foregroundRequest';
+import { AppState, RefreshControl, ScrollView, Text, View } from 'react-native';
 export default function HomeScreen() {
-  const uid = useAppSelector((s) => s.auth.uid);
-  const settings = useAppSelector((s) => s.settings);
-  const storageMode = useAppSelector((s) => s.storageMode);
-  const { colors } = useTheme();
-
-  const today = dayjs().format('YYYY-MM-DD');
-  const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD');
-
-  // ─── 데이터 훅 ─────────────────────────────────────────
-  const { data: schedules, isLoading: schedulesLoading } = useSchedules();
-  const { data: weather, isLoading: weatherLoading } = useWeather();
-  const {
-    data: digest,
-    isLoading: digestLoading,
-    refetch: refetchDigest,
-  } = useDateDigest(today);
-  const generateMutation = useGenerateDigest();
-
-  // ─── 앱 진입 시 반복 일정 재스케줄 ──────────────────────
-  useEffect(() => {
-    if (uid) {
-      rescheduleOverdueRepeating(uid).catch(console.error);
-      requestNotificationPermission().catch(console.error);
-    }
-  }, [uid]);
-
-  // ─── buildInput 헬퍼 ────────────────────────────────────
-  const buildInput = useCallback((): GenerateDigestInput => {
-    const ownerId =
-      storageMode.mode === 'local'
-        ? storageMode.deviceKey ?? 'unknown'
-        : uid ?? 'unknown';
-    return {
-      ownerType: storageMode.mode === 'local' ? 'device' : 'user',
-      ownerId,
-      dateKey: today,
-      timezone: settings.timezone,
-      types: settings.digestTypes ?? { weather: true, stocks: false, news: true },
-      city: settings.digestCity,
-      stockTickers: settings.stockTickers,
-      newsKeywords: settings.newsKeywords,
-      newsLanguage: settings.newsLanguage,
+    const { colors } = useTheme();
+    const now = useClock();
+    const settings = useAppSelector(x => x.settings);
+    const uid = useAppSelector(x => x.auth.uid);
+    const schedules = useSchedules();
+    const external = useGenerateDigest();
+    const [ai, setAi] = useState({ status: 'unavailable', message: '기기 지원 상태를 확인하고 있습니다.' });
+    const [refined, setRefined] = useState('');
+    const [busy, setBusy] = useState(false);
+    const request = useRef(new ForegroundRequest()).current;
+    useFocusEffect(useCallback(() => {
+        let statusRevision = 0;
+        const refresh = () => {
+            request.setActive(AppState.currentState === 'active');
+            setRefined(''); setBusy(false);
+            const revision = ++statusRevision;
+            if (AppState.currentState !== 'active') return;
+            PushOfficeNative.getAiStatus().then(value => { if (revision === statusRevision) setAi(value); })
+                .catch(() => { if (revision === statusRevision) setAi({ status: 'unavailable', message: '이 Android 빌드에서는 로컬 AI를 사용할 수 없습니다.' }); });
+        };
+        refresh();
+        const sub = AppState.addEventListener('change', refresh);
+        return () => { statusRevision++; request.setActive(false); sub.remove(); };
+    }, [request]));
+    const occurrences = useMemo(() => {
+        const date = new Date(now);
+        const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const end = new Date(start);
+        end.setDate(end.getDate() + 1);
+        return projectOccurrences((schedules.data ?? []).map(toNativeSchedule), start, end).map(hydrateSchedule);
+    }, [schedules.data, now]);
+    const today = dayjs(now).format('YYYY-MM-DD');
+    const todayItems = occurrences.filter(x => dayjs(x.startAt.toDate()).format('YYYY-MM-DD') === today);
+    const next = useMemo(() => {
+        const record = nextSchedule((schedules.data ?? []).map(toNativeSchedule), now);
+        return record ? hydrateSchedule(record) : null;
+    }, [schedules.data, now]);
+    const summary = schedules.isLoading ? '기기에 저장된 일정을 확인하고 있어요.' : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(', ')}.${next ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}` : '오늘 등록된 일정은 없어요. 여유 있는 하루를 계획해 보세요.';
+    const source = JSON.stringify([today, summary, schedules.data]);
+    // Ref revision changes immediately with source render, before any deferred native completion.
+    request.setSource(source);
+    useLayoutEffect(() => { setRefined(''); setBusy(false); }, [source]);
+    const open = () => PushOfficeNative.openQuickEntry().catch(e => showError(e, '빠른 입력을 열 수 없습니다.'));
+    const refine = async () => {
+        const valid = request.begin();
+        setBusy(true);
+        await runForegroundRequest(valid,
+            () => PushOfficeNative.generateBriefing(`한국어로 짧고 친절한 일정 브리핑을 작성하세요. 없는 사실을 추가하지 마세요. ${summary}`),
+            { result: setRefined, error: e => showError(e, '로컬 AI 요약을 만들 수 없습니다.'), finish: () => {
+                setBusy(false);
+                PushOfficeNative.getAiStatus().then(value => { if (valid()) setAi(value); }).catch(() => {});
+            } });
     };
-  }, [uid, storageMode, settings, today]);
-
-  // ─── 자동 생성 (당일 digest 없거나 fallback이면) ────────
-  const autoTriggered = useRef(false);
-  useEffect(() => {
-    if (autoTriggered.current) return;
-    if (digestLoading) return;
-    if (!digest || isFallbackDigest(digest)) {
-      autoTriggered.current = true;
-      generateMutation.mutate({ input: buildInput() });
-    }
-  }, [digest, digestLoading, buildInput, generateMutation]);
-
-  // ─── pull-to-refresh ───────────────────────────────────
-  const [refreshing, setRefreshing] = React.useState(false);
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await generateMutation.mutateAsync({ input: buildInput(), force: true });
-      await refetchDigest();
-    } catch {
-      // swallow
-    }
-    setRefreshing(false);
-  }, [buildInput, generateMutation, refetchDigest]);
-
-  // ─── 일정 필터링 ──────────────────────────────────────
-  const todayStart = dayjs(today).startOf('day');
-  const todayEnd = dayjs(today).endOf('day');
-  const tomorrowStart = dayjs(tomorrow).startOf('day');
-  const tomorrowEnd = dayjs(tomorrow).endOf('day');
-
-  const todaySchedules = useMemo<ScheduleDoc[]>(
-    () =>
-      (schedules ?? []).filter((s) => {
-        const d = dayjs(s.startAt?.toDate?.());
-        return d.isAfter(todayStart) && d.isBefore(todayEnd);
-      }),
-    [schedules, todayStart, todayEnd],
-  );
-
-  const tomorrowSchedules = useMemo<ScheduleDoc[]>(
-    () =>
-      (schedules ?? []).filter((s) => {
-        const d = dayjs(s.startAt?.toDate?.());
-        return d.isAfter(tomorrowStart) && d.isBefore(tomorrowEnd);
-      }),
-    [schedules, tomorrowStart, tomorrowEnd],
-  );
-
-  // ─── 로딩 상태 ────────────────────────────────────────
-  const isInitialLoading = schedulesLoading && digestLoading;
-  if (isInitialLoading) return <Loading />;
-
-  // ─── digest 에서 구조화 데이터 추출 ──────────────────────
-  const wd = digest?.weatherData;
-  const nd = digest?.newsData;
-  const sd = digest?.stockData;
-  const aiBriefing = digest?.aiBriefing;
-
-  // 날씨: digest에 포함된 구조화 데이터 우선, 없으면 클라이언트 직접 호출
-  const weatherProps = wd
-    ? wd
-    : weather
-      ? {
-          temp: weather.temp,
-          feelsLike: weather.feelsLike ?? weather.temp,
-          tempMin: weather.tempMin ?? weather.temp,
-          tempMax: weather.tempMax ?? weather.temp,
-          description: weather.description,
-          city: weather.city,
-          comment: weather.comment,
-        }
-      : null;
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.primary}
-            colors={[colors.primary]}
-          />
-        }
-      >
-        {/* 헤더 */}
-        <View style={styles.header}>
-          <Text style={[styles.greeting, { color: colors.text }]}>
-            {getGreeting()}
-          </Text>
-          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
-            {dayjs().format('M월 D일 dddd')}
-          </Text>
-        </View>
-
-        {/* 생성 중 인디케이터 */}
-        {generateMutation.isPending && (
-          <View style={styles.generatingRow}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={[styles.generatingText, { color: colors.textSecondary }]}>
-              브리핑 생성 중...
-            </Text>
-          </View>
-        )}
-
-        {/* 1. AI 요약 */}
-        {aiBriefing ? <BriefingAISummaryCard text={aiBriefing} /> : null}
-
-        {/* 2. 날씨 */}
-        {weatherLoading && !weatherProps ? (
-          <View style={styles.loadingCard}>
-            <ActivityIndicator size="small" color={colors.primary} />
-          </View>
-        ) : weatherProps ? (
-          <BriefingWeatherCard {...weatherProps} />
-        ) : null}
-
-        {/* 3. 뉴스 */}
-        {nd && nd.length > 0 ? <BriefingNewsCard items={nd} /> : null}
-
-        {/* 4. 주식 */}
-        {sd && sd.length > 0 ? <BriefingStockCard items={sd} /> : null}
-
-        {/* 5. 일정 */}
-        <BriefingScheduleCard
-          todaySchedules={todaySchedules}
-          tomorrowSchedules={tomorrowSchedules}
-        />
-
-        {/* digest 없고 생성 실패 시 수동 트리거 */}
-        {!digest && !generateMutation.isPending && (
-          <TouchableOpacity
-            style={[styles.manualBtn, { backgroundColor: colors.primary }]}
-            onPress={() => generateMutation.mutate({ input: buildInput() })}
-          >
-            <Ionicons name="sparkles-outline" size={16} color="#FFF" />
-            <Text style={styles.manualBtnText}>
-              {generateMutation.isError ? '다시 생성하기' : '브리핑 생성하기'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
-    </SafeAreaView>
-  );
+    return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }}/>}>
+  <View>
+    <Text style={[s.caption, { color: colors.primary, fontWeight: '700' }]}>내 기기에 머무는 일정 비서</Text>
+    <Text style={[s.heading, { color: colors.text, marginTop: 6 }]}>{new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}</Text>
+    <Text style={[s.subtitle, { color: colors.textSecondary, marginTop: 5 }]}>{dayjs(now).format('M월 D일 dddd')}</Text>
+    </View>
+  <AssistantButton label="텍스트 · 음성으로 일정 추가" icon="chatbubble-ellipses-outline" onPress={open}/>
+  <AssistantCard title="오늘의 브리핑">
+    <Text style={[s.body, { color: colors.text }]}>{refined || summary}</Text>
+    <Text style={[s.caption, { color: colors.textSecondary }]}>{refined ? '기기 내 Gemini Nano로 정리한 요약' : '저장된 일정으로 바로 만든 로컬 요약'}</Text>{ai.status === 'available' && <AssistantButton label="기기 AI로 다듬기" icon="sparkles-outline" secondary busy={busy} onPress={refine}/>}<Text style={[s.caption, { color: colors.textSecondary }]}>Gemini Nano · {ai.message}</Text>
+    </AssistantCard>
+  {next && <AssistantCard title="다음 일정">
+        <ScheduleItem schedule={next}/>
+        </AssistantCard>}
+  <AssistantCard title={`오늘 일정  ${todayItems.length}`}>
+   {schedules.isError ? <Text style={{ color: colors.danger }}>일정을 불러오지 못했어요. 아래로 당겨 다시 확인해 주세요.</Text> : todayItems.length ? todayItems.map(x => <ScheduleItem key={x.id} schedule={x}/>) : <Text style={[s.body, { color: colors.textSecondary }]}>아직 일정이 없어요. “내일 오전 9시 회의”처럼 입력해 보세요.</Text>}
+  </AssistantCard>
+  <AssistantCard title="선택한 외부 브리핑">
+    <Text style={[s.caption, { color: colors.textSecondary }]}>날씨·뉴스·주식은 설정에서 선택하고 직접 불러옵니다. 선택 항목과 지역·관심 종목은 외부 브리핑 서비스로 전송됩니다.</Text>
+    <AssistantButton label="외부 브리핑 불러오기" icon="cloud-outline" secondary busy={external.isPending} onPress={() => external.mutate({ input: { ownerId: uid ?? 'local', ownerType: 'device', dateKey: today, timezone: settings.timezone, types: settings.digestTypes, city: settings.digestCity, stockTickers: settings.stockTickers, newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage, allowExternal: true }, force: true })}/>{external.isError && <Text style={{ color: colors.danger }}>외부 정보를 가져오지 못했어요. 로컬 일정은 계속 사용할 수 있습니다.</Text>}</AssistantCard>
+  {external.data?.weatherData && <BriefingWeatherCard {...external.data.weatherData}/>}{external.data?.newsData && <BriefingNewsCard items={external.data.newsData}/>}{external.data?.stockData && <BriefingStockCard items={external.data.stockData}/>}
+ </ScrollView>;
 }
-
-/** 시간대별 인사말 */
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 6) return '새벽이네요';
-  if (h < 12) return '좋은 아침이에요';
-  if (h < 18) return '좋은 오후에요';
-  return '좋은 저녁이에요';
-}
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  content: { paddingTop: 12, paddingBottom: 24 },
-
-  header: { paddingHorizontal: 20, marginBottom: 12 },
-  greeting: { fontSize: 22, fontWeight: '700' },
-  dateLabel: { fontSize: 14, marginTop: 2 },
-
-  generatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  generatingText: { fontSize: 13 },
-
-  loadingCard: { alignItems: 'center', paddingVertical: 20 },
-
-  manualBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 20,
-    borderRadius: 12,
-    paddingVertical: 14,
-  },
-  manualBtnText: { color: '#FFF', fontSize: 15, fontWeight: '600' },
-});

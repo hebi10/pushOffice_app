@@ -7,7 +7,7 @@ const initialState: UserSettings = {
   pushEnabled: true,
   dailyBriefingEnabled: false,
   dailyBriefingTime: { hour: 8, minute: 0 },
-  digestTypes: { weather: true, stocks: false, news: false },
+  digestTypes: { weather: false, stocks: false, news: false },
   digestCity: 'Seoul',
   weatherRegion: null,
   stockTickers: [],

@@ -22,11 +22,13 @@ const REPEAT_LABEL: Record<string, string> = {
 export function ScheduleItem({ schedule }: Props) {
   const { colors } = useTheme();
   const startAt = schedule.startAt?.toDate?.() ?? new Date();
-  const time = dayjs(startAt).format('HH:mm');
+  const time = schedule.isAllDay ? '종일' : dayjs(startAt).format('HH:mm');
   const dateStr = dayjs(startAt).format('M월 D일 (ddd)');
 
   return (
     <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={`${schedule.title}, ${dateStr} ${time}, 일정 상세`}
       style={[
         styles.container,
         { backgroundColor: colors.surface, borderColor: colors.surfaceBorder },

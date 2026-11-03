@@ -7,7 +7,7 @@ interface StorageModeState {
 }
 
 const initialState: StorageModeState = {
-  mode: 'firebase',
+  mode: 'local',
   deviceKey: null,
 };
 

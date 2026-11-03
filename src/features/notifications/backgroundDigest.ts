@@ -5,6 +5,7 @@
  * 제약: 플랫폼에 따라 백그라운드 실행이 보장되지 않을 수 있음.
  * 최소 보장: 로컬 알림은 시간에 맞춰 울리고, 탭하면 앱에서 생성/표시.
  */
+import { isPushOfficeNativeAvailable } from '../../../modules/push-office-native';
 import * as BackgroundFetch from 'expo-background-fetch';
 import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
@@ -19,6 +20,7 @@ const BACKGROUND_DIGEST_TASK = 'BACKGROUND_DIGEST_TASK';
 /** 태스크 정의 */
 TaskManager.defineTask(BACKGROUND_DIGEST_TASK, async () => {
   try {
+    if (isPushOfficeNativeAvailable) return BackgroundFetch.BackgroundFetchResult.NoData;
     const mode = await getStorageMode();
     if (mode !== 'local') return BackgroundFetch.BackgroundFetchResult.NoData;
 
@@ -75,6 +77,7 @@ TaskManager.defineTask(BACKGROUND_DIGEST_TASK, async () => {
 
 /** 백그라운드 태스크 등록 */
 export async function registerBackgroundDigestTask(): Promise<void> {
+  if (isPushOfficeNativeAvailable) return;
   try {
     const isRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_DIGEST_TASK);
     if (isRegistered) return;
@@ -106,6 +109,7 @@ export async function scheduleLocalDigestNotification(
   hour: number,
   minute: number,
 ): Promise<string | null> {
+  if (isPushOfficeNativeAvailable) return null;
   try {
     // 기존 브리핑 알림 취소
     await cancelLocalDigestNotification();

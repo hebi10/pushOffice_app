@@ -1,0 +1,99 @@
+name: Android release bundle
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  bundle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Set up Java
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            package-lock.json
+            plugins/with-local-assistant.js
+            modules/push-office-native/android/build.gradle
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check release scripts and app
+        run: |
+          python3 -m unittest discover -s tools/ci -p 'test_*.py'
+          npm test
+          npm run typecheck
+          npx --no-install eslint app src plugins tests
+
+      - name: Install Android build packages
+        run: |
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            'platforms;android-36' \
+            'build-tools;36.0.0' \
+            'ndk;27.1.12297006' \
+            'cmake;3.22.1'
+
+      - name: Generate Android project with local Expo CLI
+        run: npx --no-install expo prebuild --platform android --clean --no-install
+
+      - name: Build release bundle with Gradle
+        working-directory: android
+        run: |
+          ./gradlew :app:bundleRelease \
+            --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+
+      # Secrets are available only to this finalization step, after dependency
+      # installation, prebuild, tests and Gradle have finished.
+      - name: Prepare and verify signed or explicitly unsigned bundle
+        id: release
+        env:
+          PUSH_OFFICE_KEYSTORE_BASE64: ${{ secrets.PUSH_OFFICE_KEYSTORE_BASE64 }}
+          PUSH_OFFICE_KEYSTORE_PASSWORD: ${{ secrets.PUSH_OFFICE_KEYSTORE_PASSWORD }}
+          PUSH_OFFICE_KEY_ALIAS: ${{ secrets.PUSH_OFFICE_KEY_ALIAS }}
+          PUSH_OFFICE_KEY_PASSWORD: ${{ secrets.PUSH_OFFICE_KEY_PASSWORD }}
+          PUSH_OFFICE_UPLOAD_CERT_SHA256: ${{ secrets.PUSH_OFFICE_UPLOAD_CERT_SHA256 }}
+        run: |
+          python3 tools/ci/release_aab.py \
+            --source android/app/build/outputs/bundle/release/app-release.aab \
+            --output-directory "$RUNNER_TEMP/push-office-artifacts"
+
+      - name: Upload verified bundle and verification report
+        uses: actions/upload-artifact@v7
+        with:
+          name: PushOffice-android-${{ steps.release.outputs.mode }}-${{ github.run_number }}
+          path: |
+            ${{ steps.release.outputs.artifact_path }}
+            ${{ steps.release.outputs.artifact_path }}.sha256
+            ${{ steps.release.outputs.report_path }}
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

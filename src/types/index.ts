@@ -46,6 +46,8 @@ export interface DigestTypes {
 export type RepeatType = 'none' | 'monthly' | 'yearly';
 
 export interface ScheduleDoc {
+  /** Native canonical IANA zone of the immutable recurrence anchor. */
+  anchorZone?: string;
   id?: string;
   userId: string;
   type: ScheduleType;
@@ -71,7 +73,7 @@ export interface DigestDoc {
   title: string;
   summary: string;
   contentMarkdown: string;
-  sources: Array<{ label: string; url?: string }>;
+  sources: { label: string; url?: string }[];
   createdAt: number;
   updatedAt: number;
 
@@ -87,19 +89,19 @@ export interface DigestDoc {
   } | null;
 
   /** 구조화된 뉴스 데이터 */
-  newsData?: Array<{
+  newsData?: {
     title: string;
     description: string;
     source: string;
     url?: string;
-  }> | null;
+  }[] | null;
 
   /** 구조화된 주식 데이터 */
-  stockData?: Array<{
+  stockData?: {
     symbol: string;
     price: string;
     changePercent: string;
-  }> | null;
+  }[] | null;
 
   /** AI 한줄 브리핑 (3~5문장) */
   aiBriefing?: string;

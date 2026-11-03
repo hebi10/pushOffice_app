@@ -14,7 +14,6 @@ import {
     localGetDigestsByMonth,
     localSaveDigest,
 } from './localStore';
-import { getStorageMode } from './storageMode';
 
 export interface DigestAdapter {
   getAll(ownerId: string): Promise<DigestDoc[]>;
@@ -37,11 +36,8 @@ const localAdapter: DigestAdapter = {
   save: localSaveDigest,
 };
 
-/** 현재 모드에 맞는 DigestAdapter 반환 */
-export async function getDigestAdapter(): Promise<DigestAdapter> {
-  const mode = await getStorageMode();
-  return mode === 'local' ? localAdapter : firebaseAdapter;
-}
+/** Normal app digests always remain local; a pending source never selects cloud persistence. */
+export async function getDigestAdapter(): Promise<DigestAdapter> { return localAdapter; }
 
 /** 명시적으로 모드를 지정 */
 export function getDigestAdapterByMode(mode: 'firebase' | 'local'): DigestAdapter {
