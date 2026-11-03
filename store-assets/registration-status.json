@@ -2,15 +2,61 @@
   "package": "com.hebi96.pushOffice_app",
   "version": "1.1.0",
   "version_code": 3,
-  "console_completed_tasks": 7,
+  "console_completed_tasks": 10,
   "console_total_tasks": 11,
+  "console_task_count_status": "verified_dashboard_capture_saved",
+  "console_remaining_task": "content_rating_iarc_terms_unchecked",
   "store_listing": "saved_ready_to_send_for_review",
   "aab_uploaded": false,
   "aab_signing": "pending_existing_upload_key",
-  "unsigned_aab_sha256": "9bd3019f930894be116c8d4636d722034618093432a1e10025f60ab2a46f6ec4",
+  "unsigned_aab_sha256": "244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903",
   "internal_release_url": "https://play.google.com/console/u/0/developers/5537932067090246638/app/4973839358608212790/tracks/4701347459059543444/releases/4/prepare",
-  "privacy_policy": "draft_not_published",
-  "data_safety": "partial_draft",
-  "support_email": "pending_user_input",
-  "iarc_terms_accepted": false
+  "privacy_policy": "published_public_access_verified_console_url_saved",
+  "privacy_policy_url": "https://hebi10.github.io/pushOffice_app/privacy/",
+  "privacy_policy_local_source": "docs/privacy/index.html",
+  "privacy_policy_store_copy": "store-assets/privacy-policy-draft.ko.html",
+  "privacy_policy_store_copy_status": "final_same_as_public_source_legacy_filename",
+  "github_main_commit": "27cec8350052133916dd98978a280d40cc0fffd0",
+  "github_main_commit_url": "https://github.com/hebi10/pushOffice_app/commit/27cec8350052133916dd98978a280d40cc0fffd0",
+  "data_safety": "final_saved_not_sent_for_review",
+  "data_safety_build_scope": {
+    "expo_no_dotenv": true,
+    "external_backend_env_injected": false,
+    "firebase_env_injected": false
+  },
+  "data_safety_answers": {
+    "collected_types": [
+      "device_or_other_ids",
+      "diagnostics"
+    ],
+    "shared": false,
+    "ephemeral_processing": false,
+    "required": true,
+    "purposes": [
+      "analytics"
+    ],
+    "all_data_encrypted_in_transit": true,
+    "new_account_creation": false,
+    "external_sign_in": false,
+    "data_deletion_request_badge": false,
+    "deletion_badge_note": "Manual email inquiries exist; no operator-controlled guarantee to delete Google SDK diagnostics."
+  },
+  "support_email": "asdlkj0104@gmail.com",
+  "support_email_status": "saved_and_published",
+  "build_provider": "github_actions_not_expo_eas",
+  "github_actions": {
+    "run_id": 41588844929,
+    "url": "https://github.com/hebi10/pushOffice_app/actions/runs/41588844929",
+    "last_reported_status": "completed",
+    "last_reported_stage": "verified_unsigned_artifact_uploaded",
+    "conclusion": "success",
+    "artifact_id": 13209608492,
+    "artifact_url": "https://github.com/hebi10/pushOffice_app/actions/runs/41588844929/artifacts/13209608492",
+    "gradle_build_duration": "19m 18s"
+  },
+  "unsigned_aab_role": "verified_github_build_signing_pending_not_for_play_upload",
+  "review_submitted": false,
+  "iarc_terms_accepted": false,
+  "previous_local_unsigned_aab_sha256": "9bd3019f930894be116c8d4636d722034618093432a1e10025f60ab2a46f6ec4",
+  "unsigned_aab_size_bytes": 62295369
 }

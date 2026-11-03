@@ -13,6 +13,14 @@ Expo Go에는 앱 전용 네이티브 모듈이 없습니다. Android developmen
 
 `plugins/with-local-assistant.js`가 prebuild 때 `android.minSdkVersion=26`, `android.kotlinVersion=2.4.0`을 유지합니다. 루트 Kotlin Gradle plugin도 해당 속성으로 명시적으로 버전을 선택하며, Expo 루트 플러그인 적용 전에 `ext.kspVersion=2.3.10`을 설정합니다. Kotlin 2.4.0은 ML Kit GenAI beta5의 Kotlin 메타데이터에 맞춘 컴파일러 설정이며 Expo SDK는 54를 유지합니다. `app.json`의 `android.allowBackup=false`도 생성된 Android 앱에 적용됩니다.
 
+## GitHub에서 AAB 빌드
+
+[Android release bundle](https://github.com/hebi10/pushOffice_app/actions/workflows/android-release.yml)의 **Run workflow**로 빌드합니다. EAS 서비스와 Expo 로그인 없이, 저장소의 Expo CLI로 Android 프로젝트를 생성하고 Gradle을 실행합니다. 기존 업로드 키가 없으면 결과는 명시적인 미서명 AAB이며 Play 업로드용으로 사용할 수 없습니다. 서명 키 설정과 인증서 검증 방법은 [CI 안내](tools/ci/README.md)에 있습니다.
+
+현재 GitHub 빌드는 `.env`를 읽지 않으며 외부 브리핑·Firebase 환경값을 주입하지 않습니다. 외부 기능을 활성화할 때는 실제 서버 처리와 Play 데이터 보안 답변을 다시 확인해야 합니다.
+
+[개인정보처리방침](https://hebi10.github.io/pushOffice_app/privacy/) · 지원: [asdlkj0104@gmail.com](mailto:asdlkj0104@gmail.com). 앱 설정에서도 방침과 지원 문의를 열 수 있습니다.
+
 ## 사용
 
 - 홈에서 오늘의 로컬 브리핑과 다음 일정을 확인하고 **텍스트 · 음성으로 일정 추가**를 누릅니다.
