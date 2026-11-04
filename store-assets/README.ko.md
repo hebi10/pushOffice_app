@@ -31,7 +31,7 @@ release-notes-ko-KR.txt: 내부 테스트 출시 노트
 
 GitHub Actions 실행 [41588844929](https://github.com/hebi10/pushOffice_app/actions/runs/41588844929)가 전체 성공했습니다. EAS 없이 Gradle 빌드(19분 18초), 미서명 AAB 검증과 artifact 게시까지 통과했습니다. [결과 파일](https://github.com/hebi10/pushOffice_app/actions/runs/41588844929/artifacts/13209608492)의 AAB는 62,295,369바이트, SHA-256 `244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903`입니다. 기존 로컬 62,345,073바이트 준비본은 이전 참고 자료입니다.
 
-사용자가 제공한 새 업로드 키로 이전 코드의 AAB 서명 검증을 완료했습니다. 이후 요청한 위젯·빠른 입력 디자인 변경은 이전 파일에 포함되지 않으므로 수정된 소스로 다시 빌드해야 합니다. 최신 검증 내용은 `docs/verification/2026-11-04-native-entry-design.md`를 기준으로 확인합니다.
+위젯·빠른 입력 디자인을 포함한 수정본을 다시 빌드하고 사용자가 제공한 새 업로드 키로 APK·AAB 서명 검증을 완료했습니다. `PushOffice-v1.1.0-code3-ui-signed.apk`와 `PushOffice-v1.1.0-code3-ui-signed.aab`는 ARM64·ARMv7·x86_64를 포함하며 16KB 정렬을 검증했습니다. AAB의 bundletool·단일 서명·서명 전후 앱 payload 일치도 확인했습니다. 이전 `PushOffice-v1.1.0-code3-signed.aab`에는 이번 디자인 변경이 없으므로 사용하지 않습니다. 최신 검증 내용은 `docs/verification/2026-11-04-native-entry-design.md`를 기준으로 확인합니다.
 
 2026-11-04 Play Console에서 새 업로드 키가 **2026-11-06 12:32 KST부터 유효**하다는 안내를 직접 확인했습니다. 내부 테스트는 1.0.1(코드 2)을 제공하며 1.1.0 초안에는 AAB가 없습니다. 비공개 테스트도 아직 미배포입니다. 키 활성화 후 최종 수정본 AAB를 업로드하고 내부 테스트 출시를 완료해야 합니다. Play 검토는 전송하지 않았습니다.
 

@@ -8,16 +8,16 @@
   "console_remaining_task": null,
   "store_listing": "saved_ready_to_send_for_review",
   "aab_uploaded": false,
-  "aab_signing": "signed_with_exported_eas_key_play_upload_key_reset_pending",
-  "unsigned_aab_sha256": "244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903",
+  "aab_signing": "latest_native_ui_signed_locally_play_upload_key_activation_pending",
+  "unsigned_aab_sha256": "c686a89cc886a3790ca779506b26762c421990c54818a30bfafafd75aa549534",
   "internal_release_url": "https://play.google.com/console/u/0/developers/5537932067090246638/app/4973839358608212790/tracks/4701347459059543444/releases/4/prepare",
   "privacy_policy": "published_public_access_verified_console_url_saved",
   "privacy_policy_url": "https://hebi10.github.io/pushOffice_app/privacy/",
   "privacy_policy_local_source": "docs/privacy/index.html",
   "privacy_policy_store_copy": "store-assets/privacy-policy-draft.ko.html",
   "privacy_policy_store_copy_status": "final_same_as_public_source_legacy_filename",
-  "github_main_commit": "27cec8350052133916dd98978a280d40cc0fffd0",
-  "github_main_commit_url": "https://github.com/hebi10/pushOffice_app/commit/27cec8350052133916dd98978a280d40cc0fffd0",
+  "github_main_commit": "75dedb4f11948850ed48ce5a60fed1d246762faf",
+  "github_main_commit_url": "https://github.com/hebi10/pushOffice_app/commit/75dedb4f11948850ed48ce5a60fed1d246762faf",
   "data_safety": "final_saved_not_sent_for_review",
   "data_safety_build_scope": {
     "expo_no_dotenv": true,
@@ -43,7 +43,7 @@
   },
   "support_email": "asdlkj0104@gmail.com",
   "support_email_status": "saved_and_published",
-  "build_provider": "github_actions_not_expo_eas",
+  "build_provider": "local_gradle_from_verified_github_source",
   "github_actions": {
     "run_id": 41588844929,
     "url": "https://github.com/hebi10/pushOffice_app/actions/runs/41588844929",
@@ -52,13 +52,14 @@
     "conclusion": "success",
     "artifact_id": 13209608492,
     "artifact_url": "https://github.com/hebi10/pushOffice_app/actions/runs/41588844929/artifacts/13209608492",
-    "gradle_build_duration": "19m 18s"
+    "gradle_build_duration": "19m 18s",
+    "scope": "historical_build_before_native_ui_design_changes"
   },
-  "unsigned_aab_role": "verified_github_build_source_for_locally_signed_aab",
+  "unsigned_aab_role": "verified_latest_native_ui_local_gradle_build_source_for_locally_signed_aab",
   "review_submitted": false,
   "iarc_terms_accepted": true,
   "previous_local_unsigned_aab_sha256": "9bd3019f930894be116c8d4636d722034618093432a1e10025f60ab2a46f6ec4",
-  "unsigned_aab_size_bytes": 62295369,
+  "unsigned_aab_size_bytes": 62301352,
   "console_task_count_evidence": "Previously observed dashboard 10/11; final content rating saved; app setup card disappeared and closed testing stage became active. No new numeric 11/11 label was observed.",
   "app_setup_card_visible": false,
   "console_workflow_stage": "closed_testing_stage_active",
@@ -121,7 +122,7 @@
     "submitted_by_user": true,
     "submitted_at_utc": "2026-11-04T03:32:00Z",
     "submitted_at_kst": "2026-11-04T12:32:00+09:00",
-    "console_status": "upload_key_reset_request_pending_observed",
+    "console_status": "activation_time_reconfirmed_in_console_2026-11-04",
     "activation_confirmation_source": "google_play_confirmation_email",
     "effective_at_utc": "2026-11-06T03:32:00Z",
     "effective_at_kst": "2026-11-06T12:32:00+09:00",
@@ -131,25 +132,22 @@
     "play_upload_status": "blocked_until_activation_and_console_recheck"
   },
   "signed_aab": {
-    "filename": "PushOffice-v1.1.0-code3-signed.aab",
-    "size_bytes": 62453770,
-    "sha256": "0cf9f610b90070e30ae2ded64c88d26cd19e840c07fa9e87951968d0bb592565",
-    "signing_status": "signed_locally_pending_play_upload_key_activation",
-    "signing_certificate_sha256": "77:04:A1:A8:A8:92:77:01:A6:F8:6F:E5:10:0C:63:3A:0D:E5:A0:38:D4:1A:A7:C6:5C:8A:56:15:0D:F5:58:45",
-    "source_unsigned_aab_sha256": "244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903",
-    "source_unsigned_aab_size_bytes": 62295369,
+    "filename": "PushOffice-v1.1.0-code3-ui-signed.aab",
+    "size_bytes": 62459872,
+    "sha256": "000f3e008652528821495b474cd9e08cfd4e42797df6ac0ea37c95dacd208a76",
+    "source_commit": "75dedb4f11948850ed48ce5a60fed1d246762faf",
+    "signing_status": "signed_verified_pending_play_upload_key_activation",
+    "signing_certificate_sha256": "7704A1A8A8927701A6F86FE5100C633A0DE5A038D41AA7C65C8A56150DF55845",
+    "source_unsigned_aab_sha256": "c686a89cc886a3790ca779506b26762c421990c54818a30bfafafd75aa549534",
+    "source_unsigned_aab_size_bytes": 62301352,
     "verification": {
       "jarsigner": "passed",
       "jarsigner_strict": "passed",
       "signer_count": 1,
-      "payload_entries_compared": 1452,
       "payload_entries_unchanged": true,
       "elf_64bit_files_checked": 46,
       "elf_64bit_load_alignment": "16KB",
-      "bundletool": {
-        "original_unsigned_github_build": "passed",
-        "rerun_after_signing": false
-      }
+      "bundletool": "passed_on_final_signed_aab"
     },
     "play_uploaded": false
   },
@@ -217,5 +215,31 @@
     "existing_feature_graphic_selected": true,
     "existing_icon_and_feature_graphic_origin": "derived_from_previously_generated_mark",
     "read_only_selected_declaration_and_disabled_save_verified": true
+  },
+  "latest_native_ui_release": {
+    "version": "1.1.0",
+    "version_code": 3,
+    "source_commit": "75dedb4f11948850ed48ce5a60fed1d246762faf",
+    "abis": [
+      "arm64-v8a",
+      "armeabi-v7a",
+      "x86_64"
+    ],
+    "signed_aab": "PushOffice-v1.1.0-code3-ui-signed.aab",
+    "signed_apk": "PushOffice-v1.1.0-code3-ui-signed.apk",
+    "signed_apk_sha256": "605628f71236db4b87602b13115f7cc92f7b371f5e5ea3b230785c55dd3c5301",
+    "signed_apk_size_bytes": 90598496,
+    "apk_signature_verified": true,
+    "apk_16kb_alignment_verified": true,
+    "apk_can_update_play_installation": false,
+    "verification_document": "docs/verification/2026-11-04-native-entry-design.md",
+    "play_internal_available_version": "1.0.1",
+    "play_internal_available_version_code": 2,
+    "play_latest_draft_version": "1.1.0",
+    "play_latest_draft_has_aab": false,
+    "closed_testing_released": false,
+    "play_upload_performed": false,
+    "play_upload_not_before_kst": "2026-11-06T12:32:00+09:00",
+    "play_console_observed_on": "2026-11-04"
   }
 }

@@ -25,7 +25,7 @@ Scope: the two Android home-screen widgets, the Quick Settings tile label/subtit
 
 The first current-source full instrumentation run completed 15 of 16 tests successfully. Its sole failure was the voice editor's active-window assertion (`active=android`). Inspection immediately after the failure found an Android system dialog titled **System UI isn't responding**, owned by `com.android.systemui`, rather than an app or microphone-permission dialog. The assertion was retained. The system dialog, window dump and exact test log were preserved before recovery of the isolated emulator.
 
-The unchanged full default-font suite passed **16/16** after dismissing the observed SystemUI dialog. In the 2×-font chooser group, four tests passed and the voice test could not observe the active accessibility root. A targeted run of that same voice test then passed **1/1**, including the recording safeguard, unchanged microphone permission and app/keyboard active-window assertions. The grouped failure is retained as a software-emulator/accessibility timing limitation; it is not reported as a clean five-test group. The tablet 2×-font chooser width/scroll check passed **1/1**. The original 1600×2560 request was clamped by this emulator to 1440×2560; the final check explicitly used that supported size (~823 dp width). Final release screenshots are pending the release build.
+The unchanged full default-font suite passed **16/16** after dismissing the observed SystemUI dialog. In the 2×-font chooser group, four tests passed and the voice test could not observe the active accessibility root. A targeted run of that same voice test then passed **1/1**, including the recording safeguard, unchanged microphone permission and app/keyboard active-window assertions. The grouped failure is retained as a software-emulator/accessibility timing limitation; it is not reported as a clean five-test group. The tablet 2×-font chooser width/scroll check passed **1/1**. The original 1600×2560 request was clamped by this emulator to 1440×2560; the final check explicitly used that supported size (~823 dp width). Final signed release screenshots were captured and visually inspected after installation; see below.
 
 ## Environment and limits
 
@@ -36,3 +36,15 @@ The previous signed AAB predates this native UI change. Final release artifacts 
 ## Source and evidence
 
 All native source and test files remained unchanged during this recovery/validation session. The tested native APK SHA-256 is `eb4a85b7a9da5dd53998bb728acaeac9bef546cd43aeecec3fe8d8a074466b57`. The successful 16-test, isolated voice and tablet checks are recorded separately; the failed grouped large-font attempt was preserved, not overwritten.
+
+## Final signed release and captures
+
+The final signed APK was installed successfully on the isolated emulator. Its SHA-256 is `605628f71236db4b87602b13115f7cc92f7b371f5e5ea3b230785c55dd3c5301`. The release verification report confirms package/version 1.1.0 / code 3, `debuggable=false`, ARM64 / ARMv7 / x86_64, valid APK signature, unchanged non-signature payloads, ZIP 16 KB alignment and 16 KB ELF alignment for the checked 64-bit libraries.
+
+Three original 720×1600 device screenshots were captured and visually inspected: the actual Push Office Quick Settings tile, the actual signed input chooser, and the actual signed agenda widget hosted by stock Launcher3. The widget host dump identifies `com.hebi96.pushOffice_app/expo.modules.pushoffice.ScheduleAgendaWidgetProvider`; an instrumentation test widget was not used. The agenda displays the two sample events and adjacent text/voice actions. Screenshots use three sample schedules and an isolated emulator clock before 15:00 KST.
+
+The capture package is `PushOffice-v1.1.0-ui-captures.zip` and includes original PNGs and capture/host evidence. These are raw app/device captures, not replacement Play explanatory artwork.
+
+The signed chooser was opened directly through its real Activity using root ADB on the disposable emulator. A SystemUI ANR recurred after the signed tile was tapped, so the final signed-app capture does **not** establish a successful tile-to-chooser path. The actual tile label/subtitle and direct chooser UI are confirmed separately. No app crash was established by this evidence. The system dialog was dismissed once for the remaining captures; no further environment resets or test loops were performed after the successful captures.
+
+Play publication remains separate from this local installation: the upload-key activation blocker and current track status are recorded in `store-assets/registration-status.json`.
