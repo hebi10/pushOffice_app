@@ -81,10 +81,23 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply {
       text=getString(R.string.tile_label); textSize=12f; setTextColor(blue); setTypeface(null,Typeface.BOLD)
     })
-    root.addView(TextView(this).apply {
-      text=getString(R.string.quick_entry_title); textSize=22f; setTextColor(Color.rgb(17,24,39))
-      setTypeface(null,Typeface.BOLD); setPadding(0,dp(8),0,dp(6))
-    })
+    val chooserHeading=LinearLayout(this).apply {
+      orientation=LinearLayout.HORIZONTAL
+      gravity=Gravity.CENTER_VERTICAL
+    }
+    chooserHeading.addView(TextView(this).apply {
+      text=getString(R.string.quick_entry_title)
+      textSize=22f
+      setTextColor(Color.rgb(17,24,39))
+      setTypeface(null,Typeface.BOLD)
+      setPadding(0,dp(8),0,dp(6))
+    }, LinearLayout.LayoutParams(0,-2,1f))
+    chooserHeading.addView(ImageView(this).apply {
+      setImageResource(R.drawable.quick_entry_illustration)
+      scaleType=ImageView.ScaleType.CENTER_CROP
+      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    }, LinearLayout.LayoutParams(dp(64),dp(56)))
+    root.addView(chooserHeading)
     root.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(Color.rgb(75,85,99))
       setPadding(0,0,0,dp(12))
