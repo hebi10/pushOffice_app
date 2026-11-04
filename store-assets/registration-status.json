@@ -8,7 +8,7 @@
   "console_remaining_task": null,
   "store_listing": "saved_ready_to_send_for_review",
   "aab_uploaded": false,
-  "aab_signing": "pending_existing_upload_key",
+  "aab_signing": "signed_with_exported_eas_key_play_upload_key_reset_pending",
   "unsigned_aab_sha256": "244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903",
   "internal_release_url": "https://play.google.com/console/u/0/developers/5537932067090246638/app/4973839358608212790/tracks/4701347459059543444/releases/4/prepare",
   "privacy_policy": "published_public_access_verified_console_url_saved",
@@ -54,7 +54,7 @@
     "artifact_url": "https://github.com/hebi10/pushOffice_app/actions/runs/41588844929/artifacts/13209608492",
     "gradle_build_duration": "19m 18s"
   },
-  "unsigned_aab_role": "verified_github_build_signing_pending_not_for_play_upload",
+  "unsigned_aab_role": "verified_github_build_source_for_locally_signed_aab",
   "review_submitted": false,
   "iarc_terms_accepted": true,
   "previous_local_unsigned_aab_sha256": "9bd3019f930894be116c8d4636d722034618093432a1e10025f60ab2a46f6ec4",
@@ -95,13 +95,17 @@
   },
   "existing_upload_key_checks": {
     "github_repository_secrets_ui": "only_public_upload_certificate_pin_registered_four_private_signing_secrets_pending",
-    "local_task_workspace": "not_found",
-    "expo_stored_key_lookup": "existing_project_and_android_upload_keystore_entry_observed_export_not_confirmed",
+    "local_task_workspace": "user_supplied_push_office_keystore_verified",
+    "expo_stored_key_lookup": "one_existing_android_credential_entry_observed_and_push_office_keystore_export_verified",
     "previous_automatic_review_reason": "User preference for GitHub and sensitive upload-key access.",
     "expo_access_approval": "explicitly_approved_by_user_2026-11-04",
-    "play_certificate_match": "not_yet_verified_against_expo_keystore"
+    "play_certificate_match": "mismatch_verified_between_current_play_upload_certificate_and_exported_eas_keystore",
+    "current_play_upload_certificate_sha256": "AE:10:E3:7E:FA:71:64:1A:54:49:0F:0A:24:95:77:3D:41:E9:13:18:51:52:DF:32:4B:63:77:6A:6F:A2:F5:91",
+    "exported_eas_keystore_certificate_sha256": "77:04:A1:A8:A8:92:77:01:A6:F8:6F:E5:10:0C:63:3A:0D:E5:A0:38:D4:1A:A7:C6:5C:8A:56:15:0D:F5:58:45",
+    "expo_android_credential_entries_observed": 1,
+    "github_upload_certificate_pin_status": "still_previous_play_upload_certificate_four_private_signing_secrets_not_registered"
   },
-  "signed_aab_available": false,
+  "signed_aab_available": true,
   "signing_workflow_rerun_after_key_check": false,
   "github_signing_secret_names_present": [
     "PUSH_OFFICE_UPLOAD_CERT_SHA256"
@@ -111,5 +115,42 @@
     "PUSH_OFFICE_KEYSTORE_PASSWORD",
     "PUSH_OFFICE_KEY_ALIAS",
     "PUSH_OFFICE_KEY_PASSWORD"
-  ]
+  ],
+  "upload_key_reset": {
+    "status": "pending_activation",
+    "submitted_by_user": true,
+    "submitted_at_utc": "2026-11-04T03:32:00Z",
+    "submitted_at_kst": "2026-11-04T12:32:00+09:00",
+    "console_status": "upload_key_reset_request_pending_observed",
+    "activation_confirmation_source": "google_play_confirmation_email",
+    "effective_at_utc": "2026-11-06T03:32:00Z",
+    "effective_at_kst": "2026-11-06T12:32:00+09:00",
+    "previous_upload_certificate_sha256": "AE:10:E3:7E:FA:71:64:1A:54:49:0F:0A:24:95:77:3D:41:E9:13:18:51:52:DF:32:4B:63:77:6A:6F:A2:F5:91",
+    "new_upload_certificate_sha1": "80:0E:D8:83:D0:59:5A:93:43:04:65:89:6B:F6:23:5B:57:24:18:2D",
+    "new_upload_certificate_sha256": "77:04:A1:A8:A8:92:77:01:A6:F8:6F:E5:10:0C:63:3A:0D:E5:A0:38:D4:1A:A7:C6:5C:8A:56:15:0D:F5:58:45",
+    "play_upload_status": "blocked_until_activation_and_console_recheck"
+  },
+  "signed_aab": {
+    "filename": "PushOffice-v1.1.0-code3-signed.aab",
+    "size_bytes": 62453770,
+    "sha256": "0cf9f610b90070e30ae2ded64c88d26cd19e840c07fa9e87951968d0bb592565",
+    "signing_status": "signed_locally_pending_play_upload_key_activation",
+    "signing_certificate_sha256": "77:04:A1:A8:A8:92:77:01:A6:F8:6F:E5:10:0C:63:3A:0D:E5:A0:38:D4:1A:A7:C6:5C:8A:56:15:0D:F5:58:45",
+    "source_unsigned_aab_sha256": "244f71614e52014bc39bc160c045c52a9c2e8f7c9e46dd4d1c29a0af96a8f903",
+    "source_unsigned_aab_size_bytes": 62295369,
+    "verification": {
+      "jarsigner": "passed",
+      "jarsigner_strict": "passed",
+      "signer_count": 1,
+      "payload_entries_compared": 1452,
+      "payload_entries_unchanged": true,
+      "elf_64bit_files_checked": 46,
+      "elf_64bit_load_alignment": "16KB",
+      "bundletool": {
+        "original_unsigned_github_build": "passed",
+        "rerun_after_signing": false
+      }
+    },
+    "play_uploaded": false
+  }
 }
