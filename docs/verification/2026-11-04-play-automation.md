@@ -4,7 +4,7 @@ The user authorized APK/AAB builds, default internal-test delivery and manually 
 
 ## Verified locally
 
-- Python release tests: 69 passed. These cover track resolution and forbidden destinations, version inventory/races, empty and nonempty drafts, upload integrity, uncertain commit state, cleanup, certificate guards, metadata and release policy.
+- Python release tests: 75 passed. These cover track resolution and forbidden destinations, version inventory/races, empty and nonempty drafts, upload integrity, uncertain commit state, cleanup, certificate guards, metadata and release policy.
 - Four actual workflow Bash command/target combinations were exercised with a CLI shim. Internal mode omits `--closed-track` even if a closed-track variable is configured; explicit closed mode forwards it.
 - Existing application tests: 50 passed. TypeScript and ESLint passed, with existing npm configuration warnings.
 - The portable AAB signer was exercised on the real three-ABI bundle with the already supplied upload key; bundletool, certificate and signature validation passed.
@@ -24,4 +24,4 @@ The current `Hebi-App-Release-Setup-2026-11-04.json` records the existing projec
 
 The four private `PUSH_OFFICE_*` signing Secrets must be present before an actual Actions build can proceed. This session has the supplied key locally but cannot register the Secrets while the originating browser connection is unavailable. Values were not printed or committed. The approved public certificate pin is fixed in the workflow rather than using the old pin Secret.
 
-The first main-branch workflow run will separately establish live WIF/Play connectivity and actual signing-setting availability. Until that run is observed, this record does not claim live Actions signing or Play upload success. Before key activation, a successful signed build is explicitly deferred rather than published. Google review/tester availability is separate from an accepted API edit.
+The first main-branch run (41795858564) passed all 69 then-current tests and successfully authenticated the existing WIF app account. Play preflight encountered a valid track identifier outside the initial ASCII assumptions. Inventory now accepts printable server IDs (including localized/space names); exact selected track names use canonical UTF-8 path encoding. Six regression tests and a scoped independent review passed. The follow-up run will establish complete Play inventory and actual signing-setting availability; live Actions signing or Play upload is not yet claimed. Before key activation, a successful signed build is explicitly deferred rather than published. Google review/tester availability is separate from an accepted API edit.

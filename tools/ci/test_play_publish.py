@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 from urllib.error import HTTPError
-from urllib.parse import urlsplit
+from urllib.parse import unquote, urlsplit
 from zipfile import ZipFile
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -91,7 +91,7 @@ class PlayServer:
             self.tracks = self.edits.pop(edit_id)
             return Response({'id': edit_id, 'expiryTimeSeconds': '9999999999'})
         if method == 'GET' and '/tracks/' in path:
-            name = path.rsplit('/', 1)[1]
+            name = unquote(path.rsplit('/', 1)[1], errors='strict')
             return Response(next(item for item in tracks if item['track'] == name))
         raise AssertionError(f'Unexpected request: {method} {path}')
 
@@ -169,6 +169,68 @@ class PlayTests(unittest.TestCase):
         config['expo']['android']['versionCode'] = 20
         self.config.write_text(json.dumps(config))
         self.assertEqual(self.preflight()['next_version_code'], 20)
+
+    def test_internal_inventory_accepts_localized_space_and_form_factor_tracks(self):
+        self.server.tracks.extend([
+            {'track': '비공개 테스트', 'releases': [{'status': 'completed', 'versionCodes': ['20']}]},
+            {'track': 'Closed testing 2026', 'releases': [{'status': 'draft', 'versionCodes': ['21']}]},
+            {'track': 'wear:production', 'releases': [{'status': 'completed', 'versionCodes': ['22']}]},
+        ])
+        result = self.preflight()
+        self.assertEqual(result['api_track'], 'qa')
+        self.assertEqual(result['next_version_code'], 23)
+        self.assertEqual(result['available_track_ids'], [
+            'qa', 'production', 'closed-test', '비공개 테스트', 'Closed testing 2026', 'wear:production'])
+        self.assertEqual(self.server.deleted, ['e1'])
+
+    def test_invalid_or_duplicate_localized_inventory_is_rejected_with_cleanup(self):
+        for names in (['qa', '비공개', '비공개'], ['qa', ''], ['qa', '   '], ['qa', None],
+                      ['qa', '닫힌\n테스트'], ['qa', '닫힌\x7f테스트'], ['qa', '닫힌\u200b테스트']):
+            with self.subTest(names=names):
+                server = PlayServer(tracks=[{'track': name, 'releases': []} for name in names])
+                with self.assertRaises(play.ReleaseError):
+                    play.preflight(play.PlayClient('token', transport=server), 'internal', app_config=self.config)
+                self.assertEqual(server.deleted, ['e1'])
+
+    def test_exact_localized_closed_track_publishes_through_encoded_path_and_readback(self):
+        self.server.tracks.append({'track': '비공개 테스트', 'releases': []})
+        result = play.preflight(self.client, 'closed', closed_track='비공개 테스트', app_config=self.config)
+        self.assertEqual(result['api_track'], '비공개 테스트')
+        result = play.publish(self.client, 'closed', closed_track='비공개 테스트', bundle=self.bundle,
+                              verification=self.verification, notes=self.notes)
+        self.assertEqual(result['status'], 'committed')
+        self.assertEqual(self.server.deleted, ['e1', 'e3'])
+        self.assertIn(('PUT', EDITS + '/e2/tracks/%EB%B9%84%EA%B3%B5%EA%B0%9C%20%ED%85%8C%EC%8A%A4%ED%8A%B8'),
+                      [(method, path) for method, path, _ in self.server.calls])
+        self.assertIn(('GET', EDITS + '/e3/tracks/%EB%B9%84%EA%B3%B5%EA%B0%9C%20%ED%85%8C%EC%8A%A4%ED%8A%B8'),
+                      [(method, path) for method, path, _ in self.server.calls])
+
+    def test_closed_track_names_with_spaces_require_exact_existing_match(self):
+        self.server.tracks.append({'track': 'Closed testing (한국)', 'releases': []})
+        result = play.preflight(self.client, 'closed', closed_track='Closed testing (한국)', app_config=self.config)
+        self.assertEqual(result['api_track'], 'Closed testing (한국)')
+        with self.assertRaises(play.ReleaseError):
+            play.preflight(self.client, 'closed', closed_track='closed testing (한국)', app_config=self.config)
+
+    def test_existing_closed_names_cannot_select_reserved_form_factor_or_routing_paths(self):
+        for name in ('Production', ' production ', 'Beta', 'QA', 'INTERNAL', 'wear:닫힌 테스트',
+                     '../qa', '/qa', '닫힌/테스트', '닫힌\\테스트', '닫힌?track=production',
+                     '닫힌#production', '%2Fproduction', '닫힌%20테스트', '.', '..'):
+            with self.subTest(name=name):
+                server = PlayServer(tracks=[{'track': 'qa'}, {'track': name}])
+                with self.assertRaises(play.ReleaseError):
+                    play.preflight(play.PlayClient('token', transport=server), 'closed',
+                                   closed_track=name, app_config=self.config)
+                self.assertEqual(server.calls, [])
+
+    def test_track_request_refuses_encoded_routing_paths_and_noncanonical_encoding(self):
+        edit = self.client.create_edit()
+        for name in ('%2E%2E', '%2Fproduction', '%252Fproduction', '%FF', '%eb%b9%84',
+                     'qa?track=production', '닫힌 테스트', '%ZZ'):
+            with self.subTest(name=name):
+                with self.assertRaises(play.ReleaseError):
+                    self.client.request('GET', edit + '/tracks/' + name)
+        self.assertEqual(len(self.server.calls), 1)
 
     def test_internal_requires_exactly_one_existing_alias(self):
         for tracks in ([], [{'track': 'qa'}, {'track': 'internal'}], [{'track': 'Internal'}]):

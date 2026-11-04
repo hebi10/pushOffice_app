@@ -10,7 +10,7 @@ from pathlib import Path
 import re
 import sys
 from urllib.error import HTTPError, URLError
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 from zipfile import BadZipFile
 
@@ -21,7 +21,6 @@ PACKAGE = release_aab.PACKAGE
 UPLOAD_CERT_SHA256 = '7704A1A8A8927701A6F86FE5100C633A0DE5A038D41AA7C65C8A56150DF55845'
 ROOT = 'https://androidpublisher.googleapis.com'
 EDITS = f'/androidpublisher/v3/applications/{PACKAGE}/edits'
-TRACK_PATTERN = r'[A-Za-z0-9][A-Za-z0-9._-]{0,99}'
 RESERVED_TRACKS = {'production', 'beta', 'qa', 'internal'}
 NOTES = Path(__file__).resolve().parents[2] / 'store-assets/release-notes-ko-KR.txt'
 UPLOAD_KEY_ACTIVE_AT = datetime(2026, 11, 6, 3, 32, tzinfo=timezone.utc)
@@ -56,11 +55,19 @@ class PlayClient:
         else:
             match = re.fullmatch(
                 re.escape(EDITS) + r'/([A-Za-z0-9_-]+)'
-                r'(?:/(?:tracks(?:/[A-Za-z0-9][A-Za-z0-9._-]{0,99})?|bundles|apks)'
+                r'(?:/(?:tracks(?:/((?:[A-Za-z0-9._~-]|%[0-9A-F]{2})+))?|bundles|apks)'
                 r'|:validate|:commit\?changesInReviewBehavior=ERROR_IF_IN_REVIEW)?', path)
             upload = re.fullmatch(re.escape('/upload' + EDITS)
                                   + r'/([A-Za-z0-9_-]+)/bundles\?uploadType=media', path)
             require(bool(match or upload), 'The API request is outside the authorized application.')
+            if match and match.group(2) is not None:
+                encoded = match.group(2)
+                try:
+                    track = unquote(encoded, errors='strict')
+                except UnicodeError:
+                    raise ReleaseError('The API track identifier encoding is invalid.') from None
+                require(selectable_track_identifier(track) and quote(track, safe='') == encoded,
+                        'The API track identifier must be one canonically encoded path segment.')
             edit_id = (match or upload).group(1)
             require(EDITS + '/' + edit_id in self._created_edits,
                     'The API request must use an edit created by this client.')
@@ -117,23 +124,33 @@ def objects(response, key):
     return values
 
 
+def track_identifier(value):
+    return isinstance(value, str) and bool(value.strip()) and value.isprintable()
+
+
+def selectable_track_identifier(value):
+    return (track_identifier(value) and value not in {'.', '..'}
+            and not any(character in value for character in '/\\:?#%'))
+
+
 def validate_target(target, closed_track):
     require(target in {'internal', 'closed'}, 'Select internal or closed testing.')
     if target == 'internal':
         require(closed_track is None, 'A closed track may only be selected for closed testing.')
     else:
-        require(isinstance(closed_track, str) and bool(re.fullmatch(TRACK_PATTERN, closed_track))
-                and closed_track.casefold() not in RESERVED_TRACKS,
+        require(selectable_track_identifier(closed_track)
+                and closed_track.strip().casefold() not in RESERVED_TRACKS,
                 'Closed testing requires an exact existing closed track; reserved and form-factor tracks are forbidden.')
 
 
 def inventory(client, edit, target, closed_track, report):
     tracks = objects(client.request('GET', edit + '/tracks'), 'tracks')
+    report['available_track_ids'] = [track['track'] for track in tracks if track_identifier(track.get('track'))]
     used, names, public = set(), set(), []
     for track in tracks:
         name = track.get('track')
-        require(isinstance(name, str) and bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._:-]{0,199}', name))
-                and name not in names, 'Google Play returned an invalid or duplicate track identifier.')
+        require(track_identifier(name) and name not in names,
+                'Google Play returned an invalid or duplicate track identifier.')
         names.add(name)
         releases = []
         for release in objects(track, 'releases'):
