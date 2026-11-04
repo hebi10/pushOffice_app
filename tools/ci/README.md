@@ -45,3 +45,44 @@ python3 tools/ci/release_aab.py \
 ```
 
 secret 값을 명령줄에 넣거나 `set -x`, 환경 변수 전체 출력, keystore 내용 출력으로 확인하지 마세요.
+
+## Windows에서 기존 키 내려받기
+
+Expo 대시보드의 기존 `hebi96 / pushOffice_app` 프로젝트와 Android 앱 항목 `com.hebi96.pushOffice_app`을 사용합니다. 연결된 기존 EAS projectId는 `0e5da6f1-57cb-4cf6-9d24-5a65efee7575`입니다. 프로젝트나 키를 새로 생성하는 단계는 없습니다.
+
+웹 내보내기의 완료 여부를 확인할 수 없는 경우, Windows PowerShell에서 다음 명령을 실행합니다. 올바른 저장소를 별도 임시 폴더에 내려받아 기존 로컬 프로젝트 선택 오류를 피합니다. Node.js/npm 및 Git이 설치된 PC가 필요합니다.
+
+```powershell
+$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
+$workPath = Join-Path $env:TEMP ("PushOffice-key-" + [guid]::NewGuid().ToString("N"))
+git clone --depth 1 https://github.com/hebi10/pushOffice_app.git $workPath
+if ($LASTEXITCODE -ne 0) { throw "Project download failed." }
+Set-Location $workPath
+npm.cmd ci
+if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
+npx.cmd --yes eas-cli@latest login --browser
+npx.cmd --yes eas-cli@latest credentials --platform android
+```
+
+브라우저 로그인은 기존 `hebi96` 계정을 사용합니다. 이어서 터미널 메뉴에서 다음 항목을 선택합니다.
+
+```text
+production
+credentials.json: Upload/Download credentials between EAS servers and your local json
+Download credentials from EAS to credentials.json
+```
+
+다운로드한 `credentials.json`의 `android.keystore`에는 keystore 파일 경로와 keystorePassword/keyAlias/keyPassword가 들어 있습니다. GitHub의 네 가지 비밀값을 채울 때 사용합니다. 이 파일과 키 파일을 채팅이나 공개 소스로 보내지 않습니다. 이 저장소는 다운로드한 자격 증명 JSON과 keystore 파일을 Git 추적에서 제외합니다.
+
+등록할 비밀값의 이름은 다음과 같습니다. 값은 파일과 PC의 클립보드에서 GitHub 입력칸으로만 옮깁니다.
+
+```text
+PUSH_OFFICE_KEYSTORE_BASE64
+PUSH_OFFICE_KEYSTORE_PASSWORD
+PUSH_OFFICE_KEY_ALIAS
+PUSH_OFFICE_KEY_PASSWORD
+```
+
+2026-11-04 확인 시 공개 인증서 검사값 `PUSH_OFFICE_UPLOAD_CERT_SHA256`만 GitHub에 등록했습니다. 기존 키와의 실제 일치는 아직 확인하지 못했으며, 네 비밀값 등록 후 CI의 인증서 검사에서 확인합니다. 모든 비밀값을 등록하기 전에는 release workflow를 실행하지 않습니다.
+
+공식 절차: https://docs.expo.dev/app-signing/syncing-credentials/

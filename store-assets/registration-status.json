@@ -94,11 +94,22 @@
     "evidence_size_bytes": 61254
   },
   "existing_upload_key_checks": {
-    "github_repository_secrets_ui": "not_found",
+    "github_repository_secrets_ui": "only_public_upload_certificate_pin_registered_four_private_signing_secrets_pending",
     "local_task_workspace": "not_found",
-    "expo_stored_key_lookup": "one_attempt_blocked_by_automatic_approval_review_stopped_no_bypass",
-    "automatic_review_reason": "User preference for GitHub and sensitive upload-key access."
+    "expo_stored_key_lookup": "existing_project_and_android_upload_keystore_entry_observed_export_not_confirmed",
+    "previous_automatic_review_reason": "User preference for GitHub and sensitive upload-key access.",
+    "expo_access_approval": "explicitly_approved_by_user_2026-11-04",
+    "play_certificate_match": "not_yet_verified_against_expo_keystore"
   },
   "signed_aab_available": false,
-  "signing_workflow_rerun_after_key_check": false
+  "signing_workflow_rerun_after_key_check": false,
+  "github_signing_secret_names_present": [
+    "PUSH_OFFICE_UPLOAD_CERT_SHA256"
+  ],
+  "github_private_signing_secret_names_pending": [
+    "PUSH_OFFICE_KEYSTORE_BASE64",
+    "PUSH_OFFICE_KEYSTORE_PASSWORD",
+    "PUSH_OFFICE_KEY_ALIAS",
+    "PUSH_OFFICE_KEY_PASSWORD"
+  ]
 }
