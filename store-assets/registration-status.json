@@ -152,5 +152,70 @@
       }
     },
     "play_uploaded": false
+  },
+  "store_explanatory_images": {
+    "status": "saved_ready_to_send_for_review",
+    "saved_on": "2026-11-04",
+    "count": 6,
+    "source": "six_actual_android_api_29_app_captures_with_ai_generated_compositions_and_korean_captions",
+    "previous_phone_screenshots_replaced": true,
+    "play_acceptance": "all_six_accepted_reviewed_and_saved",
+    "saved_order_verified_after_reopening": true,
+    "color_mode": "RGB",
+    "each_file_size": "under_1.3_MB",
+    "images": [
+      {
+        "order": 1,
+        "filename": "PushOffice-story-01-home.png",
+        "headline": "오늘의 일정,\n한눈에",
+        "width": 941,
+        "height": 1672
+      },
+      {
+        "order": 2,
+        "filename": "PushOffice-story-02-quick-settings.png",
+        "headline": "빠른 설정에서,\n바로 입력",
+        "width": 916,
+        "height": 1717
+      },
+      {
+        "order": 3,
+        "filename": "PushOffice-story-03-input-chooser.png",
+        "headline": "텍스트·음성,\n편한 방식으로",
+        "width": 916,
+        "height": 1717
+      },
+      {
+        "order": 4,
+        "filename": "PushOffice-story-04-change-preview.png",
+        "headline": "저장하기 전,\n한 번 더 확인",
+        "width": 916,
+        "height": 1717
+      },
+      {
+        "order": 5,
+        "filename": "PushOffice-story-05-calendar.png",
+        "headline": "날짜별 일정,\n달력에서 한눈에",
+        "width": 916,
+        "height": 1717
+      },
+      {
+        "order": 6,
+        "filename": "PushOffice-story-06-home-widgets.png",
+        "headline": "홈 화면에서,\n바로 일정 확인",
+        "width": 916,
+        "height": 1717
+      }
+    ]
+  },
+  "store_ai_label_declaration": {
+    "status": "submitted_saved_read_only_confirmed",
+    "saved_on": "2026-11-04",
+    "ai_generated_assets_declared": true,
+    "each_new_phone_image_selected": true,
+    "existing_app_icon_selected": true,
+    "existing_feature_graphic_selected": true,
+    "existing_icon_and_feature_graphic_origin": "derived_from_previously_generated_mark",
+    "read_only_selected_declaration_and_disabled_save_verified": true
   }
 }
