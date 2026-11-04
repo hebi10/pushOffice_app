@@ -241,5 +241,30 @@
     "play_upload_performed": false,
     "play_upload_not_before_kst": "2026-11-06T12:32:00+09:00",
     "play_console_observed_on": "2026-11-04"
+  },
+  "deployment_automation": {
+    "workflow": ".github/workflows/android-release.yml",
+    "main_push_target": "internal",
+    "closed_testing": "manual_only_exact_existing_track",
+    "modes": [
+      "deploy",
+      "build",
+      "check"
+    ],
+    "wif_project": "hebi-app-release-80847404",
+    "service_account": "play-pushoffice@hebi-app-release-80847404.iam.gserviceaccount.com",
+    "live_run_id": 41796673910,
+    "live_run_url": "https://github.com/hebi10/pushOffice_app/actions/runs/41796673910",
+    "release_tests_passed": 75,
+    "wif_authentication": "passed",
+    "play_inventory": "passed",
+    "version_allocation": "passed",
+    "status": "blocked_missing_four_private_signing_secrets",
+    "private_signing_settings_registered_by_this_session": false,
+    "actions_build_completed": false,
+    "play_upload_performed": false,
+    "upload_key_active_at_kst": "2026-11-06T12:32:00+09:00",
+    "verification_document": "docs/verification/2026-11-04-play-automation.md",
+    "browser_blocker": "originating_browser_context_unavailable"
   }
 }
