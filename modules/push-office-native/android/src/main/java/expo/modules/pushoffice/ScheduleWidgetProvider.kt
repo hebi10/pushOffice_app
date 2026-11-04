@@ -1,17 +1,15 @@
 package expo.modules.pushoffice
 
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.*
-import android.net.Uri
-import android.view.View
-import android.widget.RemoteViews
+import android.os.Bundle
 import java.time.*
 import java.time.format.DateTimeFormatter
 
 open class ScheduleWidgetProvider : AppWidgetProvider() {
   override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) { refreshAll(context) }
+  override fun onAppWidgetOptionsChanged(context: Context, manager: AppWidgetManager, id: Int, options: Bundle) { refreshAll(context) }
   override fun onDisabled(context: Context) { refreshAll(context) }
   override fun onDeleted(context: Context, ids: IntArray) { refreshAll(context) }
   override fun onReceive(context: Context, intent: Intent) {
@@ -33,27 +31,14 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
       WidgetRefreshScheduler.reserve(context, WidgetRefreshTime.next(now.toInstant().toEpochMilli(), end, upcoming.firstOrNull()?.second))
       for((provider,agenda) in providers) {
         for(id in widgetIds.getValue(provider)) {
-          val views=RemoteViews(context.packageName,if(agenda) R.layout.widget_agenda else R.layout.widget_small)
           val data=if(agenda) today else upcoming
-          val rows=if(agenda) listOf(R.id.widget_event_1,R.id.widget_event_2,R.id.widget_event_3) else listOf(R.id.widget_event_1)
-          rows.forEachIndexed { index,row ->
-            val event=data.getOrNull(index)
-            views.setViewVisibility(row,if(event!=null || index==0) View.VISIBLE else View.GONE)
-            views.setTextViewText(row,event?.let { "${it.third.format(DateTimeFormatter.ofPattern(if(agenda) "HH:mm" else "M월 d일 HH:mm"))}  ${it.first.title}" } ?: if(agenda) "오늘 예정된 일정이 없습니다." else "예정된 일정이 없습니다.")
-            // Clear old click when the displayed row becomes empty.
-            views.setOnClickPendingIntent(row,event?.let {
-              val intent=Intent(Intent.ACTION_VIEW,Uri.parse("pushofficeapp://schedule/${Uri.encode(it.first.id)}")).setPackage(context.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-              PendingIntent.getActivity(context,0,intent,PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            } ?: entry(context,"chooser"))
+          val events=data.map { event ->
+            WidgetEvent(event.first.id,event.third.format(DateTimeFormatter.ofPattern(if(agenda) "HH:mm" else "M/d HH:mm")),event.first.title)
           }
-          views.setOnClickPendingIntent(R.id.widget_text,entry(context,"text"))
-          views.setOnClickPendingIntent(R.id.widget_voice,entry(context,"voice"))
-          manager.updateAppWidget(id,views)
+          manager.updateAppWidget(id,ScheduleWidgetViews.create(context,agenda,events,manager.getAppWidgetOptions(id)))
         }
       }
     }
-    private fun entry(context: Context, mode: String)=PendingIntent.getActivity(context,0,
-      Intent(context,QuickEntryActivity::class.java).setData(Uri.parse("pushoffice://entry/$mode")).putExtra("entryMode",mode).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
   }
 }
 class ScheduleAgendaWidgetProvider : ScheduleWidgetProvider()

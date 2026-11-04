@@ -1,1 +1,20 @@
-<resources><string name="widget_small_description">다음 일정과 빠른 입력</string><string name="widget_agenda_description">오늘의 일정과 빠른 입력</string><string name="widget_small_label">Push Office 다음 일정</string><string name="widget_agenda_label">Push Office 오늘 일정</string><string name="tile_label">빠른 일정</string></resources>
+<resources>
+  <string name="widget_small_description">다음 일정과 빠른 입력</string>
+  <string name="widget_agenda_description">오늘의 일정과 빠른 입력</string>
+  <string name="widget_small_label">Push Office 다음 일정</string>
+  <string name="widget_agenda_label">Push Office 오늘 일정</string>
+  <string name="tile_label">Push Office</string>
+  <string name="tile_subtitle">텍스트 · 음성</string>
+  <string name="tile_content_description">Push Office 빠른 일정 입력. 텍스트 또는 음성으로 입력합니다.</string>
+  <string name="tile_add_title">Push Office 타일 추가</string>
+  <string name="tile_add_manual">빠른 설정을 두 번 내린 뒤 편집(연필)을 누르고 ‘%1$s’를 원하는 위치로 끌어 놓으세요.</string>
+  <string name="quick_entry_title">빠른 일정 입력</string>
+  <string name="quick_entry_description">입력 방법을 선택해 주세요. 저장 전 내용을 확인합니다.</string>
+  <string name="quick_entry_text">텍스트로 입력</string>
+  <string name="quick_entry_text_detail">키보드로 일정 작성</string>
+  <string name="quick_entry_text_accessibility">텍스트로 일정 입력</string>
+  <string name="quick_entry_voice">음성으로 입력</string>
+  <string name="quick_entry_voice_detail">시작 버튼을 눌러 녹음</string>
+  <string name="quick_entry_voice_accessibility">음성 입력 화면 열기. 녹음은 시작 버튼을 눌러야 시작됩니다.</string>
+  <string name="quick_entry_close">닫기</string>
+</resources>

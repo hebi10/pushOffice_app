@@ -14,7 +14,10 @@ import android.speech.*
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.View
+import android.view.Gravity
+import android.view.WindowInsets
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityNodeInfo
 import android.widget.*
 import kotlinx.coroutines.*
 import java.time.*
@@ -52,10 +55,77 @@ class QuickEntryActivity : Activity() {
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
-    page("빠른 일정 입력", "입력 방법을 선택해 주세요. 저장 전 내용을 확인합니다.")
-    button("텍스트로 입력", "텍스트로 일정 입력") { editor(false) }
-    button("음성으로 입력", "음성 입력 화면 열기. 녹음은 시작 버튼을 눌러야 시작됩니다.") { editor(true) }
-    button("닫기") { finish() }
+    exitEditor()
+    var availableWidth=resources.displayMetrics.widthPixels
+    var availableHeight=resources.displayMetrics.heightPixels
+    if(Build.VERSION.SDK_INT>=30) {
+      val metrics=windowManager.currentWindowMetrics
+      val insets=metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+      availableWidth=metrics.bounds.width()-insets.left-insets.right
+      availableHeight=metrics.bounds.height()-insets.top-insets.bottom
+    }
+    val maxHeight=(availableHeight-dp(32)).coerceAtLeast(1)
+    root=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(22),dp(18),dp(22),dp(12))
+      background=GradientDrawable().apply { setColor(Color.WHITE); cornerRadius=dp(24).toFloat() }
+    }
+    val scroll=object: ScrollView(this) {
+      override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) maxHeight
+          else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(maxHeight)
+        super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
+      }
+    }.apply { addView(root); isFillViewport=false }
+    setContentView(scroll)
+    root.addView(TextView(this).apply {
+      text=getString(R.string.tile_label); textSize=12f; setTextColor(blue); setTypeface(null,Typeface.BOLD)
+    })
+    root.addView(TextView(this).apply {
+      text=getString(R.string.quick_entry_title); textSize=22f; setTextColor(Color.rgb(17,24,39))
+      setTypeface(null,Typeface.BOLD); setPadding(0,dp(8),0,dp(6))
+    })
+    root.addView(TextView(this).apply {
+      text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(Color.rgb(75,85,99))
+      setPadding(0,0,0,dp(12))
+    })
+    fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
+      val textColor=if(primary) Color.WHITE else Color.rgb(17,24,39)
+      val row=LinearLayout(this).apply {
+        orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
+        setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
+        background=GradientDrawable().apply {
+          setColor(if(primary) blue else Color.rgb(243,244,246))
+          if(!primary) setStroke(dp(1),Color.rgb(209,213,219))
+        }
+        val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
+        foreground=attributes.getDrawable(0); attributes.recycle()
+        isClickable=true; isFocusable=true; contentDescription=getString(description)
+        accessibilityDelegate=object: View.AccessibilityDelegate() {
+          override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
+            super.onInitializeAccessibilityNodeInfo(host,info); info.className=Button::class.java.name
+          }
+        }
+        setOnClickListener { action() }
+      }
+      row.addView(TextView(this).apply {
+        text=getString(title); textSize=16f; setTextColor(textColor); setTypeface(null,Typeface.BOLD)
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      })
+      row.addView(TextView(this).apply {
+        text=getString(detail); textSize=13f; setTextColor(if(primary) Color.WHITE else Color.rgb(75,85,99))
+        setPadding(0,dp(3),0,0); importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      })
+      root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    }
+    choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,true) { editor(false) }
+    choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,false) { editor(true) }
+    root.addView(Button(this).apply {
+      text=getString(R.string.quick_entry_close); contentDescription=text; textSize=14f
+      isAllCaps=false; setTextColor(blue); background=null; minimumHeight=dp(48)
+      setPadding(dp(12),0,dp(12),0); setOnClickListener { finish() }
+    },LinearLayout.LayoutParams(-2,-2).apply { gravity=Gravity.END; topMargin=dp(4) })
+    window.setLayout((availableWidth-dp(32)).coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun editor(voice: Boolean) {
     page("일정을 남겨 보세요", "예: 내일 오후 3시 고객 미팅\n변경: 고객 미팅 한 시간 늦춰")

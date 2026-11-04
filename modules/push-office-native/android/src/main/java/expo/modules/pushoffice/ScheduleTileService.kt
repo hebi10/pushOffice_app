@@ -7,7 +7,16 @@ import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 
 class ScheduleTileService : TileService() {
-  override fun onStartListening() { super.onStartListening(); qsTile?.apply { state=Tile.STATE_ACTIVE; label="빠른 일정"; updateTile() } }
+  override fun onStartListening() {
+    super.onStartListening()
+    qsTile?.apply {
+      state=Tile.STATE_ACTIVE
+      label=getString(R.string.tile_label)
+      contentDescription=getString(R.string.tile_content_description)
+      if(Build.VERSION.SDK_INT>=29) subtitle=getString(R.string.tile_subtitle)
+      updateTile()
+    }
+  }
   override fun onClick() {
     super.onClick()
     val open=Runnable {

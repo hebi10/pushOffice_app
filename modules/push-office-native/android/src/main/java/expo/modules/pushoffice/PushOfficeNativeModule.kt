@@ -32,11 +32,11 @@ class PushOfficeNativeModule : Module() {
       if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 타일 추가를 요청해 주세요.",null)
       else activity.runOnUiThread {
         if(Build.VERSION.SDK_INT<33) {
-          android.app.AlertDialog.Builder(activity).setTitle("빠른 일정 타일 추가").setMessage("빠른 설정을 두 번 내린 뒤 편집(연필)을 누르고 ‘빠른 일정’을 원하는 위치로 끌어 놓으세요.").setPositiveButton("확인",null).show()
+          android.app.AlertDialog.Builder(activity).setTitle(activity.getString(R.string.tile_add_title)).setMessage(activity.getString(R.string.tile_add_manual,activity.getString(R.string.tile_label))).setPositiveButton("확인",null).show()
           promise.resolve("unsupported_manual")
         } else try {
           activity.getSystemService(StatusBarManager::class.java).requestAddTileService(
-            ComponentName(activity,ScheduleTileService::class.java),"빠른 일정",Icon.createWithResource(activity,R.drawable.ic_schedule_tile),activity.mainExecutor
+            ComponentName(activity,ScheduleTileService::class.java),activity.getString(R.string.tile_label),Icon.createWithResource(activity,R.drawable.ic_schedule_tile),activity.mainExecutor
           ) { result -> promise.resolve(when(result) {
             StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ADDED -> "added"
             StatusBarManager.TILE_ADD_REQUEST_RESULT_TILE_ALREADY_ADDED -> "already_added"
