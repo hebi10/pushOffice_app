@@ -1,19 +1,52 @@
-name: Android release bundle
+name: Push Office Play release
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'src/**'
+      - 'modules/**'
+      - 'plugins/**'
+      - 'assets/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'tools/ci/**'
+      - 'store-assets/release-notes-ko-KR.txt'
+      - '.github/workflows/android-release.yml'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: 'deploy: build and publish; build: signed files only; check: Play connection only'
+        type: choice
+        default: deploy
+        options: [deploy, build, check]
+      target:
+        description: 'Internal by default; closed requires an existing closed track'
+        type: choice
+        default: internal
+        options: [internal, closed]
+      closed_track:
+        description: 'Exact existing closed track API identifier (only for closed)'
+        type: string
+        required: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: android-release-${{ github.ref }}
+  group: push-office-play-release
   cancel-in-progress: false
 
 jobs:
-  bundle:
+  release:
+    if: github.repository == 'hebi10/pushOffice_app' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      id-token: write
     env:
       CI: '1'
       EXPO_NO_TELEMETRY: '1'
@@ -24,13 +57,72 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Select release request
+        id: request
+        run: python3 tools/ci/release_policy.py request
+
+      - name: Test release tools
+        run: python3 -m unittest discover -s tools/ci -p 'test_*.py'
+
+      - name: Authenticate Play preflight through existing app account
+        if: steps.request.outputs.mode != 'build'
+        id: auth_preflight
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Inspect actual Play tracks and allocate versionCode
+        if: steps.request.outputs.mode != 'build'
+        id: preflight
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth_preflight.outputs.access_token }}
+          RELEASE_TARGET: ${{ steps.request.outputs.target }}
+          CLOSED_TRACK: ${{ inputs.closed_track || vars.PLAY_CLOSED_TRACK }}
+        run: |
+          track_args=(--target "$RELEASE_TARGET")
+          if [ "$RELEASE_TARGET" = closed ]; then
+            track_args+=(--closed-track "$CLOSED_TRACK")
+          fi
+          python3 tools/ci/play_publish.py preflight \
+            "${track_args[@]}" \
+            --report "$RUNNER_TEMP/push-office-artifacts/preflight.json"
+
+      - name: Check private signing settings before building
+        if: steps.request.outputs.mode != 'check'
+        env:
+          PUSH_OFFICE_KEYSTORE_BASE64: ${{ secrets.PUSH_OFFICE_KEYSTORE_BASE64 }}
+          PUSH_OFFICE_KEYSTORE_PASSWORD: ${{ secrets.PUSH_OFFICE_KEYSTORE_PASSWORD }}
+          PUSH_OFFICE_KEY_ALIAS: ${{ secrets.PUSH_OFFICE_KEY_ALIAS }}
+          PUSH_OFFICE_KEY_PASSWORD: ${{ secrets.PUSH_OFFICE_KEY_PASSWORD }}
+        run: python3 tools/ci/release_policy.py check-signing
+
+      - name: Allocate build-only versionCode
+        if: steps.request.outputs.mode == 'build'
+        id: build_version
+        run: python3 tools/ci/release_policy.py build-version
+
+      - name: Set effective build versionCode
+        if: steps.request.outputs.mode != 'check'
+        env:
+          VERSION_CODE: ${{ steps.preflight.outputs.next_version_code || steps.build_version.outputs.next_version_code }}
+        run: python3 tools/ci/release_policy.py set-version --version-code "$VERSION_CODE"
+
       - name: Set up Node
+        if: steps.request.outputs.mode != 'check'
         uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
 
       - name: Set up Java
+        if: steps.request.outputs.mode != 'check'
         uses: actions/setup-java@v6
         with:
           distribution: temurin
@@ -41,59 +133,96 @@ jobs:
             plugins/with-local-assistant.js
             modules/push-office-native/android/build.gradle
 
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Check release scripts and app
+      - name: Install locked dependencies and verify app
+        if: steps.request.outputs.mode != 'check'
         run: |
-          python3 -m unittest discover -s tools/ci -p 'test_*.py'
+          npm ci
           npm test
           npm run typecheck
           npx --no-install eslint app src plugins tests
 
       - name: Install Android build packages
+        if: steps.request.outputs.mode != 'check'
         run: |
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            'platforms;android-36' \
-            'build-tools;36.0.0' \
-            'ndk;27.1.12297006' \
-            'cmake;3.22.1'
+            'platforms;android-36' 'build-tools;36.0.0' \
+            'ndk;27.1.12297006' 'cmake;3.22.1'
 
       - name: Generate Android project with local Expo CLI
+        if: steps.request.outputs.mode != 'check'
         run: npx --no-install expo prebuild --platform android --clean --no-install
 
-      - name: Build release bundle with Gradle
+      - name: Build release APK and AAB
+        if: steps.request.outputs.mode != 'check'
         working-directory: android
         run: |
-          ./gradlew :app:bundleRelease \
+          ./gradlew :app:assembleRelease :app:bundleRelease \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
             -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
 
-      # Secrets are available only to this finalization step, after dependency
-      # installation, prebuild, tests and Gradle have finished.
-      - name: Prepare and verify signed or explicitly unsigned bundle
-        id: release
+      - name: Sign and verify APK and AAB with the approved upload key
+        if: steps.request.outputs.mode != 'check'
+        id: sign
         env:
           PUSH_OFFICE_KEYSTORE_BASE64: ${{ secrets.PUSH_OFFICE_KEYSTORE_BASE64 }}
           PUSH_OFFICE_KEYSTORE_PASSWORD: ${{ secrets.PUSH_OFFICE_KEYSTORE_PASSWORD }}
           PUSH_OFFICE_KEY_ALIAS: ${{ secrets.PUSH_OFFICE_KEY_ALIAS }}
           PUSH_OFFICE_KEY_PASSWORD: ${{ secrets.PUSH_OFFICE_KEY_PASSWORD }}
-          PUSH_OFFICE_UPLOAD_CERT_SHA256: ${{ secrets.PUSH_OFFICE_UPLOAD_CERT_SHA256 }}
+          PUSH_OFFICE_UPLOAD_CERT_SHA256: '7704A1A8A8927701A6F86FE5100C633A0DE5A038D41AA7C65C8A56150DF55845'
         run: |
           python3 tools/ci/release_aab.py \
             --source android/app/build/outputs/bundle/release/app-release.aab \
-            --output-directory "$RUNNER_TEMP/push-office-artifacts"
+            --output-directory "$RUNNER_TEMP/push-office-artifacts/aab"
+          python3 tools/ci/release_apk.py \
+            --source android/app/build/outputs/apk/release/app-release.apk \
+            --source-commit "$GITHUB_SHA" \
+            --output-directory "$RUNNER_TEMP/push-office-artifacts/apk"
 
-      - name: Upload verified bundle and verification report
+      - name: Check approved key activation time
+        if: steps.request.outputs.mode == 'deploy'
+        id: activation
+        run: python3 tools/ci/release_policy.py upload-gate
+
+      - name: Refresh Play authentication after building
+        if: steps.request.outputs.mode == 'deploy' && steps.activation.outputs.allowed == 'true'
+        id: auth_publish
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Publish selected test track and confirm committed release
+        if: steps.request.outputs.mode == 'deploy' && steps.activation.outputs.allowed == 'true'
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth_publish.outputs.access_token }}
+          RELEASE_TARGET: ${{ steps.request.outputs.target }}
+          CLOSED_TRACK: ${{ inputs.closed_track || vars.PLAY_CLOSED_TRACK }}
+          AAB_PATH: ${{ steps.sign.outputs.artifact_path }}
+          VERIFICATION_PATH: ${{ steps.sign.outputs.report_path }}
+        run: |
+          track_args=(--target "$RELEASE_TARGET")
+          if [ "$RELEASE_TARGET" = closed ]; then
+            track_args+=(--closed-track "$CLOSED_TRACK")
+          fi
+          python3 tools/ci/play_publish.py publish \
+            "${track_args[@]}" \
+            --bundle "$AAB_PATH" --verification "$VERIFICATION_PATH" \
+            --report "$RUNNER_TEMP/push-office-artifacts/play-publication.json"
+
+      - name: Keep verified artifacts and available release reports
+        if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: PushOffice-android-${{ steps.release.outputs.mode }}-${{ github.run_number }}
-          path: |
-            ${{ steps.release.outputs.artifact_path }}
-            ${{ steps.release.outputs.artifact_path }}.sha256
-            ${{ steps.release.outputs.report_path }}
-          if-no-files-found: error
-          retention-days: 14
+          name: PushOffice-${{ steps.request.outputs.mode }}-${{ steps.request.outputs.target }}-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/push-office-artifacts/
+          if-no-files-found: warn
+          retention-days: 30
           compression-level: 0

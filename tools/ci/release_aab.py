@@ -355,6 +355,13 @@ def sign_bundle(source, destination, environment, temporary):
     validate_signed_certificate_description(signed_description, alias, expected)
 
 
+def provenance(mode, environment):
+    revision = environment.get('GITHUB_SHA') or None
+    require(revision is None or bool(re.fullmatch(r'[0-9a-f]{40}', revision)), 'Source commit is malformed.')
+    return {'source_commit': revision,
+            'signer_certificate_sha256': normalize_fingerprint(environment['PUSH_OFFICE_UPLOAD_CERT_SHA256']) if mode == 'signed' else None}
+
+
 def finalize(source, output_directory, config, environment, gradle_home):
     mode = signing_mode(environment)
     name = artifact_name(config['expo'], mode)
@@ -381,7 +388,7 @@ def finalize(source, output_directory, config, environment, gradle_home):
              'signing_pending': mode == 'unsigned', 'play_upload_performed': False,
              'filename': name, 'sha256': sha256(destination.read_bytes()),
              'size_bytes': destination.stat().st_size,
-             'preparation': preparation, 'bundletool_validated': True, **payload}
+             'preparation': preparation, 'bundletool_validated': True, **payload, **provenance(mode, environment)}
     report = destination.with_suffix('.verification.json')
     report.write_text(json.dumps(proof, indent=2) + '\n')
     destination.with_suffix('.aab.sha256').write_text(proof['sha256'] + '  ' + name + '\n')

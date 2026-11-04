@@ -55,6 +55,17 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(release.signing_mode({}), 'unsigned')
         self.assertEqual(release.signing_mode(dict.fromkeys(SECRET_NAMES, '')), 'unsigned')
 
+    def test_signed_provenance_records_the_verified_pin_and_checkout(self):
+        proof = release.provenance('signed', {'PUSH_OFFICE_UPLOAD_CERT_SHA256': 'ab:' * 31 + 'ab', 'GITHUB_SHA': 'c' * 40})
+        self.assertEqual(proof, {'signer_certificate_sha256': 'AB' * 32, 'source_commit': 'c' * 40})
+
+    def test_unsigned_provenance_does_not_claim_a_signer(self):
+        self.assertEqual(release.provenance('unsigned', {}), {'signer_certificate_sha256': None, 'source_commit': None})
+
+    def test_invalid_source_revision_cannot_enter_provenance(self):
+        with self.assertRaises(release.ReleaseError):
+            release.provenance('unsigned', {'GITHUB_SHA': 'not-a-commit'})
+
     def test_all_secrets_enable_signing(self):
         self.assertEqual(release.signing_mode(dict.fromkeys(SECRET_NAMES, 'sentinel-private-value')), 'signed')
 
