@@ -95,8 +95,9 @@ class QuickEntryActivity : Activity() {
         orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
         background=GradientDrawable().apply {
-          setColor(if(primary) blue else Color.rgb(243,244,246))
-          if(!primary) setStroke(dp(1),Color.rgb(209,213,219))
+          setColor(if(primary) blue else Color.rgb(248,250,252))
+          cornerRadius=dp(12).toFloat()
+          if(!primary) setStroke(dp(1),Color.rgb(203,213,225))
         }
         val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
         foreground=attributes.getDrawable(0); attributes.recycle()
@@ -191,9 +192,20 @@ class QuickEntryActivity : Activity() {
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
-    root.addView(TextView(this).apply { text="반복" })
+    root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(Color.rgb(75,85,99)); setPadding(0,dp(12),0,dp(5)) })
     val repeats=listOf("none","monthly","yearly")
-    val spinner=Spinner(this).apply { contentDescription="반복 설정"; adapter=ArrayAdapter(this@QuickEntryActivity,android.R.layout.simple_spinner_dropdown_item,listOf("반복 없음","매월","매년")); setSelection(repeats.indexOf(repeat).coerceAtLeast(0)) }
+    val spinner=Spinner(this).apply {
+      contentDescription="반복 설정"
+      adapter=ArrayAdapter(this@QuickEntryActivity,android.R.layout.simple_spinner_dropdown_item,listOf("반복 없음","매월","매년"))
+      setSelection(repeats.indexOf(repeat).coerceAtLeast(0))
+      minimumHeight=dp(50)
+      setPadding(dp(10),0,dp(10),0)
+      background=GradientDrawable().apply {
+        setColor(Color.rgb(248,250,252))
+        cornerRadius=dp(10).toFloat()
+        setStroke(dp(1),Color.rgb(203,213,225))
+      }
+    }
     root.addView(spinner)
     val error=TextView(this).apply { setTextColor(Color.rgb(185,28,28)); accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }; root.addView(error)
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
@@ -216,11 +228,49 @@ class QuickEntryActivity : Activity() {
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
   }
   private fun field(label: String, hintText: String, value: String, multi: Boolean=false): EditText {
-    root.addView(TextView(this).apply { text=label; setTextColor(Color.DKGRAY); setPadding(0,dp(8),0,0) })
-    return EditText(this).apply { hint=hintText; contentDescription=label; setText(value); textSize=16f; setTextColor(Color.rgb(17,24,39)); setSingleLine(!multi); if(multi) { minLines=3; maxLines=5; gravity=android.view.Gravity.TOP }; root.addView(this,LinearLayout.LayoutParams(-1,-2)) }
+    root.addView(TextView(this).apply {
+      text=label
+      textSize=13f
+      setTextColor(Color.rgb(75,85,99))
+      setPadding(0,dp(12),0,dp(6))
+    })
+    return EditText(this).apply {
+      hint=hintText
+      contentDescription=label
+      setText(value)
+      textSize=16f
+      setTextColor(Color.rgb(31,41,55))
+      setHintTextColor(Color.rgb(107,114,128))
+      setSingleLine(!multi)
+      if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
+      minimumHeight=dp(if(multi)104 else 50)
+      setPadding(dp(12),dp(10),dp(12),dp(10))
+      background=GradientDrawable().apply {
+        setColor(Color.rgb(248,250,252))
+        cornerRadius=dp(10).toFloat()
+        setStroke(dp(1),Color.rgb(203,213,225))
+      }
+      root.addView(this,LinearLayout.LayoutParams(-1,-2))
+    }
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {
-    root.addView(Button(this).apply { text=label; contentDescription=description; isAllCaps=false; setTextColor(blue); setOnClickListener { action() } },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(5) })
+    val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
+    val color=if(primary) Color.WHITE else blue
+    root.addView(Button(this).apply {
+      text=label
+      contentDescription=description
+      textSize=15f
+      isAllCaps=false
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(color)
+      stateListAnimator=null
+      background=GradientDrawable().apply {
+        setColor(if(primary) blue else Color.WHITE)
+        cornerRadius=dp(12).toFloat()
+        setStroke(dp(1),if(primary) blue else Color.rgb(203,213,225))
+      }
+      setOnClickListener { action() }
+    },LinearLayout.LayoutParams(-1,dp(50)).apply { topMargin=dp(if(primary)14 else 8) })
   }
   private fun beginSpeech() {
     session.inputChanged(); cancelModel()
