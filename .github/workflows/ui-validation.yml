@@ -1,12 +1,13 @@
 name: Push Office UI validation
 
 on:
-  push:
-    branches:
-      - feat/push-office-ui-refresh-20261104
   pull_request:
     branches:
       - main
+
+concurrency:
+  group: push-office-ui-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
