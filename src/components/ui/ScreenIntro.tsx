@@ -8,7 +8,7 @@ export function ScreenIntro({ eyebrow, title, description, artwork }: {
   description?: string;
   artwork?: ImageSourcePropType;
 }) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   return (
     <View style={styles.container}>
       <View style={styles.copy}>
@@ -16,7 +16,7 @@ export function ScreenIntro({ eyebrow, title, description, artwork }: {
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
         {description ? <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text> : null}
       </View>
-      {artwork ? <Image source={artwork} style={styles.artwork} resizeMode="cover" accessible={false} /> : null}
+      {artwork && !isDark ? <Image source={artwork} style={styles.artwork} resizeMode="cover" accessible={false} /> : null}
     </View>
   );
 }
