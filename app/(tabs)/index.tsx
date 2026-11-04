@@ -85,7 +85,7 @@ export default function HomeScreen() {
           eyebrow="내 기기에 머무는 일정 비서"
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
           description={dayjs(now).format('M월 D일 dddd')}
-          artwork={require('@/assets/images/push-office-mark.png')}
+          artwork={require('@/assets/images/illustration-home.jpg')}
         />
         <AssistantButton
           label="텍스트 · 음성으로 일정 추가"
