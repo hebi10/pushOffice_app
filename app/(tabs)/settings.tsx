@@ -71,7 +71,7 @@ export default function SettingsScreen() {
       >
         <ScreenIntro
           eyebrow="나에게 맞는 일정 비서"
-          title="설정"
+          title="내 일정, 내 방식으로"
           description="자주 사용하는 기능부터 차근차근 설정하세요."
           artwork={require('@/assets/images/illustration-settings.jpg')}
         />
