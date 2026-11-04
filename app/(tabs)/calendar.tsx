@@ -45,7 +45,7 @@ export default function CalendarScreen() {
     <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={s.content}>
       <ScreenIntro
         eyebrow="날짜별 일정 확인"
-        title="일정 · 캘린더"
+        title="이번 달 일정"
         description="달력에서 날짜를 선택하고 일정을 확인하세요."
         artwork={require('@/assets/images/illustration-calendar.jpg')}
       />
