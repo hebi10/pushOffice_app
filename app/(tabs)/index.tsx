@@ -1,4 +1,5 @@
 import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
+import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { BriefingNewsCard, BriefingStockCard, BriefingWeatherCard } from '@/src/components/briefing';
 import { useTheme } from '@/src/contexts/ThemeContext';
@@ -68,26 +69,85 @@ export default function HomeScreen() {
                 PushOfficeNative.getAiStatus().then(value => { if (valid()) setAi(value); }).catch(() => {});
             } });
     };
-    return <ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }}/>}>
-  <View>
-    <Text style={[s.caption, { color: colors.primary, fontWeight: '700' }]}>내 기기에 머무는 일정 비서</Text>
-    <Text style={[s.heading, { color: colors.text, marginTop: 6 }]}>{new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}</Text>
-    <Text style={[s.subtitle, { color: colors.textSecondary, marginTop: 5 }]}>{dayjs(now).format('M월 D일 dddd')}</Text>
-    </View>
-  <AssistantButton label="텍스트 · 음성으로 일정 추가" icon="chatbubble-ellipses-outline" onPress={open}/>
-  <AssistantCard title="오늘의 브리핑">
-    <Text style={[s.body, { color: colors.text }]}>{refined || summary}</Text>
-    <Text style={[s.caption, { color: colors.textSecondary }]}>{refined ? '기기 내 Gemini Nano로 정리한 요약' : '저장된 일정으로 바로 만든 로컬 요약'}</Text>{ai.status === 'available' && <AssistantButton label="기기 AI로 다듬기" icon="sparkles-outline" secondary busy={busy} onPress={refine}/>}<Text style={[s.caption, { color: colors.textSecondary }]}>Gemini Nano · {ai.message}</Text>
-    </AssistantCard>
-  {next && <AssistantCard title="다음 일정">
-        <ScheduleItem schedule={next}/>
-        </AssistantCard>}
-  <AssistantCard title={`오늘 일정  ${todayItems.length}`}>
-   {schedules.isError ? <Text style={{ color: colors.danger }}>일정을 불러오지 못했어요. 아래로 당겨 다시 확인해 주세요.</Text> : todayItems.length ? todayItems.map(x => <ScheduleItem key={x.id} schedule={x}/>) : <Text style={[s.body, { color: colors.textSecondary }]}>아직 일정이 없어요. “내일 오전 9시 회의”처럼 입력해 보세요.</Text>}
-  </AssistantCard>
-  <AssistantCard title="선택한 외부 브리핑">
-    <Text style={[s.caption, { color: colors.textSecondary }]}>날씨·뉴스·주식은 설정에서 선택하고 직접 불러옵니다. 선택 항목과 지역·관심 종목은 외부 브리핑 서비스로 전송됩니다.</Text>
-    <AssistantButton label="외부 브리핑 불러오기" icon="cloud-outline" secondary busy={external.isPending} onPress={() => external.mutate({ input: { ownerId: uid ?? 'local', ownerType: 'device', dateKey: today, timezone: settings.timezone, types: settings.digestTypes, city: settings.digestCity, stockTickers: settings.stockTickers, newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage, allowExternal: true }, force: true })}/>{external.isError && <Text style={{ color: colors.danger }}>외부 정보를 가져오지 못했어요. 로컬 일정은 계속 사용할 수 있습니다.</Text>}</AssistantCard>
-  {external.data?.weatherData && <BriefingWeatherCard {...external.data.weatherData}/>}{external.data?.newsData && <BriefingNewsCard items={external.data.newsData}/>}{external.data?.stockData && <BriefingStockCard items={external.data.stockData}/>}
- </ScrollView>;
+    const nextAt = next?.startAt?.toDate?.();
+    const readableSummary = schedules.isLoading
+        ? '저장된 일정을 확인하고 있습니다.'
+        : todayItems.length
+            ? `오늘 등록된 일정이 ${todayItems.length}개 있습니다.`
+            : '오늘 등록된 일정이 없습니다.';
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.background }}
+        contentContainerStyle={s.content}
+        refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
+      >
+        <ScreenIntro
+          eyebrow="내 기기에 머무는 일정 비서"
+          title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
+          description={dayjs(now).format('M월 D일 dddd')}
+          artwork={require('@/assets/images/push-office-mark.png')}
+        />
+        <AssistantButton
+          label="텍스트 · 음성으로 일정 추가"
+          icon="add-circle-outline"
+          onPress={open}
+        />
+        <AssistantCard title="오늘의 브리핑" icon="sunny-outline">
+          <Text style={[s.body, { color: colors.text, fontWeight: '600' }]}>
+            {refined || readableSummary}
+          </Text>
+          {todayItems.length > 0 ? (
+            <Text style={[s.subtitle, { color: colors.textSecondary }]}>
+              {todayItems.slice(0, 2).map(x => `${x.isAllDay ? '종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(' · ')}
+              {todayItems.length > 2 ? ` 외 ${todayItems.length - 2}개` : ''}
+            </Text>
+          ) : null}
+          {ai.status === 'available' ? (
+            <AssistantButton label="기기 AI로 브리핑 다듬기" icon="sparkles-outline" secondary busy={busy} onPress={refine} />
+          ) : null}
+          <Text style={[s.caption, { color: colors.textSecondary }]}>
+            {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정으로 만든 요약'}
+          </Text>
+        </AssistantCard>
+        {next && nextAt ? (
+          <AssistantCard title="다음 일정" icon="calendar-outline">
+            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]} numberOfLines={2}>{next.title}</Text>
+            <Text style={[s.subtitle, { color: colors.primary, fontWeight: '700' }]}>
+              {dayjs(nextAt).format('M월 D일 (ddd) HH:mm')}
+            </Text>
+          </AssistantCard>
+        ) : null}
+        <AssistantCard title={`오늘 일정 ${todayItems.length}개`} icon="list-outline">
+          {schedules.isError ? (
+            <Text style={[s.body, { color: colors.danger }]}>일정을 불러오지 못했습니다. 아래로 당겨 다시 확인해 주세요.</Text>
+          ) : todayItems.length ? (
+            todayItems.map(x => <ScheduleItem key={x.id} schedule={x} />)
+          ) : (
+            <Text style={[s.body, { color: colors.textSecondary }]}>아직 일정이 없습니다. “내일 오전 9시 회의”처럼 입력해 보세요.</Text>
+          )}
+        </AssistantCard>
+        <AssistantCard title="선택한 외부 브리핑" icon="cloud-outline">
+          <Text style={[s.caption, { color: colors.textSecondary }]}>
+            설정에서 선택한 날씨·뉴스·주식을 직접 불러옵니다. 일정 내용은 외부로 전송하지 않습니다.
+          </Text>
+          <AssistantButton
+            label="외부 브리핑 불러오기"
+            icon="cloud-download-outline"
+            secondary
+            busy={external.isPending}
+            onPress={() => external.mutate({ input: {
+              ownerId: uid ?? 'local', ownerType: 'device', dateKey: today,
+              timezone: settings.timezone, types: settings.digestTypes,
+              city: settings.digestCity, stockTickers: settings.stockTickers,
+              newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage,
+              allowExternal: true,
+            }, force: true })}
+          />
+          {external.isError ? <Text style={[s.caption, { color: colors.danger }]}>외부 정보를 가져오지 못했습니다. 로컬 일정은 계속 사용할 수 있습니다.</Text> : null}
+        </AssistantCard>
+        {external.data?.weatherData ? <BriefingWeatherCard {...external.data.weatherData} /> : null}
+        {external.data?.newsData ? <BriefingNewsCard items={external.data.newsData} /> : null}
+        {external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
+      </ScrollView>
+    );
 }
