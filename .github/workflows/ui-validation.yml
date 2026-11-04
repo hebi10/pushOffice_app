@@ -1,0 +1,62 @@
+name: Push Office UI validation
+
+on:
+  push:
+    branches:
+      - feat/push-office-ui-refresh-20261104
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  javascript:
+    name: React Native UI checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npx --no-install eslint app src plugins tests
+      - run: npx --no-install expo export --platform android --output-dir dist-ui-check
+
+  native:
+    name: Android Kotlin UI checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Test and compile Android module
+        working-directory: android
+        run: |
+          ./gradlew :push-office-native:testDebugUnitTest :app:assembleDebug \
+            --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PreactNativeArchitectures=x86_64
