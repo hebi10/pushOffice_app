@@ -29,9 +29,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '브리핑',
+          title: 'Push Office',
+          tabBarLabel: '홈',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sunny-outline" size={size ?? 22} color={color} />
+            <Ionicons name="home-outline" size={size ?? 22} color={color} />
           ),
         }}
       />
