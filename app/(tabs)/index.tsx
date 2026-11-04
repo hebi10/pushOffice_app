@@ -14,7 +14,7 @@ import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { ForegroundRequest, runForegroundRequest } from '@/src/features/notifications/foregroundRequest';
-import { AppState, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { AppState, RefreshControl, ScrollView, Text } from 'react-native';
 export default function HomeScreen() {
     const { colors } = useTheme();
     const now = useClock();
