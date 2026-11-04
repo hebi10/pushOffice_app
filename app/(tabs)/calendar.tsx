@@ -47,7 +47,7 @@ export default function CalendarScreen() {
         eyebrow="날짜별 일정 확인"
         title="일정 · 캘린더"
         description="달력에서 날짜를 선택하고 일정을 확인하세요."
-        artwork={require('@/assets/images/push-office-mark.png')}
+        artwork={require('@/assets/images/illustration-calendar.jpg')}
       />
       <View style={{ backgroundColor: colors.surface, borderColor: colors.surfaceBorder, borderWidth: 1, borderRadius: 16, overflow: 'hidden', paddingVertical: 8 }}>
         <Calendar
