@@ -73,7 +73,7 @@ export default function SettingsScreen() {
           eyebrow="나에게 맞는 일정 비서"
           title="설정"
           description="자주 사용하는 기능부터 차근차근 설정하세요."
-          artwork={require('@/assets/images/push-office-mark.png')}
+          artwork={require('@/assets/images/illustration-settings.jpg')}
         />
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {([['basic', '기본 설정'], ['advanced', '고급 설정']] as const).map(([value, label]) => {
