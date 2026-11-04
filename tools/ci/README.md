@@ -54,7 +54,7 @@ Secret이 하나라도 빠졌으면 빌드 전에 실패합니다. 서명 없는
 
 업로드 직전에 기존 코드를 다시 조회해 외부 업로드로 생긴 충돌을 거부합니다. 선택한 트랙의 완료된 출시 또는 버전 코드 없는 빈 초안만 대체합니다. 내용이 있는 초안·진행 중 출시·중단 출시는 Console에서 먼저 해결해야 합니다. 다른 트랙은 수정하지 않습니다.
 
-AAB는 패키지 `com.hebi96.pushOffice_app`, SDK 26/36, 버전, debuggable=false, 차단 권한, ARM64·ARMv7·x86_64, 64비트 ELF 16KB 정렬, bundletool 구조, 실제 서명과 인증서 지문을 검증합니다. 검증 보고서의 hash·크기·출처 커밋·실제 AAB 내용을 업로드 전에 다시 대조합니다. APK도 v2 단일 서명, 16KB ZIP/ELF 정렬과 서명 전후 payload 일치를 확인합니다.
+AAB는 패키지 `com.hebi96.pushOffice_app`, SDK 26/36, 버전, debuggable=false, 차단 권한, ARM64·ARMv7·x86_64, 64비트 ELF 16KB 정렬, bundletool 구조, 실제 서명과 인증서 지문을 검증합니다. 검증 보고서의 hash·크기·실제 AAB 내용을 업로드 전에 다시 대조합니다. 보고서의 출처 커밋은 현재 실행의 `GITHUB_SHA`와 정확히 같아야 하며, 패키지·버전명·버전 코드는 해당 빌드에 사용한 일회성 `app.json`과 일치해야 합니다. 출처가 없거나 이전 빌드의 파일이면 Play API 요청 전에 중단합니다. APK도 v2 단일 서명, 16KB ZIP/ELF 정렬과 서명 전후 payload 일치를 확인합니다.
 
 업로드 응답의 버전·SHA-256 확인 → 트랙 갱신 → edit 검증 → 기존 검토가 있으면 중단하는 `ERROR_IF_IN_REVIEW` commit → 새 edit에서 최종 트랙 확인 순서입니다. 업로드·commit 결과가 불명확하면 자동 재시도하지 않습니다. API가 접수한 것과 Google 검토 승인·테스터에게 제공된 것은 별도입니다.
 
@@ -67,6 +67,8 @@ APK는 업로드 키로 서명하므로 기존 Play 설치본을 업데이트할
 ```sh
 python3 -m unittest discover -s tools/ci -p 'test_*.py'
 ```
+
+릴리스 도구 또는 워크플로를 수정한 PR에서는 `Push Office release tool checks`가 비밀 설정이나 Play 인증 없이 이 검증을 실행합니다.
 
 공식 문서:
 - https://developers.google.com/android-publisher/tracks

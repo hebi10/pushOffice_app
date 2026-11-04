@@ -209,7 +209,7 @@ def preflight(client, target, *, closed_track=None, app_config=Path('app.json'),
     return report
 
 
-def load_inputs(bundle, verification, notes):
+def load_inputs(bundle, verification, notes, *, app_config, source_commit):
     try:
         bundle, verification, notes = Path(bundle), Path(verification), Path(notes)
         require(all(path.is_file() and not path.is_symlink() for path in (bundle, verification, notes))
@@ -228,9 +228,13 @@ def load_inputs(bundle, verification, notes):
                 and proof.get('sha256') == release_aab.sha256(payload)
                 and type(proof.get('size_bytes')) is int and proof['size_bytes'] == len(payload),
                 'The bundle filename, SHA-256 or size does not match its verification report.')
+        require(isinstance(source_commit, str) and bool(re.fullmatch(r'[0-9a-f]{40}', source_commit))
+                and proof['source_commit'] == source_commit,
+                'The verified bundle source commit does not match the current release checkout.')
         manifest = proof['manifest']
         code = version_code(manifest['version_code'])
-        config = {'expo': {'version': manifest['version_name'], 'android': {'package': PACKAGE, 'versionCode': code}}}
+        config = json.loads(Path(app_config).read_text(encoding='utf-8'))
+        release_aab.validate_metadata(manifest, config)
         require(bundle.name == release_aab.artifact_name(config['expo'], 'signed')
                 and verification.name == bundle.with_suffix('.verification.json').name,
                 'The bundle or verification filename does not match its signed version.')
@@ -254,10 +258,12 @@ def load_inputs(bundle, verification, notes):
         raise ReleaseError('The signed AAB, matching verification report or Korean release notes are invalid.') from None
 
 
-def publish(client, target, *, closed_track=None, bundle=None, verification=None, notes=NOTES, report=None):
+def publish(client, target, *, source_commit, app_config=Path('app.json'), closed_track=None,
+            bundle=None, verification=None, notes=NOTES, report=None):
     report = start_report(report, 'publish', target)
     validate_target(target, closed_track)
-    proof, code, payload, text = load_inputs(bundle, verification, notes)
+    proof, code, payload, text = load_inputs(bundle, verification, notes,
+                                           app_config=app_config, source_commit=source_commit)
     report.update(version_code=code, version_name=proof['manifest']['version_name'],
                   source_commit=proof['source_commit'], bundle_sha256=proof['sha256'])
     edit = client.create_edit()
@@ -338,6 +344,7 @@ def main(argv=None):
             require(arguments.bundle is not None and arguments.verification is not None,
                     'Publishing requires --bundle and --verification.')
             publish(client, arguments.target, closed_track=arguments.closed_track,
+                    source_commit=os.environ.get('GITHUB_SHA'), app_config=arguments.app_config,
                     bundle=arguments.bundle, verification=arguments.verification, report=report)
             print('Google Play API accepted the release and its test track was verified. Google approval and tester availability are not confirmed.')
         result = 0

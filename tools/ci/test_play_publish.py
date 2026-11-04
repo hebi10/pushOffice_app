@@ -142,6 +142,9 @@ class PlayTests(unittest.TestCase):
         self.config = self.root / 'app.json'
         self.config.write_text(json.dumps({'expo': {'version': '1.1.0',
                                'android': {'package': PACKAGE, 'versionCode': 3}}}), encoding='utf-8')
+        self.release_config = self.root / 'release-app.json'
+        self.release_config.write_text(json.dumps({'expo': {'version': '1.1.0',
+                                       'android': {'package': PACKAGE, 'versionCode': 10}}}), encoding='utf-8')
         self.server = PlayServer()
         self.client = play.PlayClient('sentinel-private-token', transport=self.server)
 
@@ -153,7 +156,8 @@ class PlayTests(unittest.TestCase):
 
     def publish(self, **kwargs):
         return play.publish(self.client, 'internal', bundle=self.bundle,
-                            verification=self.verification, notes=self.notes, **kwargs)
+                            verification=self.verification, notes=self.notes,
+                            app_config=self.release_config, source_commit='a' * 40, **kwargs)
 
     def test_preflight_allocates_above_bundles_apks_and_all_tracks_and_deletes_edit(self):
         result = self.preflight()
@@ -197,7 +201,8 @@ class PlayTests(unittest.TestCase):
         result = play.preflight(self.client, 'closed', closed_track='비공개 테스트', app_config=self.config)
         self.assertEqual(result['api_track'], '비공개 테스트')
         result = play.publish(self.client, 'closed', closed_track='비공개 테스트', bundle=self.bundle,
-                              verification=self.verification, notes=self.notes)
+                              verification=self.verification, notes=self.notes,
+                              app_config=self.release_config, source_commit='a' * 40)
         self.assertEqual(result['status'], 'committed')
         self.assertEqual(self.server.deleted, ['e1', 'e3'])
         self.assertIn(('PUT', EDITS + '/e2/tracks/%EB%B9%84%EA%B3%B5%EA%B0%9C%20%ED%85%8C%EC%8A%A4%ED%8A%B8'),
@@ -317,7 +322,8 @@ class PlayTests(unittest.TestCase):
                 server = PlayServer(tracks=[{'track': 'internal', 'releases': [{'status': status, 'versionCodes': codes}]}])
                 with self.assertRaises(play.ReleaseError):
                     play.publish(play.PlayClient('token', transport=server), 'internal', bundle=self.bundle,
-                                 verification=self.verification, notes=self.notes)
+                                 verification=self.verification, notes=self.notes,
+                                 app_config=self.release_config, source_commit='a' * 40)
                 self.assertIsNone(server.uploaded)
                 self.assertEqual(server.deleted, ['e1'])
 
@@ -385,7 +391,8 @@ class PlayTests(unittest.TestCase):
                 server.overrides[('POST', path)] = response
                 with self.assertRaises(play.ReleaseError):
                     play.publish(play.PlayClient('token', transport=server), 'internal', bundle=self.bundle,
-                                 verification=self.verification, notes=self.notes)
+                                 verification=self.verification, notes=self.notes,
+                                 app_config=self.release_config, source_commit='a' * 40)
                 self.assertFalse(any(method == 'PUT' for method, _, _ in server.calls))
                 self.assertEqual(server.deleted, ['e1'])
 
@@ -414,7 +421,8 @@ class PlayTests(unittest.TestCase):
                 report = {}
                 with self.assertRaises(play.ReleaseError):
                     play.publish(play.PlayClient('token', transport=server), 'internal', bundle=self.bundle,
-                                 verification=self.verification, notes=self.notes, report=report)
+                                 verification=self.verification, notes=self.notes,
+                                 app_config=self.release_config, source_commit='a' * 40, report=report)
                 self.assertEqual(report['status'], 'commit_unknown')
                 self.assertIsNone(report['api_accepted'])
                 self.assertEqual(sum(url == path for _, url, _ in server.calls), 1)
@@ -440,7 +448,8 @@ class PlayTests(unittest.TestCase):
                 report = {}
                 with self.assertRaises(play.ReleaseError):
                     play.publish(play.PlayClient('token', transport=server), 'internal', bundle=self.bundle,
-                                 verification=self.verification, notes=self.notes, report=report)
+                                 verification=self.verification, notes=self.notes,
+                                 app_config=self.release_config, source_commit='a' * 40, report=report)
                 self.assertTrue(report['api_accepted'])
                 self.assertFalse(report['track_verified'])
                 self.assertEqual(server.deleted, ['e2'])
@@ -479,6 +488,54 @@ class PlayTests(unittest.TestCase):
         self.assertNotIn('sentinel-private-token', report.read_text())
         self.assertFalse(output.exists())
 
+    def test_cli_publish_rejects_another_source_commit_before_any_api_request(self):
+        config = json.loads(self.config.read_text())
+        config['expo']['android']['versionCode'] = 10
+        self.config.write_text(json.dumps(config))
+        report = self.root / 'wrong-source.json'
+        with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=self.client), patch.dict(os.environ, {'GITHUB_SHA': 'b' * 40}), redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+            clock.now.return_value = datetime(2026, 11, 6, 3, 32, tzinfo=timezone.utc)
+            result = play.main(['publish', '--app-config', str(self.config),
+                                '--bundle', str(self.bundle), '--verification', str(self.verification),
+                                '--report', str(report)])
+        self.assertEqual(result, 1)
+        self.assertEqual(self.server.calls, [])
+        self.assertFalse(json.loads(report.read_text())['api_accepted'])
+
+    def test_cli_publish_rejects_missing_or_malformed_source_context_before_api(self):
+        for source in ('', 'not-a-commit', 'A' * 40):
+            with self.subTest(source=source):
+                report = self.root / 'invalid-source.json'
+                server = PlayServer()
+                client = play.PlayClient('token', transport=server)
+                with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=client), patch.dict(os.environ, {'GITHUB_SHA': source}), redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+                    clock.now.return_value = datetime(2026, 11, 6, 3, 32, tzinfo=timezone.utc)
+                    result = play.main(['publish', '--app-config', str(self.release_config),
+                                        '--bundle', str(self.bundle), '--verification', str(self.verification),
+                                        '--report', str(report)])
+                self.assertEqual(result, 1)
+                self.assertEqual(server.calls, [])
+
+    def test_cli_publish_rejects_checkout_version_or_package_mismatch_before_api(self):
+        configurations = [
+            {'expo': {'version': '1.1.0', 'android': {'package': PACKAGE, 'versionCode': 11}}},
+            {'expo': {'version': '1.2.0', 'android': {'package': PACKAGE, 'versionCode': 10}}},
+            {'expo': {'version': '1.1.0', 'android': {'package': 'com.hebi96.other', 'versionCode': 10}}},
+        ]
+        for config in configurations:
+            with self.subTest(config=config):
+                self.config.write_text(json.dumps(config))
+                report = self.root / 'wrong-config.json'
+                server = PlayServer()
+                client = play.PlayClient('token', transport=server)
+                with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=client), patch.dict(os.environ, {'GITHUB_SHA': 'a' * 40}), redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
+                    clock.now.return_value = datetime(2026, 11, 6, 3, 32, tzinfo=timezone.utc)
+                    result = play.main(['publish', '--app-config', str(self.config),
+                                        '--bundle', str(self.bundle), '--verification', str(self.verification),
+                                        '--report', str(report)])
+                self.assertEqual(result, 1)
+                self.assertEqual(server.calls, [])
+
     def test_cli_publish_refuses_before_key_activation_without_api_calls(self):
         report = self.root / 'deferred.json'
         with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=self.client), redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()):
@@ -491,9 +548,9 @@ class PlayTests(unittest.TestCase):
 
     def test_cli_publish_accepts_activation_boundary_and_retains_approval_distinction(self):
         report = self.root / 'published.json'
-        with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=self.client), redirect_stdout(io.StringIO()):
+        with patch.object(play, 'datetime', create=True) as clock, patch.object(play, 'PlayClient', return_value=self.client), patch.dict(os.environ, {'GITHUB_SHA': 'a' * 40}), redirect_stdout(io.StringIO()):
             clock.now.return_value = datetime(2026, 11, 6, 3, 32, tzinfo=timezone.utc)
-            self.assertEqual(play.main(['publish', '--bundle', str(self.bundle),
+            self.assertEqual(play.main(['publish', '--app-config', str(self.release_config), '--bundle', str(self.bundle),
                              '--verification', str(self.verification), '--report', str(report)]), 0)
         result = json.loads(report.read_text())
         self.assertTrue(result['api_accepted'])
