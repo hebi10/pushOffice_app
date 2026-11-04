@@ -1,0 +1,29 @@
+name: Push Office release tool checks
+
+on:
+  pull_request:
+    paths:
+      - 'tools/ci/**'
+      - '.github/workflows/android-release.yml'
+      - '.github/workflows/release-tools.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'tools/ci/**'
+      - '.github/workflows/android-release.yml'
+      - '.github/workflows/release-tools.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  release-tools:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Test release policies and publication guards
+        run: python3 -m unittest discover -s tools/ci -p 'test_*.py'
