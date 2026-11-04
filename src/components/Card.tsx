@@ -28,8 +28,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 12,
     padding: 14,
-    marginVertical: 6,
-    marginHorizontal: 16,
+    marginVertical: 0,
+    marginHorizontal: 0,
     borderWidth: StyleSheet.hairlineWidth,
   },
 });
