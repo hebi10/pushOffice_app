@@ -173,9 +173,11 @@ class QuickEntryActivity : Activity() {
     status=TextView(this).apply { text="모든 입력은 기기에서 처리합니다."; setTextColor(secondary); textSize=13f; accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
     root.addView(status)
     button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
-    button("음성 입력 시작", "기기 내 한국어 음성 녹음 시작") { beginSpeech() }
-    button("음성 입력 중지") { stopSpeech() }
-    button("기기 AI로 해석") {
+    pairedButtons(
+      "음성 입력 시작", { beginSpeech() },
+      "음성 입력 중지", { stopSpeech() }
+    )
+    pairedButtons("기기 AI로 해석", {
       stopSpeech(); cancelModel()
       val request=session.startModel(transcript.text.toString())
       if(request!=null) modelJob=scope.launch {
@@ -194,8 +196,7 @@ class QuickEntryActivity : Activity() {
           if(current()) status.text="${e.message}\n기본 해석 또는 직접 입력을 이용해 주세요."
         }
       }
-    }
-    button("AI 해석 취소") { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." }
+    }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
     button("뒤로") { chooser() }
     if(voice) status.text="음성 입력 시작을 누르면 기기 내 한국어 인식을 확인합니다."
@@ -375,6 +376,41 @@ class QuickEntryActivity : Activity() {
       setOnClickListener { action() }
     },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(primary)14 else 8) })
   }
+  private fun pairedButtons(
+    leftLabel: String, leftAction: () -> Unit,
+    rightLabel: String, rightAction: () -> Unit
+  ) {
+    val container=LinearLayout(this).apply {
+      orientation=LinearLayout.HORIZONTAL
+      gravity=Gravity.CENTER_VERTICAL
+    }
+    fun add(label: String, action: () -> Unit) {
+      container.addView(Button(this).apply {
+        text=label
+        contentDescription=label
+        textSize=14f
+        isAllCaps=false
+        setSingleLine(false)
+        setTextColor(blue)
+        setTypeface(null,Typeface.BOLD)
+        stateListAnimator=null
+        setPadding(dp(8),dp(8),dp(8),dp(8))
+        minHeight=dp(50)
+        background=GradientDrawable().apply {
+          setColor(surface)
+          cornerRadius=dp(10).toFloat()
+          setStroke(dp(1),inputBorder)
+        }
+        setOnClickListener { action() }
+      },LinearLayout.LayoutParams(0,-2,1f).apply {
+        setMargins(dp(4),0,dp(4),0)
+      })
+    }
+    add(leftLabel,leftAction)
+    add(rightLabel,rightAction)
+    root.addView(container,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+  }
+
   private fun showBrandedDialog(
     title: String,
     message: String?,
