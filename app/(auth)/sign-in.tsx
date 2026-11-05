@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { AssistantButton } from '@/src/components/AssistantUI';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 
 export default function SignInScreen() {
   const { colors } = useTheme();
@@ -40,8 +41,8 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, paddingHorizontal: 24, alignItems: 'center', justifyContent: 'center' },
   logo: { width: 96, height: 96, marginBottom: 20, borderRadius: 18 },
-  title: { fontSize: 28, fontWeight: '800', lineHeight: 36 },
-  subtitle: { fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 10 },
+  title: { fontFamily: APP_FONT_FAMILY, fontSize: 28, fontWeight: '800', lineHeight: 36 },
+  subtitle: { fontFamily: APP_FONT_FAMILY, fontSize: 15, lineHeight: 23, textAlign: 'center', marginTop: 10 },
   action: { width: '100%', maxWidth: 420, marginTop: 32 },
-  helper: { fontSize: 12, lineHeight: 19, marginTop: 16 },
+  helper: { fontFamily: APP_FONT_FAMILY, fontSize: 12, lineHeight: 19, marginTop: 16 },
 });

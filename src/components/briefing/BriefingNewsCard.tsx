@@ -2,6 +2,7 @@
  * 뉴스 카드 – 최대 5건, 제목 + 출처
  */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { Card } from '../Card';
@@ -57,8 +58,8 @@ export function BriefingNewsCard({ items }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  label: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 8 },
   row: { paddingVertical: 8 },
-  title: { fontSize: 14, lineHeight: 20 },
-  source: { fontSize: 11, marginTop: 2 },
+  title: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 20 },
+  source: { fontFamily: APP_FONT_FAMILY, fontSize: 11, marginTop: 2 },
 });

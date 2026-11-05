@@ -1,5 +1,6 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -12,7 +13,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.headerBackground },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: '600', fontSize: 17 },
+        headerTitleStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: '600', fontSize: 17 },
         tabBarStyle: {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
@@ -23,7 +24,7 @@ export default function TabsLayout() {
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: { fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: APP_FONT_FAMILY, fontSize: 11 },
       }}
     >
       <Tabs.Screen

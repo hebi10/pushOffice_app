@@ -1,0 +1,7 @@
+<resources>
+  <color name="po_widget_surface">#FFFFFF</color>
+  <color name="po_widget_text">#1F2937</color>
+  <color name="po_widget_accent">#2563EB</color>
+  <color name="po_widget_border">#E2E8F0</color>
+  <color name="po_widget_action_surface">#F8FAFC</color>
+</resources>

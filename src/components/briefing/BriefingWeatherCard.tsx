@@ -2,6 +2,7 @@
  * 날씨 카드 – 기온, 체감, 최저/최고, 한줄 코멘트
  */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../Card';
@@ -60,11 +61,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  label: { fontSize: 13, fontWeight: '600' },
-  city: { fontSize: 12 },
+  label: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600' },
+  city: { fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   tempRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  temp: { fontSize: 36, fontWeight: '700', lineHeight: 42 },
+  temp: { fontFamily: APP_FONT_FAMILY, fontSize: 36, fontWeight: '700', lineHeight: 42 },
   tempDetail: { flex: 1, gap: 2 },
-  sub: { fontSize: 13 },
-  comment: { fontSize: 13, fontWeight: '500', marginTop: 8 },
+  sub: { fontFamily: APP_FONT_FAMILY, fontSize: 13 },
+  comment: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '500', marginTop: 8 },
 });

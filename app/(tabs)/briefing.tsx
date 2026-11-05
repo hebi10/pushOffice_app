@@ -16,10 +16,12 @@ import {
   BriefingWeatherCard,
 } from '@/src/components/briefing';
 import { Card } from '@/src/components/Card';
+import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { Loading } from '@/src/components/Loading';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import type { GenerateDigestInput } from '@/src/features/digest';
 import { isFallbackDigest, useDateDigest, useGenerateDigest } from '@/src/features/digest';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
@@ -101,7 +103,7 @@ export default function BriefingScreen() {
   const settings = useAppSelector((s) => s.settings);
   const storageMode = useAppSelector((s) => s.storageMode);
   const { date } = useLocalSearchParams<{ date?: string }>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const now = useClock();
   const targetDate = date || dayjs(now).format('YYYY-MM-DD');
@@ -236,13 +238,16 @@ export default function BriefingScreen() {
         {/* ─── 헤더 ───────────────────────────────────── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>데일리 다이제스트</Text>
-            <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
-              {dayjs(targetDate).format('YYYY년 M월 D일 (ddd)')}
-            </Text>
+            <ScreenIntro
+              eyebrow="일정과 외부 정보"
+              title="데일리 다이제스트"
+              description={dayjs(targetDate).format('YYYY년 M월 D일 (ddd)')}
+            />
           </View>
 
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="브리핑 새로고침"
             style={[styles.refreshBtn, { borderColor: colors.surfaceBorder }]}
             onPress={handleRegenerate}
             disabled={generateMutation.isPending}
@@ -356,8 +361,8 @@ export default function BriefingScreen() {
                 onPress={handleShare}
                 activeOpacity={0.7}
               >
-                <Ionicons name="share-outline" size={16} color="#FFF" />
-                <Text style={styles.actionBtnText}>공유하기</Text>
+                <Ionicons name="share-outline" size={16} color={isDark ? colors.background : '#FFF'} />
+                <Text style={[styles.actionBtnText, { color: isDark ? colors.background : '#FFF' }]}>공유하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -393,9 +398,9 @@ export default function BriefingScreen() {
                 disabled={generateMutation.isPending}
               >
                 {generateMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={isDark ? colors.background : '#FFF'} />
                 ) : (
-                  <Text style={styles.generateBtnText}>
+                  <Text style={[styles.generateBtnText, { color: isDark ? colors.background : '#FFF' }]}>
                     {generateMutation.isError ? '다시 생성' : '브리핑 생성하기'}
                   </Text>
                 )}
@@ -443,25 +448,25 @@ const styles = StyleSheet.create({
    * 기존 FlatList + ListHeaderComponent 구조에서는 이 값이 부족했음
    */
   scrollContent: {
-    paddingTop: 12,
-    paddingBottom: 100,
+    paddingTop: 16,
+    paddingBottom: 48,
+    paddingHorizontal: 16,
   },
 
   /* 헤더 */
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
+    alignItems: 'center',
     marginBottom: 12,
   },
   headerLeft: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '700' },
-  headerDate: { fontSize: 13, marginTop: 2 },
+  headerTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700' },
+  headerDate: { fontFamily: APP_FONT_FAMILY, fontSize: 13, marginTop: 2 },
   refreshBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -475,17 +480,16 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginHorizontal: 16,
     borderRadius: 8,
     marginBottom: 8,
   },
-  pastBannerText: { fontSize: 13, fontWeight: '500' },
+  pastBannerText: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '500' },
 
   /* 로딩 / 에러 */
   loadingBox: { alignItems: 'center', paddingVertical: 48, gap: 10 },
-  loadingText: { fontSize: 14 },
+  loadingText: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   errorBox: { alignItems: 'center', paddingVertical: 16, gap: 8 },
-  errorText: { fontSize: 14 },
+  errorText: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   actionBtnOutline: {
     borderWidth: 1,
     borderRadius: 8,
@@ -493,7 +497,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 4,
   },
-  actionBtnOutlineText: { fontSize: 13, fontWeight: '600' },
+  actionBtnOutlineText: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600' },
 
   /* fallback 배너 */
   fallbackBanner: {
@@ -503,28 +507,26 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginHorizontal: 16,
     marginBottom: 4,
   },
-  fallbackText: { flex: 1, fontSize: 12 },
+  fallbackText: { flex: 1, fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   fallbackBtn: {
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  fallbackBtnText: { fontSize: 12, fontWeight: '600' },
+  fallbackBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 12, fontWeight: '600' },
 
   /* 레거시 markdown */
-  legacySectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
-  legacyText: { fontSize: 14, lineHeight: 22 },
-  sourcesText: { fontSize: 11, marginTop: 8 },
+  legacySectionTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  legacyText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 22 },
+  sourcesText: { fontFamily: APP_FONT_FAMILY, fontSize: 11, marginTop: 8 },
 
   /* 하단 액션 바 */
   actionBar: {
     flexDirection: 'row',
     gap: 10,
-    marginHorizontal: 16,
     marginTop: 16,
   },
   actionBtn: {
@@ -534,28 +536,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderRadius: 10,
+    minHeight: 50,
     paddingVertical: 12,
   },
-  actionBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  actionBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 빈 상태 */
   emptyBox: { alignItems: 'center', paddingVertical: 24, gap: 10 },
-  emptyTitle: { fontSize: 14 },
-  errorSmall: { fontSize: 12 },
+  emptyTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
+  errorSmall: { fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   generateBtn: {
     borderRadius: 10,
+    minHeight: 50,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     marginTop: 4,
   },
-  generateBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  generateBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 레거시 일정 섹션 */
   legacySchedules: { marginTop: 16 },
   scheduleSectionTitle: {
-    fontSize: 14,
+    fontFamily: APP_FONT_FAMILY, fontSize: 14,
     fontWeight: '600',
-    marginHorizontal: 16,
     marginBottom: 6,
   },
 });

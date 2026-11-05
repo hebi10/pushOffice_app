@@ -4,7 +4,6 @@ import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
-import android.graphics.Color
 import android.graphics.Typeface
 import android.net.Uri
 import android.os.Bundle
@@ -24,8 +23,6 @@ import kotlin.math.roundToInt
 internal data class WidgetEvent(val id: String, val time: String, val title: String)
 
 internal object ScheduleWidgetViews {
-  private val blue = Color.rgb(37, 99, 235)
-
   fun create(context: Context, agenda: Boolean, events: List<WidgetEvent>, options: Bundle): RemoteViews {
     val minWidth = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH).takeIf { it > 0 } ?: if (agenda) 250 else 180
     val minHeight = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT).takeIf { it > 0 } ?: if (agenda) 160 else 148
@@ -41,7 +38,8 @@ internal object ScheduleWidgetViews {
     val heading = if (agenda) "오늘의 일정" else "다음 일정"
     val rows = if (agenda) listOf(R.id.widget_event_1, R.id.widget_event_2, R.id.widget_event_3) else listOf(R.id.widget_event_1)
     val empty = if (agenda) "오늘 일정 없음" else "일정 없음"
-    val samples = events.take(rows.size).map { eventText(it, agenda) }.ifEmpty { listOf(empty) }
+    val accent = context.getColor(R.color.po_widget_accent)
+    val samples = events.take(rows.size).map { eventText(it, agenda, accent) }.ifEmpty { listOf(empty) }
     var eventSize = 15f
     var rowPadding = if (agenda) 3 else 4
     val lines = if (agenda) 1 else 2
@@ -82,7 +80,7 @@ internal object ScheduleWidgetViews {
         setViewVisibility(row, if (visible) View.VISIBLE else View.GONE)
         setViewPadding(row, 0, dp(context, rowPadding), 0, dp(context, rowPadding))
         setTextViewTextSize(row, TypedValue.COMPLEX_UNIT_SP, eventSize)
-        setTextViewText(row, event?.let { eventText(it, agenda) } ?: empty)
+        setTextViewText(row, event?.let { eventText(it, agenda, accent) } ?: empty)
         setContentDescription(row, event?.let { "${it.time}, ${it.title}" } ?: if (agenda) "오늘 예정된 일정이 없습니다." else "예정된 일정이 없습니다.")
         setOnClickPendingIntent(row, when {
           event != null -> pending(context, eventIntent(context, event.id))
@@ -106,8 +104,8 @@ internal object ScheduleWidgetViews {
       .putExtra("entryMode", mode)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-  private fun eventText(event: WidgetEvent, agenda: Boolean): CharSequence = SpannableString("${event.time}${if (agenda) "  " else "\n"}${event.title}").apply {
-    setSpan(ForegroundColorSpan(blue), 0, event.time.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+  private fun eventText(event: WidgetEvent, agenda: Boolean, accent: Int): CharSequence = SpannableString("${event.time}${if (agenda) "  " else "\n"}${event.title}").apply {
+    setSpan(ForegroundColorSpan(accent), 0, event.time.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     setSpan(StyleSpan(Typeface.BOLD), 0, event.time.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     if (!agenda) setSpan(RelativeSizeSpan(.8f), 0, event.time.length + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
   }

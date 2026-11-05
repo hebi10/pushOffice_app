@@ -2,7 +2,8 @@
  * 알림 권한 요청
  */
 import * as Notifications from 'expo-notifications';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import { showNotice } from '@/src/components/ui/toast';
 
 /** 알림 권한 요청 */
 export async function requestNotificationPermission(): Promise<boolean> {
@@ -14,7 +15,7 @@ export async function requestNotificationPermission(): Promise<boolean> {
       finalStatus = status;
     }
     if (finalStatus !== 'granted') {
-      Alert.alert('알림 권한', '알림을 받으려면 권한을 허용해 주세요.');
+      showNotice('알림 권한', '알림을 받으려면 권한을 허용해 주세요.');
       return false;
     }
     if (Platform.OS === 'android') {

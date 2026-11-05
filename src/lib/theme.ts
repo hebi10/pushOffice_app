@@ -73,7 +73,7 @@ export const darkColors: AppColors = {
   chatUserBubble: '#5B9FE6',
   chatAssistantBubble: '#2A2A2A',
   chatAssistantBorder: '#444444',
-  chatUserText: '#FFFFFF',
+  chatUserText: '#121212',
   chatAssistantText: '#E0E0E0',
   statusBar: 'light',
 };

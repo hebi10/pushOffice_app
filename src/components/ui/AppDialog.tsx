@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 
 type AppDialogProps = {
   visible: boolean;
@@ -32,8 +33,9 @@ export function AppDialog({
   onDismiss,
   showCancel = true,
 }: AppDialogProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const actionColor = destructive ? colors.danger : colors.primary;
+  const actionTextColor = isDark ? colors.background : '#FFFFFF';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
@@ -74,7 +76,7 @@ export function AppDialog({
               onPress={onConfirm}
               style={[styles.action, { backgroundColor: actionColor, borderColor: actionColor }]}
             >
-              <Text style={[styles.label, { color: '#FFFFFF' }]}>{confirmLabel}</Text>
+              <Text style={[styles.label, { color: actionTextColor }]}>{confirmLabel}</Text>
             </Pressable>
           </View>
         </View>
@@ -106,13 +108,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontSize: 20, fontWeight: '700', lineHeight: 28 },
-  message: { fontSize: 14, lineHeight: 22 },
+  title: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700', lineHeight: 28 },
+  message: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 22 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
   action: {
     flex: 1, minHeight: 48, paddingHorizontal: 10,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderRadius: 10,
   },
-  label: { fontSize: 15, fontWeight: '700' },
+  label: { fontFamily: APP_FONT_FAMILY, fontSize: 15, fontWeight: '700' },
 });

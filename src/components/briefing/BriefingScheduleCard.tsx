@@ -2,6 +2,7 @@
  * 일정 카드 – 오늘/내일 일정 미리보기
  */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import type { ScheduleDoc } from '@/src/types';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -75,13 +76,13 @@ export function BriefingScheduleCard({ todaySchedules, tomorrowSchedules }: Prop
 }
 
 const styles = StyleSheet.create({
-  sectionLabel: { fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  sectionLabel: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 4 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 6,
     gap: 10,
   },
-  time: { fontSize: 13, fontWeight: '600', width: 42 },
-  title: { fontSize: 14, flex: 1 },
+  time: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', width: 42 },
+  title: { fontFamily: APP_FONT_FAMILY, fontSize: 14, flex: 1 },
 });

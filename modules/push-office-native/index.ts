@@ -44,6 +44,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   getAiStatus(): Promise<AiStatus>;
   generateBriefing(prompt: string): Promise<string>;
   refreshWidgets(): Promise<void>;
+  setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
   getSchedules(): Promise<NativeSchedule[]>;
   saveSchedule(record: NativeSchedule): Promise<NativeSchedule>;
   /** Import without overwriting existing ids, retaining history without reserving past alarms. */
@@ -69,6 +70,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   getAiStatus: async () => ({ status: 'unavailable', message: '기기 AI는 지원되는 Android 기기에서 사용할 수 있습니다.' }),
   generateBriefing: unavailable,
   refreshWidgets: unavailable,
+  setUiTheme: unavailable,
   getSchedules: async () => [],
   saveSchedule: unavailable,
   importSchedules: unavailable,
