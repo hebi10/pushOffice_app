@@ -32,7 +32,7 @@ class PushOfficeNativeModule : Module() {
       if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 타일 추가를 요청해 주세요.",null)
       else activity.runOnUiThread {
         if(Build.VERSION.SDK_INT<33) {
-          android.app.AlertDialog.Builder(activity).setTitle(activity.getString(R.string.tile_add_title)).setMessage(activity.getString(R.string.tile_add_manual,activity.getString(R.string.tile_label))).setPositiveButton("확인",null).show()
+          android.app.AlertDialog.Builder(android.view.ContextThemeWrapper(activity, R.style.PushOfficeDialog)).setTitle(activity.getString(R.string.tile_add_title)).setMessage(activity.getString(R.string.tile_add_manual,activity.getString(R.string.tile_label))).setPositiveButton("확인",null).show()
           promise.resolve("unsupported_manual")
         } else try {
           activity.getSystemService(StatusBarManager::class.java).requestAddTileService(
