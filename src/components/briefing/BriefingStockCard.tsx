@@ -2,6 +2,7 @@
  * 주식 카드 – 종목별 가격 + 등락률
  */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '../Card';
@@ -60,15 +61,15 @@ export function BriefingStockCard({ items }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  label: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 8 },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
   },
-  symbol: { fontSize: 14, fontWeight: '600' },
+  symbol: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
   right: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  price: { fontSize: 14 },
-  change: { fontSize: 13, fontWeight: '600', minWidth: 70, textAlign: 'right' },
+  price: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
+  change: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', minWidth: 70, textAlign: 'right' },
 });
