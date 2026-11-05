@@ -151,7 +151,9 @@ export default function ScheduleDetail() {
           </View>
           <View style={s.row}>
             <Text style={[s.body, { color: colors.text }]}>하루 종일</Text>
-            <Switch accessibilityLabel="하루 종일" value={allDay} onValueChange={setAllDay} trackColor={{ true: colors.primary }} />
+            <Switch accessibilityLabel="하루 종일" value={allDay} onValueChange={setAllDay}
+              trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
+              thumbColor={allDay ? colors.primary : colors.surfaceBorder} />
           </View>
           {!allDay ? (
             <View style={{ gap: 6 }}>
@@ -194,7 +196,9 @@ export default function ScheduleDetail() {
           </View>
           <View style={s.row}>
             <Text style={[s.body, { color: colors.text }]}>일정 알림</Text>
-            <Switch accessibilityLabel="일정 알림" value={notification} onValueChange={setNotification} trackColor={{ true: colors.primary }} />
+            <Switch accessibilityLabel="일정 알림" value={notification} onValueChange={setNotification}
+              trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
+              thumbColor={notification ? colors.primary : colors.surfaceBorder} />
           </View>
           <Text style={[s.caption, { color: colors.textSecondary }]}>알림은 기기 권한과 전체 알림 설정에 따라 전달됩니다.</Text>
           <Text style={[s.caption, { color: colors.textSecondary }]}>반복</Text>
