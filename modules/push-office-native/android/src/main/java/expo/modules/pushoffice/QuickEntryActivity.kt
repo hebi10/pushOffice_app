@@ -42,7 +42,7 @@ class QuickEntryActivity : Activity() {
     (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
   private val blue: Int get() = if(isDark) Color.rgb(96,165,250) else Color.rgb(37,99,235)
   private val surface: Int get() = if(isDark) Color.rgb(30,41,59) else Color.WHITE
-  private val foreground: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
+  private val foregroundColor: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
   private val secondary: Int get() = if(isDark) Color.rgb(203,213,225) else Color.rgb(75,85,99)
   private val fieldBackground: Int get() = if(isDark) Color.rgb(51,65,85) else Color.rgb(248,250,252)
   private val inputBorder: Int get() = if(isDark) Color.rgb(100,116,139) else Color.rgb(203,213,225)
@@ -67,7 +67,7 @@ class QuickEntryActivity : Activity() {
     }.apply { addView(root); isFillViewport=false }
     setContentView(scroll)
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
-    root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foreground); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
+    root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(secondary); setPadding(0,0,0,dp(14)) })
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
   }
@@ -105,7 +105,7 @@ class QuickEntryActivity : Activity() {
     chooserHeading.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
       textSize=22f
-      setTextColor(foreground)
+      setTextColor(foregroundColor)
       setTypeface(null,Typeface.BOLD)
       setPadding(0,dp(8),0,dp(6))
     }, LinearLayout.LayoutParams(0,-2,1f))
@@ -120,7 +120,7 @@ class QuickEntryActivity : Activity() {
       setPadding(0,0,0,dp(12))
     })
     fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
-      val textColor=if(primary) Color.WHITE else foreground
+      val textColor=if(primary) Color.WHITE else foregroundColor
       val row=LinearLayout(this).apply {
         orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
@@ -336,7 +336,7 @@ class QuickEntryActivity : Activity() {
       contentDescription=label
       setText(value)
       textSize=16f
-      setTextColor(foreground)
+      setTextColor(foregroundColor)
       setHintTextColor(Color.rgb(107,114,128))
       setSingleLine(!multi)
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
