@@ -51,5 +51,5 @@ test('native quick-entry follows explicit app theme without altering reminder st
 
 test('native dark-mode chooser does not show the white-backed light illustration', () => {
   const native = source('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/QuickEntryActivity.kt');
-  assert.match(native, /if \(!isDark\) chooserHeading\.addView\(ImageView\(this\)/);
+  assert.match(native, /if \(!isDark\) root\.addView\(ImageView\(this\)/);
 });

@@ -78,7 +78,8 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
     root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(secondary); setPadding(0,0,0,dp(14)) })
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setGravity(Gravity.CENTER)
+    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(440)),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
     exitEditor()
@@ -93,8 +94,12 @@ class QuickEntryActivity : Activity() {
     val maxHeight=(availableHeight-dp(32)).coerceAtLeast(1)
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      setPadding(dp(22),dp(18),dp(22),dp(12))
-      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
+      setPadding(dp(20),dp(12),dp(20),dp(22))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        val r=dp(20).toFloat()
+        cornerRadii=floatArrayOf(r,r,r,r,0f,0f,0f,0f)
+      }
     }
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -104,72 +109,147 @@ class QuickEntryActivity : Activity() {
       }
     }.apply { addView(root); isFillViewport=false }
     setContentView(scroll)
-    root.addView(TextView(this).apply {
-      text=getString(R.string.tile_label); textSize=12f; setTextColor(blue); setTypeface(null,Typeface.BOLD)
+    root.addView(View(this).apply {
+      background=GradientDrawable().apply {
+        setColor(inputBorder)
+        cornerRadius=dp(3).toFloat()
+      }
+      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    },LinearLayout.LayoutParams(dp(42),dp(4)).apply {
+      gravity=Gravity.CENTER_HORIZONTAL
+      bottomMargin=dp(10)
     })
-    val chooserHeading=LinearLayout(this).apply {
+    val heading=LinearLayout(this).apply {
       orientation=LinearLayout.HORIZONTAL
       gravity=Gravity.CENTER_VERTICAL
     }
-    chooserHeading.addView(TextView(this).apply {
+    heading.addView(TextView(this).apply {
+      text=getString(R.string.tile_label)
+      textSize=12f
+      setTextColor(blue)
+      setTypeface(null,Typeface.BOLD)
+    },LinearLayout.LayoutParams(0,-2,1f))
+    heading.addView(TextView(this).apply {
+      text="×"
+      contentDescription=getString(R.string.quick_entry_close)
+      textSize=28f
+      gravity=Gravity.CENTER
+      setTextColor(secondary)
+      minimumHeight=dp(48)
+      minimumWidth=dp(48)
+      isClickable=true
+      isFocusable=true
+      setOnClickListener { finish() }
+    },LinearLayout.LayoutParams(dp(48),dp(48)))
+    root.addView(heading)
+    if (!isDark) root.addView(ImageView(this).apply {
+      setImageResource(R.drawable.quick_entry_illustration)
+      scaleType=ImageView.ScaleType.FIT_CENTER
+      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    },LinearLayout.LayoutParams(dp(112),dp(90)).apply {
+      gravity=Gravity.CENTER_HORIZONTAL
+      bottomMargin=dp(8)
+    })
+    root.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
-      textSize=22f
+      textSize=23f
       setTextColor(foregroundColor)
       setTypeface(null,Typeface.BOLD)
-      setPadding(0,dp(8),0,dp(6))
-    }, LinearLayout.LayoutParams(0,-2,1f))
-    // The light illustration has an opaque white background; hide it on dark surfaces.
-    if (!isDark) chooserHeading.addView(ImageView(this).apply {
-      setImageResource(R.drawable.quick_entry_illustration)
-      scaleType=ImageView.ScaleType.CENTER_CROP
-      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, LinearLayout.LayoutParams(dp(64),dp(56)))
-    root.addView(chooserHeading)
-    root.addView(TextView(this).apply {
-      text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(secondary)
-      setPadding(0,0,0,dp(12))
+      gravity=Gravity.CENTER
+      setPadding(0,0,0,dp(8))
     })
-    fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
+    root.addView(TextView(this).apply {
+      text=getString(R.string.quick_entry_description)
+      textSize=14f
+      setTextColor(secondary)
+      gravity=Gravity.CENTER
+      setPadding(0,0,0,dp(16))
+    })
+    fun choice(title: Int, detail: Int, description: Int, iconRes: Int, primary: Boolean, action: ()->Unit) {
       val textColor=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor
       val row=LinearLayout(this).apply {
-        orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
-        setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
+        orientation=LinearLayout.HORIZONTAL
+        gravity=Gravity.CENTER_VERTICAL
+        setPadding(dp(14),dp(12),dp(14),dp(12))
+        minimumHeight=dp(68)
         background=GradientDrawable().apply {
           setColor(if(primary) blue else fieldBackground)
           cornerRadius=dp(12).toFloat()
           if(!primary) setStroke(dp(1),inputBorder)
         }
         val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
-        foreground=attributes.getDrawable(0); attributes.recycle()
-        isClickable=true; isFocusable=true; contentDescription=getString(description)
+        foreground=attributes.getDrawable(0)
+        attributes.recycle()
+        isClickable=true
+        isFocusable=true
+        contentDescription=getString(description)
         accessibilityDelegate=object: View.AccessibilityDelegate() {
           override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
-            super.onInitializeAccessibilityNodeInfo(host,info); info.className=Button::class.java.name
+            super.onInitializeAccessibilityNodeInfo(host,info)
+            info.className=Button::class.java.name
           }
         }
         setOnClickListener { action() }
       }
-      row.addView(TextView(this).apply {
-        text=getString(title); textSize=16f; setTextColor(textColor); setTypeface(null,Typeface.BOLD)
+      row.addView(ImageView(this).apply {
+        setImageResource(iconRes)
+        setColorFilter(textColor)
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      },LinearLayout.LayoutParams(dp(24),dp(24)).apply { marginEnd=dp(12) })
+      val copy=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+      copy.addView(TextView(this).apply {
+        text=getString(title)
+        textSize=16f
+        setTextColor(textColor)
+        setTypeface(null,Typeface.BOLD)
         importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
-      row.addView(TextView(this).apply {
-        text=getString(detail); textSize=13f; setTextColor(if(primary) Color.WHITE else secondary)
-        setPadding(0,dp(3),0,0); importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      copy.addView(TextView(this).apply {
+        text=getString(detail)
+        textSize=13f
+        setTextColor(if(primary) textColor else secondary)
+        alpha=if(primary) 0.85f else 1f
+        setPadding(0,dp(3),0,0)
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
+      row.addView(copy,LinearLayout.LayoutParams(0,-2,1f))
+      row.addView(TextView(this).apply {
+        text="›"
+        textSize=24f
+        setTextColor(textColor)
+        gravity=Gravity.CENTER
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      },LinearLayout.LayoutParams(dp(22),-2))
       root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
     }
-    choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,true) { editor(false) }
-    choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,false) { editor(true) }
-    root.addView(Button(this).apply {
-      text=getString(R.string.quick_entry_close); contentDescription=text; textSize=14f
-      isAllCaps=false; setTextColor(blue); background=null; minimumHeight=dp(48)
-      setPadding(dp(12),0,dp(12),0); setOnClickListener { finish() }
-    },LinearLayout.LayoutParams(-2,-2).apply { gravity=Gravity.END; topMargin=dp(4) })
-    window.setLayout((availableWidth-dp(32)).coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+    choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
+    choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
+    window.setGravity(Gravity.BOTTOM)
+    window.setLayout(availableWidth.coerceAtMost(dp(440)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+  }
+  private fun sectionLabel(title: String, detail: String?=null) {
+    root.addView(TextView(this).apply {
+      text=title
+      textSize=14f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),dp(16),dp(2),dp(4))
+    })
+    if(!detail.isNullOrBlank()) root.addView(TextView(this).apply {
+      text=detail
+      textSize=12f
+      setTextColor(secondary)
+      setPadding(dp(2),0,dp(2),dp(4))
+    })
   }
   private fun editor(voice: Boolean) {
-    page("일정을 남겨 보세요", "예: 내일 오후 3시 고객 미팅\n변경: 고객 미팅 한 시간 늦춰")
+    page("일정 입력", "날짜·시간·제목을 적으면 저장 전 확인할 수 있습니다.")
+    root.addView(TextView(this).apply {
+      text="예: 내일 오후 3시 고객 미팅 · 고객 미팅 한 시간 늦춰"
+      textSize=13f
+      setTextColor(secondary)
+      setPadding(dp(2),0,dp(2),dp(6))
+    })
     session.enterEditor()
     transcript=field("일정 입력", "날짜, 시간, 일정 제목을 입력하세요", "", true)
     transcript.addTextChangedListener(object: TextWatcher {
@@ -180,13 +260,26 @@ class QuickEntryActivity : Activity() {
       }
       override fun afterTextChanged(s: Editable?) {}
     })
-    status=TextView(this).apply { text="모든 입력은 기기에서 처리합니다."; setTextColor(secondary); textSize=13f; accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
-    root.addView(status)
-    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
+    status=TextView(this).apply {
+      text="모든 입력은 기기에서 처리합니다."
+      setTextColor(secondary)
+      textSize=13f
+      minimumHeight=dp(44)
+      setPadding(dp(12),dp(9),dp(12),dp(9))
+      gravity=Gravity.CENTER_VERTICAL
+      background=GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius=dp(10).toFloat()
+      }
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+    sectionLabel("음성 입력", "말하기 버튼을 눌러야 녹음이 시작됩니다.")
     pairedButtons(
       "음성 입력 시작", { beginSpeech() },
       "음성 입력 중지", { stopSpeech() }
     )
+    sectionLabel("기기 AI", "지원 기기에서만 로컬 AI 해석을 사용할 수 있습니다.")
     pairedButtons("기기 AI로 해석", {
       stopSpeech(); cancelModel()
       val request=session.startModel(transcript.text.toString())
@@ -207,7 +300,9 @@ class QuickEntryActivity : Activity() {
         }
       }
     }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
+    sectionLabel("내용 확인", "직접 수정한 후 일정을 저장할 수 있습니다.")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
+    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
     button("뒤로") { chooser() }
     if(voice) status.text="음성 입력 시작을 누르면 기기 내 한국어 인식을 확인합니다."
   }
@@ -233,10 +328,29 @@ class QuickEntryActivity : Activity() {
   private fun form(title: String, dateTime: ZonedDateTime?, repeat: String, source: String, original: ScheduleRecord?, message: String) {
     val formZone=original?.let(::eventZone) ?: dateTime?.zone ?: zone
     page(
-      if(original==null) "저장 전 확인" else "변경 전 확인",
-      if(original==null) "$message\n시간대: ${formZone.id}"
-        else "변경되는 일정을 확인해 주세요.\n시간대: ${formZone.id}"
+      if(original==null) "일정 확인 및 저장" else "변경 내용 확인",
+      "입력 내용을 확인하고 필요한 항목을 수정한 뒤 저장하세요."
     )
+    val note=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(14),dp(12),dp(14),dp(12))
+      background=GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius=dp(12).toFloat()
+      }
+    }
+    note.addView(TextView(this).apply {
+      text=if(original==null) message else "기존 일정에서 변경되는 내용을 확인해 주세요."
+      textSize=14f
+      setTextColor(foregroundColor)
+    })
+    note.addView(TextView(this).apply {
+      text="시간대: ${formZone.id}"
+      textSize=12f
+      setTextColor(secondary)
+      setPadding(0,dp(6),0,0)
+    })
+    root.addView(note)
     if(original!=null && dateTime!=null) {
       val originalValue=Instant.ofEpochMilli(original.startAt).atZone(formZone).format(FORMAT)
       val updatedValue=dateTime.format(FORMAT)
@@ -249,16 +363,37 @@ class QuickEntryActivity : Activity() {
         }
       }
       summary.addView(TextView(this).apply {
-        text="변경 전  $originalValue"
-        textSize=14f; setTextColor(secondary)
+        text=original.title
+        textSize=16f
+        setTypeface(null,Typeface.BOLD)
+        setTextColor(foregroundColor)
+        setPadding(0,0,0,dp(8))
       })
       summary.addView(TextView(this).apply {
-        text="변경 후  $updatedValue"
-        textSize=16f; setTypeface(null,Typeface.BOLD)
-        setTextColor(blue); setPadding(0,dp(8),0,0)
+        text="변경 전"
+        textSize=12f
+        setTextColor(secondary)
       })
-      root.addView(summary)
+      summary.addView(TextView(this).apply {
+        text=originalValue
+        textSize=14f
+        setTextColor(foregroundColor)
+      })
+      summary.addView(TextView(this).apply {
+        text="변경 후"
+        textSize=12f
+        setTextColor(secondary)
+        setPadding(0,dp(10),0,0)
+      })
+      summary.addView(TextView(this).apply {
+        text=updatedValue
+        textSize=17f
+        setTypeface(null,Typeface.BOLD)
+        setTextColor(blue)
+      })
+      root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
+    sectionLabel("일정 정보", "일정 이름, 날짜 및 시작 시간을 확인하세요.")
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
@@ -303,11 +438,44 @@ class QuickEntryActivity : Activity() {
       },initial.hour,initial.minute,true).show()
     }
     root.addView(pickerRow)
-    root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(secondary); setPadding(0,dp(12),0,dp(5)) })
+    val repeatCard=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(12),dp(10),dp(12),dp(12))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(12).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
+    }
+    repeatCard.addView(TextView(this).apply {
+      text="반복"
+      textSize=13f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),0,0,dp(8))
+    })
     val repeats=listOf("none","monthly","yearly")
+    val repeatLabels=listOf("반복 없음","매월","매년")
     val spinner=Spinner(this).apply {
       contentDescription="반복 설정"
-      adapter=ArrayAdapter(this@QuickEntryActivity,android.R.layout.simple_spinner_dropdown_item,listOf("반복 없음","매월","매년"))
+      adapter=object: ArrayAdapter<String>(
+        this@QuickEntryActivity,
+        android.R.layout.simple_spinner_item,
+        repeatLabels
+      ) {
+        override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getView(position,convertView,parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            textSize=15f
+          }
+        override fun getDropDownView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getDropDownView(position,convertView,parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            setBackgroundColor(surface)
+            textSize=15f
+            setPadding(dp(14),dp(12),dp(14),dp(12))
+          }
+      }
       setSelection(repeats.indexOf(repeat).coerceAtLeast(0))
       minimumHeight=dp(50)
       setPadding(dp(10),0,dp(10),0)
@@ -317,8 +485,15 @@ class QuickEntryActivity : Activity() {
         setStroke(dp(1),inputBorder)
       }
     }
-    root.addView(spinner)
-    val error=TextView(this).apply { setTextColor(Color.rgb(185,28,28)); accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }; root.addView(error)
+    repeatCard.addView(spinner,LinearLayout.LayoutParams(-1,-2))
+    root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
+    val error=TextView(this).apply {
+      setTextColor(if(isDark) Color.rgb(248,113,113) else Color.rgb(185,28,28))
+      textSize=13f
+      setPadding(dp(2),dp(8),dp(2),0)
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    root.addView(error)
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
       try {
         val start=LocalDate.parse(dateField.text.toString().trim()).atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
@@ -339,11 +514,21 @@ class QuickEntryActivity : Activity() {
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
   }
   private fun field(label: String, hintText: String, value: String, multi: Boolean=false): EditText {
-    root.addView(TextView(this).apply {
+    val card=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(12),dp(10),dp(12),dp(12))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(12).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
+    }
+    card.addView(TextView(this).apply {
       text=label
       textSize=13f
-      setTextColor(secondary)
-      setPadding(0,dp(12),0,dp(6))
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),0,0,dp(8))
     })
     return EditText(this).apply {
       hint=hintText
@@ -351,17 +536,18 @@ class QuickEntryActivity : Activity() {
       setText(value)
       textSize=16f
       setTextColor(foregroundColor)
-      setHintTextColor(Color.rgb(107,114,128))
+      setHintTextColor(secondary)
       setSingleLine(!multi)
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
-      minimumHeight=dp(if(multi)104 else 50)
+      minimumHeight=dp(if(multi)104 else 48)
       setPadding(dp(12),dp(10),dp(12),dp(10))
       background=GradientDrawable().apply {
         setColor(fieldBackground)
         cornerRadius=dp(10).toFloat()
         setStroke(dp(1),inputBorder)
       }
-      root.addView(this,LinearLayout.LayoutParams(-1,-2))
+      card.addView(this,LinearLayout.LayoutParams(-1,-2))
+      root.addView(card,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
     }
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {

@@ -159,7 +159,11 @@ tap("고급 설정")
 screenshot("04-settings-advanced", "advanced settings")
 tap("홈", bottom=True)
 tap("일정 빠르게 추가")
-screenshot("05-quick-entry", "native quick-entry chooser")
+screenshot("05-quick-entry", "native quick-entry bottom sheet")
+tap("음성 입력 화면 열기")
+screenshot("05a-voice-editor", "native voice entry editor before voice activation")
+tap("뒤로", scroll=True)
+screenshot("05b-quick-entry-return", "chooser after exiting voice editor")
 tap("텍스트로 일정 입력")
 screenshot("06-native-editor", "native text entry editor")
 
@@ -221,7 +225,7 @@ screenshot("10-home-dark", "home with explicit dark app theme")
 assert_dark_surface("10-home-dark", 4, 400)
 tap("일정 빠르게 추가")
 screenshot("11-quick-entry-dark", "branded native chooser with explicit dark app theme")
-assert_dark_surface("11-quick-entry-dark", 100, 500)
+assert_dark_surface("11-quick-entry-dark", 100, 1000)
 tap("텍스트로 일정 입력")
 screenshot("12-native-editor-dark", "native editor with explicit dark app theme")
 assert_dark_surface("12-native-editor-dark", 100, 500)
@@ -236,6 +240,37 @@ assert_dark_surface("12-native-editor-dark", 100, 500)
         ensure_ascii=False,
         indent=2,
     ),
+    encoding="utf-8",
+)
+for note in WARNINGS:
+    print(f"Capture limitation: {note}")
+
+# Small portrait screen layout regression: run with an equivalent 360dp-ish
+# viewport and preserve the default emulator dimensions after taking evidence.
+try:
+    adb("shell", "input", "keyevent", "4")
+    adb("shell", "wm", "size", "640x1360")
+    adb("shell", "wm", "density", "280")
+    adb("shell", "am", "force-stop", APP)
+    adb("shell", "monkey", "-p", APP, "1")
+    time.sleep(10)
+    tap("일정 빠르게 추가")
+    screenshot("15-compact-chooser", "bottom-sheet chooser on compact portrait screen")
+    tap("텍스트로 일정 입력")
+    screenshot("16-compact-editor", "editor on compact portrait screen")
+    tap("직접 날짜와 시간 지정", scroll=True)
+    screenshot("17-compact-confirmation", "confirmation form on compact portrait screen")
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    WARNINGS.append(f"Compact-screen capture: {exc}")
+finally:
+    adb("shell", "wm", "size", "720x1600")
+
+(OUT / "capture-manifest.json").write_text(
+    json.dumps({
+        "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",
+        "screens": REPORT,
+        "warnings": WARNINGS,
+    }, ensure_ascii=False, indent=2),
     encoding="utf-8",
 )
 for note in WARNINGS:
