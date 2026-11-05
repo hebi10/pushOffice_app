@@ -2,6 +2,7 @@
  * AI 요약 카드 – 모닝 브리핑 한줄 요약
  */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
 import { Card } from '../Card';
@@ -24,6 +25,6 @@ export function BriefingAISummaryCard({ text }: Props) {
 }
 
 const styles = StyleSheet.create({
-  label: { fontSize: 13, fontWeight: '600', marginBottom: 6 },
-  text: { fontSize: 14, lineHeight: 22 },
+  label: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 6 },
+  text: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 22 },
 });
