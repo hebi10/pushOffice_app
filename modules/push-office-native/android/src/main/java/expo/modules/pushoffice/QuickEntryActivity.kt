@@ -39,7 +39,7 @@ class QuickEntryActivity : Activity() {
   private var applyingSpeech=false
   private var modelJob: Job?=null
   private val isDark: Boolean get() =
-    resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+    (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
   private val blue: Int get() = if(isDark) Color.rgb(96,165,250) else Color.rgb(37,99,235)
   private val surface: Int get() = if(isDark) Color.rgb(30,41,59) else Color.WHITE
   private val foreground: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
