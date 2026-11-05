@@ -26,6 +26,10 @@ function presentDialog(notice: DialogNotice): void {
     : [{ text: '확인' }]);
 }
 
+export function showNotice(title: string, message: string): void {
+  presentDialog({ title, message });
+}
+
 export function showToast(message: string): void {
   if (Platform.OS === 'android') {
     ToastAndroid.show(message, ToastAndroid.SHORT);
