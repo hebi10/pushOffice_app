@@ -54,9 +54,10 @@ test('PO-UI-07 uses the same dark surfaces, accent and text palette in both widg
     ['po_widget_border', 'surfaceBorder'],
     ['po_widget_action_surface', 'inputBackground'],
   ]) {
-    const color = new RegExp('<color name="' + name + '">(#(?:[0-9A-Fa-f]{6}))<\\/color>').exec(widgetNight)?.[1];
+    const xmlKey = '<color name="' + name + '">';
+    const color = widgetNight.split(xmlKey)[1]?.split('</color>')[0];
     assert.ok(color, 'Missing Android widget color: ' + name);
-    const value = new RegExp('(?:^|\\n)  ' + themeName + ': \\' + color + \\'', 'm');
-    assert.ok(value.test(theme), name + ' does not match a design theme color');
+    const darkTheme = theme.split('export const darkColors')[1];
+    assert.ok(darkTheme.includes(themeName + ": '" + color + "'"), name + ' does not match the app dark theme');
   }
 });
