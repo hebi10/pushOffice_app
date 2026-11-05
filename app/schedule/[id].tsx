@@ -214,7 +214,7 @@ export default function ScheduleDetail() {
         <AssistantButton
           label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
           icon="trash-outline"
-          secondary
+          variant="destructive"
           busy={remove.isPending}
           onPress={() => setPendingDialog('delete')}
         />
