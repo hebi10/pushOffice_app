@@ -232,7 +232,7 @@ export default function ScheduleDetail() {
       </ScrollView>
       <Modal transparent animationType="fade" visible={dateOpen} onRequestClose={() => setDateOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 16, gap: 12 }}>
+          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 16, gap: 12, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
             <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}</Text>
             <Calendar
               key={isDark ? 'dark' : 'light'}
@@ -259,7 +259,7 @@ export default function ScheduleDetail() {
       </Modal>
       <Modal transparent animationType="fade" visible={timeOpen} onRequestClose={() => setTimeOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 20, gap: 14 }}>
+          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 20, gap: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
             <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 시간 선택' : '종료 시간 선택'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <TextInput
