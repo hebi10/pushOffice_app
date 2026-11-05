@@ -84,7 +84,7 @@ screenshot("04-settings-advanced", "advanced settings")
 tap("홈", bottom=True)
 tap("텍스트 · 음성으로 일정 추가")
 screenshot("05-quick-entry", "native quick-entry chooser")
-tap("텍스트로 입력")
+tap("텍스트로 일정 입력")
 screenshot("06-native-editor", "native text entry editor")
 (OUT / "capture-manifest.json").write_text(
     json.dumps({"source": "Android 29 emulator, new local installation", "screens": REPORT}, ensure_ascii=False, indent=2),
