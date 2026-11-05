@@ -1,7 +1,30 @@
-/**
- * 공통 유틸리티 – 에러 Alert 토스트
- */
 import { Alert, Platform, ToastAndroid } from 'react-native';
+
+export type DialogNotice = {
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  onConfirm?: () => void;
+};
+
+let dialogListener: ((notice: DialogNotice) => void) | null = null;
+
+export function subscribeDialog(listener: (notice: DialogNotice) => void): () => void {
+  dialogListener = listener;
+  return () => {
+    if (dialogListener === listener) dialogListener = null;
+  };
+}
+
+function presentDialog(notice: DialogNotice): void {
+  if (dialogListener) {
+    dialogListener(notice);
+    return;
+  }
+  Alert.alert(notice.title, notice.message, notice.onConfirm
+    ? [{ text: '취소', style: 'cancel' }, { text: notice.confirmLabel ?? '확인', onPress: notice.onConfirm }]
+    : [{ text: '확인' }]);
+}
 
 export function showToast(message: string): void {
   if (Platform.OS === 'android') {
@@ -12,17 +35,12 @@ export function showToast(message: string): void {
 }
 
 export function showError(error: unknown, fallback = '오류가 발생했습니다.'): void {
-  const msg = error instanceof Error ? error.message : fallback;
-  Alert.alert('오류', msg);
+  presentDialog({
+    title: '오류',
+    message: error instanceof Error ? error.message : fallback,
+  });
 }
 
-export function confirmAction(
-  title: string,
-  message: string,
-  onConfirm: () => void,
-): void {
-  Alert.alert(title, message, [
-    { text: '취소', style: 'cancel' },
-    { text: '확인', onPress: onConfirm },
-  ]);
+export function confirmAction(title: string, message: string, onConfirm: () => void): void {
+  presentDialog({ title, message, confirmLabel: '확인', onConfirm });
 }
