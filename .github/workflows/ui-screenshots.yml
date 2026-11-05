@@ -1,0 +1,78 @@
+name: Push Office UI screenshots
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "src/**"
+      - "modules/**"
+      - "assets/images/**"
+      - "tools/ui/**"
+      - ".github/workflows/ui-screenshots.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: push-office-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    if: github.repository == 'hebi10/pushOffice_app'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_NO_DOTENV: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Build emulator-installable app with bundled JS
+        working-directory: android
+        run: |
+          ./gradlew :app:assembleRelease --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PreactNativeArchitectures=x86_64
+      - name: Prepare software-emulator KVM permissions
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and capture actual app screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: |
+            APK=android/app/build/outputs/apk/release/app-release.apk
+            if ! adb install -r "$APK"; then
+              keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/ui-preview.jks" -storepass android -keypass android -alias preview -dname "CN=Temporary UI Preview" -keyalg RSA -keysize 2048 -validity 2
+              "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$RUNNER_TEMP/ui-preview.jks" --ks-key-alias preview --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/ui-preview.apk" "$APK"
+              adb install -r "$RUNNER_TEMP/ui-preview.apk"
+            fi
+            python3 tools/ui/capture_android.py
+      - name: Preserve screenshots and capture details
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-UI-screenshots
+          path: ui-captures/
+          if-no-files-found: warn
+          retention-days: 14
