@@ -227,8 +227,29 @@ class QuickEntryActivity : Activity() {
     window.setGravity(Gravity.BOTTOM)
     window.setLayout(availableWidth.coerceAtMost(dp(440)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
   }
+  private fun sectionLabel(title: String, detail: String?=null) {
+    root.addView(TextView(this).apply {
+      text=title
+      textSize=14f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),dp(16),dp(2),dp(4))
+    })
+    if(!detail.isNullOrBlank()) root.addView(TextView(this).apply {
+      text=detail
+      textSize=12f
+      setTextColor(secondary)
+      setPadding(dp(2),0,dp(2),dp(4))
+    })
+  }
   private fun editor(voice: Boolean) {
-    page("일정을 남겨 보세요", "예: 내일 오후 3시 고객 미팅\n변경: 고객 미팅 한 시간 늦춰")
+    page("일정 입력", "날짜·시간·제목을 적으면 저장 전 확인할 수 있습니다.")
+    root.addView(TextView(this).apply {
+      text="예: 내일 오후 3시 고객 미팅 · 고객 미팅 한 시간 늦춰"
+      textSize=13f
+      setTextColor(secondary)
+      setPadding(dp(2),0,dp(2),dp(6))
+    })
     session.enterEditor()
     transcript=field("일정 입력", "날짜, 시간, 일정 제목을 입력하세요", "", true)
     transcript.addTextChangedListener(object: TextWatcher {
@@ -239,13 +260,26 @@ class QuickEntryActivity : Activity() {
       }
       override fun afterTextChanged(s: Editable?) {}
     })
-    status=TextView(this).apply { text="모든 입력은 기기에서 처리합니다."; setTextColor(secondary); textSize=13f; accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
-    root.addView(status)
-    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
+    status=TextView(this).apply {
+      text="모든 입력은 기기에서 처리합니다."
+      setTextColor(secondary)
+      textSize=13f
+      minimumHeight=dp(44)
+      setPadding(dp(12),dp(9),dp(12),dp(9))
+      gravity=Gravity.CENTER_VERTICAL
+      background=GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius=dp(10).toFloat()
+      }
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
+    sectionLabel("음성 입력", "말하기 버튼을 눌러야 녹음이 시작됩니다.")
     pairedButtons(
       "음성 입력 시작", { beginSpeech() },
       "음성 입력 중지", { stopSpeech() }
     )
+    sectionLabel("기기 AI", "지원 기기에서만 로컬 AI 해석을 사용할 수 있습니다.")
     pairedButtons("기기 AI로 해석", {
       stopSpeech(); cancelModel()
       val request=session.startModel(transcript.text.toString())
@@ -266,7 +300,9 @@ class QuickEntryActivity : Activity() {
         }
       }
     }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
+    sectionLabel("내용 확인", "직접 수정한 후 일정을 저장할 수 있습니다.")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
+    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
     button("뒤로") { chooser() }
     if(voice) status.text="음성 입력 시작을 누르면 기기 내 한국어 인식을 확인합니다."
   }
