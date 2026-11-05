@@ -30,7 +30,7 @@ test('PO-UI-02 does not invent to-do, focus or location data', () => {
 test('PO-UI-02 next appointment preserves occurrence projection and detail navigation', () => {
   assert.match(home, /nextSchedule\(/);
   assert.match(home, /projectOccurrences\(/);
-  assert.match(home, /next\.endAt\?\.toDate/);
+  assert.match(home, /next\?\.endAt\?\.toDate/);
   assert.match(home, /nextEndAt\.getTime\(\) > nextAt\.getTime\(\)/);
   assert.match(home, /next\.isAllDay/);
   assert.match(home, /router\.push\(`\/schedule\/\$\{next\.id\}`\)/);
