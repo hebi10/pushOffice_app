@@ -67,7 +67,7 @@ test('PO-UI-03 change target and save preserve stale-event protection, timezone,
   assert.match(form, /repeats\[spinner\.selectedItemPosition\]/);
   assert.match(form, /ScheduleTime\.validate\(draft,now\)/);
   assert.match(form, /ScheduleSerial\.withLock/);
-  assert.match(form, /it\.get\(original\.id\)==original/);
+  assert.match(form, /it\.get\(original\.id\) \}==original/);
   assert.match(form, /ScheduleRuntime\.save\(this,draft\)/);
   assert.match(form, /button\("입력으로 돌아가기"\)/);
 });
