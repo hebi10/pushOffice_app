@@ -36,8 +36,8 @@ export function AssistantButton({ label, onPress, secondary = false, busy = fals
   busy?: boolean;
   icon?: IconName;
 }) {
-  const { colors } = useTheme();
-  const color = secondary ? colors.primary : '#FFFFFF';
+  const { colors, isDark } = useTheme();
+  const color = secondary ? colors.primary : isDark ? colors.background : '#FFFFFF';
   return (
     <TouchableOpacity
       accessibilityRole="button"
