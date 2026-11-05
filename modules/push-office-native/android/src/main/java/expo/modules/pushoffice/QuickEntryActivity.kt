@@ -118,7 +118,8 @@ class QuickEntryActivity : Activity() {
       setTypeface(null,Typeface.BOLD)
       setPadding(0,dp(8),0,dp(6))
     }, LinearLayout.LayoutParams(0,-2,1f))
-    chooserHeading.addView(ImageView(this).apply {
+    // The light illustration has an opaque white background; hide it on dark surfaces.
+    if (!isDark) chooserHeading.addView(ImageView(this).apply {
       setImageResource(R.drawable.quick_entry_illustration)
       scaleType=ImageView.ScaleType.CENTER_CROP
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
