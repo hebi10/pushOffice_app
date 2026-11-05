@@ -16,6 +16,7 @@ import {
   BriefingWeatherCard,
 } from '@/src/components/briefing';
 import { Card } from '@/src/components/Card';
+import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { Loading } from '@/src/components/Loading';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showToast } from '@/src/components/ui/toast';
@@ -236,13 +237,16 @@ export default function BriefingScreen() {
         {/* ─── 헤더 ───────────────────────────────────── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>데일리 다이제스트</Text>
-            <Text style={[styles.headerDate, { color: colors.textSecondary }]}>
-              {dayjs(targetDate).format('YYYY년 M월 D일 (ddd)')}
-            </Text>
+            <ScreenIntro
+              eyebrow="일정과 외부 정보"
+              title="데일리 다이제스트"
+              description={dayjs(targetDate).format('YYYY년 M월 D일 (ddd)')}
+            />
           </View>
 
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="브리핑 새로고침"
             style={[styles.refreshBtn, { borderColor: colors.surfaceBorder }]}
             onPress={handleRegenerate}
             disabled={generateMutation.isPending}
@@ -443,25 +447,25 @@ const styles = StyleSheet.create({
    * 기존 FlatList + ListHeaderComponent 구조에서는 이 값이 부족했음
    */
   scrollContent: {
-    paddingTop: 12,
-    paddingBottom: 100,
+    paddingTop: 16,
+    paddingBottom: 48,
+    paddingHorizontal: 16,
   },
 
   /* 헤더 */
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingHorizontal: 20,
+    alignItems: 'center',
     marginBottom: 12,
   },
   headerLeft: { flex: 1 },
   headerTitle: { fontSize: 20, fontWeight: '700' },
   headerDate: { fontSize: 13, marginTop: 2 },
   refreshBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -475,7 +479,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     paddingHorizontal: 16,
-    marginHorizontal: 16,
     borderRadius: 8,
     marginBottom: 8,
   },
@@ -503,7 +506,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    marginHorizontal: 16,
     marginBottom: 4,
   },
   fallbackText: { flex: 1, fontSize: 12 },
@@ -524,7 +526,6 @@ const styles = StyleSheet.create({
   actionBar: {
     flexDirection: 'row',
     gap: 10,
-    marginHorizontal: 16,
     marginTop: 16,
   },
   actionBtn: {
@@ -534,6 +535,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     borderRadius: 10,
+    minHeight: 50,
     paddingVertical: 12,
   },
   actionBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
@@ -544,6 +546,8 @@ const styles = StyleSheet.create({
   errorSmall: { fontSize: 12 },
   generateBtn: {
     borderRadius: 10,
+    minHeight: 50,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     marginTop: 4,
@@ -555,7 +559,6 @@ const styles = StyleSheet.create({
   scheduleSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    marginHorizontal: 16,
     marginBottom: 6,
   },
 });
