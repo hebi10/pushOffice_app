@@ -1,10 +1,20 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+  type TextInputProps,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { APP_FONT_FAMILY } from '@/src/lib/typography';
+import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import { useTheme } from '../contexts/ThemeContext';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
+export type AssistantButtonVariant = 'primary' | 'secondary' | 'destructive';
 
 export function AssistantCard({ title, subtitle, icon, children }: {
   title?: string;
@@ -29,53 +39,194 @@ export function AssistantCard({ title, subtitle, icon, children }: {
   );
 }
 
-export function AssistantButton({ label, onPress, secondary = false, busy = false, icon = 'add' }: {
+export function AssistantButton({
+  label,
+  onPress,
+  secondary = false,
+  variant,
+  busy = false,
+  disabled = false,
+  icon = 'add',
+}: {
   label: string;
   onPress: () => void;
   secondary?: boolean;
+  variant?: AssistantButtonVariant;
   busy?: boolean;
+  disabled?: boolean;
   icon?: IconName;
 }) {
-  const { colors, isDark } = useTheme();
-  const color = secondary ? colors.primary : isDark ? colors.background : '#FFFFFF';
+  const { colors } = useTheme();
+  const resolved = variant ?? (secondary ? 'secondary' : 'primary');
+  const foreground = resolved === 'secondary'
+    ? colors.primary
+    : resolved === 'destructive' ? colors.onDanger : colors.onPrimary;
+  const background = resolved === 'secondary'
+    ? colors.surface
+    : resolved === 'destructive' ? colors.danger : colors.primary;
+  const border = resolved === 'secondary'
+    ? colors.inputBorder
+    : background;
+  const inactive = disabled || busy;
+
   return (
     <TouchableOpacity
       accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ disabled: busy, busy }}
+      accessibilityState={{ disabled: inactive, busy }}
       activeOpacity={0.8}
-      disabled={busy}
+      disabled={inactive}
       onPress={onPress}
       style={[styles.button, {
-        backgroundColor: secondary ? colors.surface : colors.primary,
-        borderColor: secondary ? colors.inputBorder : colors.primary,
+        backgroundColor: background,
+        borderColor: border,
+        opacity: inactive ? 0.56 : 1,
       }]}
     >
-      {busy ? <ActivityIndicator color={color} /> : <Ionicons name={icon} size={19} color={color} />}
-      <Text style={[styles.buttonLabel, { color }]}>{label}</Text>
+      {busy
+        ? <ActivityIndicator color={foreground} />
+        : <Ionicons name={icon} size={19} color={foreground} />}
+      <Text style={[styles.buttonLabel, { color: foreground }]}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
+export function AssistantTextField({
+  label,
+  value,
+  onChangeText,
+  placeholder,
+  keyboardType = 'default',
+  multiline,
+  maxLength,
+  autoCapitalize,
+}: {
+  label: string;
+  value: string;
+  onChangeText: NonNullable<TextInputProps['onChangeText']>;
+  placeholder?: string;
+  keyboardType?: TextInputProps['keyboardType'];
+  multiline?: boolean;
+  maxLength?: number;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={styles.fieldGroup}>
+      <Text style={[assistantStyles.caption, { color: colors.textSecondary }]}>{label}</Text>
+      <TextInput
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        maxLength={maxLength}
+        autoCapitalize={autoCapitalize}
+        placeholderTextColor={colors.textTertiary}
+        style={[assistantStyles.input, {
+          color: colors.text,
+          backgroundColor: colors.background,
+          borderColor: colors.inputBorder,
+        }]}
+      />
+    </View>
+  );
+}
+
+export function SettingRow({
+  title,
+  description,
+  value,
+  onValueChange,
+  disabled = false,
+}: {
+  title: string;
+  description?: string;
+  value: boolean;
+  onValueChange: (next: boolean) => void;
+  disabled?: boolean;
+}) {
+  const { colors } = useTheme();
+  return (
+    <View style={[styles.settingRow, { opacity: disabled ? 0.56 : 1 }]}>
+      <View style={styles.settingCopy}>
+        <Text style={[assistantStyles.body, { color: colors.text }]}>{title}</Text>
+        {description ? (
+          <Text style={[assistantStyles.caption, { color: colors.textSecondary }]}>{description}</Text>
+        ) : null}
+      </View>
+      <Switch
+        accessibilityLabel={title}
+        accessibilityState={{ disabled }}
+        disabled={disabled}
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
+        thumbColor={value ? colors.primary : colors.surfaceBorder}
+      />
+    </View>
+  );
+}
+
 export const assistantStyles = StyleSheet.create({
-  content: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 44, gap: 14 },
-  heading: { fontFamily: APP_FONT_FAMILY, fontSize: 26, fontWeight: '800', letterSpacing: -0.5, lineHeight: 34 },
-  subtitle: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 21 },
-  body: { fontFamily: APP_FONT_FAMILY, fontSize: 15, lineHeight: 23 },
-  caption: { fontFamily: APP_FONT_FAMILY, fontSize: 12, lineHeight: 18 },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, minHeight: 48 },
-  input: { fontFamily: APP_FONT_FAMILY, borderWidth: 1, borderRadius: 10, paddingHorizontal: 13, paddingVertical: 12, fontSize: 16, minHeight: 48 },
+  content: {
+    paddingHorizontal: uiSizes.screenGutter,
+    paddingTop: uiSpacing.lg,
+    paddingBottom: uiSpacing.xxl + uiSpacing.sm,
+    gap: uiSpacing.sm + 2,
+  },
+  heading: { ...uiTypography.screenTitle, letterSpacing: -0.5 },
+  subtitle: { ...uiTypography.body, fontSize: 14, lineHeight: 21 },
+  body: uiTypography.body,
+  caption: uiTypography.caption,
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: uiSpacing.sm,
+    minHeight: uiSizes.touchMinHeight,
+  },
+  input: {
+    fontFamily: uiTypography.body.fontFamily,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+    paddingHorizontal: uiSpacing.sm + 1,
+    paddingVertical: uiSpacing.sm,
+    fontSize: 16,
+    minHeight: uiSizes.touchMinHeight,
+  },
 });
 
 const styles = StyleSheet.create({
-  card: { padding: 16, borderWidth: 1, borderRadius: 16, gap: 12 },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  headerText: { flex: 1, gap: 4 },
-  title: { fontFamily: APP_FONT_FAMILY, fontSize: 17, fontWeight: '700', lineHeight: 23 },
-  helper: { fontFamily: APP_FONT_FAMILY, fontSize: 12, lineHeight: 18 },
-  button: {
-    minHeight: 50, paddingHorizontal: 14, paddingVertical: 11, borderRadius: 12,
-    borderWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  card: {
+    padding: uiSizes.cardPadding,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.card,
+    gap: uiSpacing.sm,
   },
-  buttonLabel: { fontFamily: APP_FONT_FAMILY, fontWeight: '700', fontSize: 15, lineHeight: 21, flexShrink: 1, textAlign: 'center' },
+  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
+  headerText: { flex: 1, gap: uiSpacing.xxs },
+  title: uiTypography.sectionTitle,
+  helper: uiTypography.caption,
+  button: {
+    minHeight: uiSizes.controlMinHeight,
+    paddingHorizontal: uiSpacing.sm + 2,
+    paddingVertical: uiSpacing.sm,
+    borderRadius: uiRadii.button,
+    borderWidth: uiSizes.borderWidth,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: uiSpacing.xs,
+  },
+  buttonLabel: { ...uiTypography.button, flexShrink: 1, textAlign: 'center' },
+  fieldGroup: { gap: uiSpacing.xxs + 2 },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: uiSpacing.sm,
+    minHeight: uiSizes.touchMinHeight,
+  },
+  settingCopy: { flex: 1, gap: uiSpacing.xxs },
 });
