@@ -21,6 +21,7 @@ import { Loading } from '@/src/components/Loading';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import type { GenerateDigestInput } from '@/src/features/digest';
 import { isFallbackDigest, useDateDigest, useGenerateDigest } from '@/src/features/digest';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
@@ -460,8 +461,8 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   headerLeft: { flex: 1 },
-  headerTitle: { fontSize: 20, fontWeight: '700' },
-  headerDate: { fontSize: 13, marginTop: 2 },
+  headerTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700' },
+  headerDate: { fontFamily: APP_FONT_FAMILY, fontSize: 13, marginTop: 2 },
   refreshBtn: {
     width: 44,
     height: 44,
@@ -482,13 +483,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 8,
   },
-  pastBannerText: { fontSize: 13, fontWeight: '500' },
+  pastBannerText: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '500' },
 
   /* 로딩 / 에러 */
   loadingBox: { alignItems: 'center', paddingVertical: 48, gap: 10 },
-  loadingText: { fontSize: 14 },
+  loadingText: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   errorBox: { alignItems: 'center', paddingVertical: 16, gap: 8 },
-  errorText: { fontSize: 14 },
+  errorText: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   actionBtnOutline: {
     borderWidth: 1,
     borderRadius: 8,
@@ -496,7 +497,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 4,
   },
-  actionBtnOutlineText: { fontSize: 13, fontWeight: '600' },
+  actionBtnOutlineText: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600' },
 
   /* fallback 배너 */
   fallbackBanner: {
@@ -508,19 +509,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginBottom: 4,
   },
-  fallbackText: { flex: 1, fontSize: 12 },
+  fallbackText: { flex: 1, fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   fallbackBtn: {
     borderWidth: 1,
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
-  fallbackBtnText: { fontSize: 12, fontWeight: '600' },
+  fallbackBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 12, fontWeight: '600' },
 
   /* 레거시 markdown */
-  legacySectionTitle: { fontSize: 13, fontWeight: '600', marginBottom: 8 },
-  legacyText: { fontSize: 14, lineHeight: 22 },
-  sourcesText: { fontSize: 11, marginTop: 8 },
+  legacySectionTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600', marginBottom: 8 },
+  legacyText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 22 },
+  sourcesText: { fontFamily: APP_FONT_FAMILY, fontSize: 11, marginTop: 8 },
 
   /* 하단 액션 바 */
   actionBar: {
@@ -538,12 +539,12 @@ const styles = StyleSheet.create({
     minHeight: 50,
     paddingVertical: 12,
   },
-  actionBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  actionBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 빈 상태 */
   emptyBox: { alignItems: 'center', paddingVertical: 24, gap: 10 },
-  emptyTitle: { fontSize: 14 },
-  errorSmall: { fontSize: 12 },
+  emptyTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
+  errorSmall: { fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   generateBtn: {
     borderRadius: 10,
     minHeight: 50,
@@ -552,12 +553,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginTop: 4,
   },
-  generateBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  generateBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 레거시 일정 섹션 */
   legacySchedules: { marginTop: 16 },
   scheduleSectionTitle: {
-    fontSize: 14,
+    fontFamily: APP_FONT_FAMILY, fontSize: 14,
     fontWeight: '600',
     marginBottom: 6,
   },
