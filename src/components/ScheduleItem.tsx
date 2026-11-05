@@ -1,5 +1,6 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { dayjs } from '@/src/lib/time';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import type { ScheduleDoc } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -57,10 +58,10 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth, gap: 10,
   },
   timeCol: { width: 50 },
-  time: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  time: { fontFamily: APP_FONT_FAMILY, fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   content: { flex: 1, minWidth: 0, gap: 5 },
-  title: { fontSize: 14, fontWeight: '600', lineHeight: 19 },
+  title: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600', lineHeight: 19 },
   metaRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  date: { fontSize: 12, lineHeight: 16 },
+  date: { fontFamily: APP_FONT_FAMILY, fontSize: 12, lineHeight: 16 },
   repeat: { flexDirection: 'row', gap: 3, alignItems: 'center' },
 });
