@@ -122,6 +122,23 @@ export function SettingsActionRow({
   );
 }
 
+export function SettingsStatusRow({
+  icon,
+  title,
+  description,
+}: {
+  icon: IconName;
+  title: string;
+  description: string;
+}) {
+  return (
+    <View style={styles.row}>
+      <RowIcon name={icon} />
+      <RowCopy title={title} description={description} />
+    </View>
+  );
+}
+
 export function SettingsChoiceRow({
   icon,
   title,
