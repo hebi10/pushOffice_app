@@ -1,4 +1,5 @@
 import { Loading } from '@/src/components/Loading';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { subscribeDialog, type DialogNotice } from '@/src/components/ui/toast';
 import { ThemeProvider, useTheme } from '@/src/contexts/ThemeContext';
@@ -39,7 +40,7 @@ function InnerLayout() {
         screenOptions={{
           headerStyle: { backgroundColor: colors.headerBackground },
           headerTintColor: colors.text,
-          headerTitleStyle: { fontWeight: '600' },
+          headerTitleStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: '600' },
           contentStyle: { backgroundColor: colors.background },
         }}
       >
