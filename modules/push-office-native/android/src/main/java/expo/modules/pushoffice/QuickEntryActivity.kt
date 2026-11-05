@@ -3,6 +3,9 @@ package expo.modules.pushoffice
 import android.Manifest
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import android.content.res.Configuration
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
@@ -35,7 +38,14 @@ class QuickEntryActivity : Activity() {
   private val session=CaptureSession()
   private var applyingSpeech=false
   private var modelJob: Job?=null
-  private val blue=Color.rgb(37,99,235)
+  private val isDark: Boolean get() =
+    resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+  private val blue: Int get() = if(isDark) Color.rgb(96,165,250) else Color.rgb(37,99,235)
+  private val surface: Int get() = if(isDark) Color.rgb(30,41,59) else Color.WHITE
+  private val foreground: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
+  private val secondary: Int get() = if(isDark) Color.rgb(203,213,225) else Color.rgb(75,85,99)
+  private val fieldBackground: Int get() = if(isDark) Color.rgb(51,65,85) else Color.rgb(248,250,252)
+  private val inputBorder: Int get() = if(isDark) Color.rgb(100,116,139) else Color.rgb(203,213,225)
   private val zone get()=ScheduleZone.fallback(ReminderSettings.load(this).timezone,ZoneId.systemDefault())
   private fun eventZone(record: ScheduleRecord)=record.anchorZone?.let(ZoneId::of) ?: zone
   override fun onCreate(state: Bundle?) {
@@ -46,12 +56,12 @@ class QuickEntryActivity : Activity() {
   }
   private fun page(title: String, subtitle: String) {
     exitEditor()
-    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(22),dp(18),dp(22),dp(18)); background=GradientDrawable().apply { setColor(Color.WHITE); cornerRadius=dp(24).toFloat() } }
+    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(22),dp(18),dp(22),dp(18)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
     val scroll=ScrollView(this).apply { addView(root); isFillViewport=false }
     setContentView(scroll)
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
-    root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(Color.rgb(17,24,39)); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
-    root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(Color.rgb(107,114,128)); setPadding(0,0,0,dp(14)) })
+    root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foreground); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
+    root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(secondary); setPadding(0,0,0,dp(14)) })
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
@@ -68,7 +78,7 @@ class QuickEntryActivity : Activity() {
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(22),dp(18),dp(22),dp(12))
-      background=GradientDrawable().apply { setColor(Color.WHITE); cornerRadius=dp(24).toFloat() }
+      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
     }
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -88,7 +98,7 @@ class QuickEntryActivity : Activity() {
     chooserHeading.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
       textSize=22f
-      setTextColor(Color.rgb(17,24,39))
+      setTextColor(foreground)
       setTypeface(null,Typeface.BOLD)
       setPadding(0,dp(8),0,dp(6))
     }, LinearLayout.LayoutParams(0,-2,1f))
@@ -99,18 +109,18 @@ class QuickEntryActivity : Activity() {
     }, LinearLayout.LayoutParams(dp(64),dp(56)))
     root.addView(chooserHeading)
     root.addView(TextView(this).apply {
-      text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(Color.rgb(75,85,99))
+      text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(secondary)
       setPadding(0,0,0,dp(12))
     })
     fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
-      val textColor=if(primary) Color.WHITE else Color.rgb(17,24,39)
+      val textColor=if(primary) Color.WHITE else foreground
       val row=LinearLayout(this).apply {
         orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
         background=GradientDrawable().apply {
-          setColor(if(primary) blue else Color.rgb(248,250,252))
+          setColor(if(primary) blue else fieldBackground)
           cornerRadius=dp(12).toFloat()
-          if(!primary) setStroke(dp(1),Color.rgb(203,213,225))
+          if(!primary) setStroke(dp(1),inputBorder)
         }
         val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
         foreground=attributes.getDrawable(0); attributes.recycle()
@@ -127,7 +137,7 @@ class QuickEntryActivity : Activity() {
         importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
       row.addView(TextView(this).apply {
-        text=getString(detail); textSize=13f; setTextColor(if(primary) Color.WHITE else Color.rgb(75,85,99))
+        text=getString(detail); textSize=13f; setTextColor(if(primary) Color.WHITE else secondary)
         setPadding(0,dp(3),0,0); importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
       root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
@@ -153,7 +163,7 @@ class QuickEntryActivity : Activity() {
       }
       override fun afterTextChanged(s: Editable?) {}
     })
-    status=TextView(this).apply { text="모든 입력은 기기에서 처리합니다."; setTextColor(Color.DKGRAY); textSize=13f; accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
+    status=TextView(this).apply { text="모든 입력은 기기에서 처리합니다."; setTextColor(secondary); textSize=13f; accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }
     root.addView(status)
     button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
     button("음성 입력 시작", "기기 내 한국어 음성 녹음 시작") { beginSpeech() }
@@ -205,7 +215,7 @@ class QuickEntryActivity : Activity() {
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
-    root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(Color.rgb(75,85,99)); setPadding(0,dp(12),0,dp(5)) })
+    root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(secondary); setPadding(0,dp(12),0,dp(5)) })
     val repeats=listOf("none","monthly","yearly")
     val spinner=Spinner(this).apply {
       contentDescription="반복 설정"
@@ -214,9 +224,9 @@ class QuickEntryActivity : Activity() {
       minimumHeight=dp(50)
       setPadding(dp(10),0,dp(10),0)
       background=GradientDrawable().apply {
-        setColor(Color.rgb(248,250,252))
+        setColor(fieldBackground)
         cornerRadius=dp(10).toFloat()
-        setStroke(dp(1),Color.rgb(203,213,225))
+        setStroke(dp(1),inputBorder)
       }
     }
     root.addView(spinner)
@@ -244,7 +254,7 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply {
       text=label
       textSize=13f
-      setTextColor(Color.rgb(75,85,99))
+      setTextColor(secondary)
       setPadding(0,dp(12),0,dp(6))
     })
     return EditText(this).apply {
@@ -252,16 +262,16 @@ class QuickEntryActivity : Activity() {
       contentDescription=label
       setText(value)
       textSize=16f
-      setTextColor(Color.rgb(31,41,55))
+      setTextColor(foreground)
       setHintTextColor(Color.rgb(107,114,128))
       setSingleLine(!multi)
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
       minimumHeight=dp(if(multi)104 else 50)
       setPadding(dp(12),dp(10),dp(12),dp(10))
       background=GradientDrawable().apply {
-        setColor(Color.rgb(248,250,252))
+        setColor(fieldBackground)
         cornerRadius=dp(10).toFloat()
-        setStroke(dp(1),Color.rgb(203,213,225))
+        setStroke(dp(1),inputBorder)
       }
       root.addView(this,LinearLayout.LayoutParams(-1,-2))
     }
@@ -278,9 +288,9 @@ class QuickEntryActivity : Activity() {
       setTextColor(color)
       stateListAnimator=null
       background=GradientDrawable().apply {
-        setColor(if(primary) blue else Color.WHITE)
+        setColor(if(primary) blue else surface)
         cornerRadius=dp(12).toFloat()
-        setStroke(dp(1),if(primary) blue else Color.rgb(203,213,225))
+        setStroke(dp(1),if(primary) blue else inputBorder)
       }
       setOnClickListener { action() }
     },LinearLayout.LayoutParams(-1,dp(50)).apply { topMargin=dp(if(primary)14 else 8) })
