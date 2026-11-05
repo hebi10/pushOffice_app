@@ -5,6 +5,9 @@
  * 각 일정 메시지에서 취소/수정이 가능하다.
  */
 import { Loading } from '@/src/components/Loading';
+import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
+import { AssistantButton } from '@/src/components/AssistantUI';
+import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import { confirmAction, showError, showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useChatHistory, useUpdateChatMessage } from '@/src/features/chat';
@@ -151,16 +154,16 @@ export default function ChatHistoryScreen() {
 
             {/* 일정 연결 메시지 액션 버튼 */}
             {msg.scheduleId && !msg.cancelled && msg.role === 'assistant' && (
-              <View style={[styles.actionRow, { borderTopColor: colors.divider }]}>
+              <View style={styles.actionRow}>
                 <TouchableOpacity
-                  style={[styles.actionBtn, { borderRightColor: colors.divider }]}
+                  style={[styles.actionBtn, { borderColor: colors.divider }]}
                   onPress={() => handleEdit(msg)}
                 >
                   <Ionicons name="create-outline" size={13} color={colors.primary} />
                   <Text style={[styles.actionText, { color: colors.primary }]}>수정</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={styles.actionBtn}
+                  style={[styles.actionBtn, { borderColor: colors.divider }]}
                   onPress={() => handleCancel(msg)}
                 >
                   <Ionicons name="close-circle-outline" size={13} color={colors.danger} />
@@ -182,6 +185,13 @@ export default function ChatHistoryScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+      <View style={styles.pageHeading}>
+        <ScreenIntro
+          eyebrow="지난 일정 기록"
+          title="채팅 내역"
+          description="일정 등록·변경 내역을 확인하세요."
+        />
+      </View>
       {(!messages || messages.length === 0) ? (
         <View style={styles.emptyContainer}>
           <Ionicons name="chatbubbles-outline" size={48} color={colors.textTertiary} />
@@ -191,13 +201,13 @@ export default function ChatHistoryScreen() {
           <Text style={[styles.emptyHint, { color: colors.textTertiary }]}>
             홈 탭에서 AI와 대화하여 일정을 등록하면{'\n'}이곳에 이력이 표시됩니다.
           </Text>
-          <TouchableOpacity
-            style={[styles.goHomeBtn, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/(tabs)')}
-          >
-            <Ionicons name="home-outline" size={16} color="#FFF" />
-            <Text style={styles.goHomeBtnText}>홈으로 이동</Text>
-          </TouchableOpacity>
+          <View style={styles.emptyAction}>
+            <AssistantButton
+              label="홈으로 이동"
+              icon="home-outline"
+              onPress={() => router.push('/(tabs)')}
+            />
+          </View>
         </View>
       ) : (
         <FlatList
@@ -219,7 +229,8 @@ export default function ChatHistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContent: { paddingVertical: 12, paddingHorizontal: 12 },
+  pageHeading: { paddingHorizontal: 16, paddingTop: 8 },
+  listContent: { paddingVertical: 12, paddingHorizontal: 16, paddingBottom: 32 },
 
   /* 날짜 구분선 */
   dateSepContainer: {
@@ -230,7 +241,7 @@ const styles = StyleSheet.create({
   },
   dateSepLine: { flex: 1, height: StyleSheet.hairlineWidth },
   dateSepText: {
-    fontSize: 12,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 12,
     paddingHorizontal: 10,
     fontWeight: '500',
   },
@@ -245,8 +256,8 @@ const styles = StyleSheet.create({
   bubbleRowRight: { justifyContent: 'flex-end' },
   bubbleRowLeft: { justifyContent: 'flex-start' },
   bubble: {
-    maxWidth: '75%',
-    borderRadius: 16,
+    maxWidth: '82%',
+    borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
     overflow: 'hidden',
@@ -260,23 +271,22 @@ const styles = StyleSheet.create({
   },
   cancelledBubble: { opacity: 0.5 },
   bubbleText: {
-    fontSize: 14,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 14,
     lineHeight: 20,
   },
   cancelledText: {
     textDecorationLine: 'line-through',
   },
   timeText: {
-    fontSize: 10,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 10,
     marginBottom: 2,
   },
 
   /* 액션 버튼 */
   actionRow: {
     flexDirection: 'row',
-    marginTop: 8,
-    paddingTop: 8,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 10,
+    gap: 8,
   },
   actionBtn: {
     flex: 1,
@@ -284,11 +294,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
-    paddingVertical: 4,
-    borderRightWidth: StyleSheet.hairlineWidth,
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   actionText: {
-    fontSize: 12,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 12,
     fontWeight: '500',
   },
 
@@ -300,24 +313,15 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   emptyTitle: {
-    fontSize: 16,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 16,
     fontWeight: '600',
     marginTop: 12,
   },
   emptyHint: {
-    fontSize: 13,
+    fontFamily: APP_FONT_FAMILY,    fontSize: 13,
     textAlign: 'center',
     marginTop: 6,
     lineHeight: 20,
   },
-  goHomeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  goHomeBtnText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  emptyAction: { width: '100%', maxWidth: 320, marginTop: 20 },
 });
