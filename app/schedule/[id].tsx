@@ -250,7 +250,7 @@ export default function ScheduleDetail() {
                 calendarBackground: colors.surface, dayTextColor: colors.text,
                 monthTextColor: colors.text, arrowColor: colors.primary,
                 todayTextColor: colors.primary, textDisabledColor: colors.textTertiary,
-                selectedDayTextColor: '#FFFFFF',
+                selectedDayTextColor: isDark ? colors.background : '#FFFFFF',
               }}
             />
             <AssistantButton label="닫기" secondary icon="close-outline" onPress={() => setDateOpen(false)} />
