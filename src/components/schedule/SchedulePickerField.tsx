@@ -6,11 +6,13 @@ import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designToken
 
 export function SchedulePickerField({
   label,
+  accessibilityLabel,
   value,
   icon,
   onPress,
 }: {
   label: string;
+  accessibilityLabel?: string;
   value: string;
   icon: 'calendar-outline' | 'time-outline';
   onPress: () => void;
@@ -21,7 +23,7 @@ export function SchedulePickerField({
       <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
       <TouchableOpacity
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label}
         accessibilityHint={value}
         onPress={onPress}
         style={[
