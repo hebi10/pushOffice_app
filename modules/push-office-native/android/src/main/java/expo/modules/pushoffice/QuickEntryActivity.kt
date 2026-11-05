@@ -212,8 +212,11 @@ class QuickEntryActivity : Activity() {
       }
       exitEditor()
       fun returnToEditor() { editor(false); transcript.setText(source) }
-      AlertDialog.Builder(this).setTitle("변경할 일정을 선택해 주세요")
-        .setItems(candidates.map { "${it.title} · ${Instant.ofEpochMilli(it.startAt).atZone(eventZone(it)).format(FORMAT)} (${eventZone(it).id})" }.toTypedArray()) { _,which -> selected(candidates[which]) }.setNegativeButton("취소") { _,_ -> returnToEditor() }.setOnCancelListener { returnToEditor() }.show()
+      val options: List<Pair<String, () -> Unit>> = candidates.map { record ->
+        val text="${record.title} · ${Instant.ofEpochMilli(record.startAt).atZone(eventZone(record)).format(FORMAT)} (${eventZone(record).id})"
+        text to { selected(record) }
+      }
+      showBrandedDialog("변경할 일정을 선택해 주세요",null,options,"취소") { returnToEditor() }
     } else form(parsed.title,parsed.start,parsed.repeatType,source,null,parsed.error ?: "날짜와 시간을 확인한 뒤 저장해 주세요.")
   }
   private fun form(title: String, dateTime: ZonedDateTime?, repeat: String, source: String, original: ScheduleRecord?, message: String) {
@@ -372,6 +375,84 @@ class QuickEntryActivity : Activity() {
       setOnClickListener { action() }
     },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(primary)14 else 8) })
   }
+  private fun showBrandedDialog(
+    title: String,
+    message: String?,
+    choices: List<Pair<String, () -> Unit>>,
+    cancelLabel: String,
+    onCancel: () -> Unit
+  ) {
+    val container=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(20),dp(20),dp(20),dp(16))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(16).toFloat()
+      }
+    }
+    container.addView(TextView(this).apply {
+      text=title
+      textSize=20f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(0,0,0,dp(10))
+    })
+    if(!message.isNullOrBlank()) container.addView(TextView(this).apply {
+      text=message
+      textSize=14f
+      setTextColor(secondary)
+      setPadding(0,0,0,dp(12))
+    })
+    val maxHeight=(resources.displayMetrics.heightPixels*0.78f).toInt().coerceAtLeast(dp(240))
+    val scroll=object: ScrollView(this) {
+      override fun onMeasure(widthSpec: Int, heightSpec: Int) {
+        val size=if(MeasureSpec.getMode(heightSpec)==MeasureSpec.UNSPECIFIED) maxHeight
+          else MeasureSpec.getSize(heightSpec).coerceAtMost(maxHeight)
+        super.onMeasure(widthSpec,MeasureSpec.makeMeasureSpec(size,MeasureSpec.AT_MOST))
+      }
+    }.apply { addView(container); isFillViewport=false }
+    val dialog=AlertDialog.Builder(this).setView(scroll).create()
+    choices.forEachIndexed { index, entry ->
+      val emphasized=choices.size==1 && index==0
+      container.addView(TextView(this).apply {
+        text=entry.first
+        contentDescription=entry.first
+        textSize=15f
+        setTypeface(null,if(emphasized) Typeface.BOLD else Typeface.NORMAL)
+        setTextColor(if(emphasized) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor)
+        gravity=Gravity.CENTER_VERTICAL
+        minimumHeight=dp(52)
+        setPadding(dp(14),dp(12),dp(14),dp(12))
+        isClickable=true
+        isFocusable=true
+        background=GradientDrawable().apply {
+          setColor(if(emphasized) blue else fieldBackground)
+          cornerRadius=dp(10).toFloat()
+          if(!emphasized) setStroke(dp(1),inputBorder)
+        }
+        setOnClickListener { dialog.dismiss(); entry.second() }
+      },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    }
+    container.addView(TextView(this).apply {
+      text=cancelLabel
+      contentDescription=cancelLabel
+      textSize=14f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(blue)
+      gravity=Gravity.CENTER
+      minimumHeight=dp(48)
+      isClickable=true
+      isFocusable=true
+      setOnClickListener { dialog.dismiss(); onCancel() }
+    },LinearLayout.LayoutParams(-1,dp(48)).apply { topMargin=dp(8) })
+    dialog.setOnCancelListener { onCancel() }
+    dialog.show()
+    dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+    dialog.window?.setLayout(
+      (resources.displayMetrics.widthPixels-dp(32)).coerceAtMost(dp(440)),
+      WindowManager.LayoutParams.WRAP_CONTENT
+    )
+  }
   private fun beginSpeech() {
     session.inputChanged(); cancelModel()
     if(Build.VERSION.SDK_INT<31 || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) { status.text="이 기기는 기기 내 음성 인식을 지원하지 않습니다. 텍스트를 이용해 주세요. 온라인 인식은 사용하지 않습니다."; return }
@@ -403,9 +484,20 @@ class QuickEntryActivity : Activity() {
             status.text="듣고 있습니다…"; recognizer.startListening(request)
           } else {
             status.text="기기 내 한국어 모델이 설치되지 않았습니다. 다운로드 후 음성 입력을 다시 눌러 주세요."
-            if(support.supportedOnDeviceLanguages.any { it.startsWith("ko",true) }) AlertDialog.Builder(this@QuickEntryActivity).setTitle("한국어 음성 모델 다운로드").setMessage("기기의 음성 인식 서비스에 한국어 모델 다운로드를 요청할까요?").setPositiveButton("다운로드 요청") { _,_ ->
-              if(session.accepts(token)) try { recognizer.triggerModelDownload(request) } catch(e: Exception) { status.text="모델 다운로드를 요청하지 못했습니다. 텍스트를 이용해 주세요." }
-            }.setNegativeButton("텍스트 사용") { _,_ -> stopSpeech() }.show()
+            if(support.supportedOnDeviceLanguages.any { it.startsWith("ko",true) }) {
+              val actions: List<Pair<String, () -> Unit>> = listOf(
+                "다운로드 요청" to {
+                  if(session.accepts(token)) try { recognizer.triggerModelDownload(request) }
+                  catch(e: Exception) { status.text="모델 다운로드를 요청하지 못했습니다. 텍스트를 이용해 주세요." }
+                }
+              )
+              showBrandedDialog(
+                "한국어 음성 모델 다운로드",
+                "기기의 음성 인식 서비스에 한국어 모델 다운로드를 요청할까요?",
+                actions,
+                "텍스트 사용"
+              ) { stopSpeech() }
+            }
           }
         }
         override fun onError(error: Int) { if(session.accepts(token)) { stopSpeech(); status.text="기기 내 한국어 지원 여부를 확인할 수 없습니다 ($error). 텍스트를 이용해 주세요." } }
