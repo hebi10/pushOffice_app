@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
-import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
+import { AssistantButton, AssistantCard, AssistantTextField, SettingRow, assistantStyles as s } from '@/src/components/AssistantUI';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useScheduleDetail, useUpdateSchedule, useDeleteSchedule } from '@/src/features/schedules';
 import { PushOfficeNative } from '@/modules/push-office-native';
@@ -106,17 +106,12 @@ export default function ScheduleDetail() {
   };
 
   const field = (label: string, value: string, onChangeText: (next: string) => void, placeholder?: string) => (
-    <View style={{ gap: 6 }}>
-      <Text style={[s.caption, { color: colors.textSecondary }]}>{label}</Text>
-      <TextInput
-        accessibilityLabel={label}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.textTertiary}
-        style={[s.input, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
-      />
-    </View>
+    <AssistantTextField
+      label={label}
+      value={value}
+      onChangeText={onChangeText}
+      placeholder={placeholder}
+    />
   );
 
   if (!detail.data) {
@@ -149,12 +144,7 @@ export default function ScheduleDetail() {
               <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          <View style={s.row}>
-            <Text style={[s.body, { color: colors.text }]}>하루 종일</Text>
-            <Switch accessibilityLabel="하루 종일" value={allDay} onValueChange={setAllDay}
-              trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
-              thumbColor={allDay ? colors.primary : colors.surfaceBorder} />
-          </View>
+          <SettingRow title="하루 종일" value={allDay} onValueChange={setAllDay} />
           {!allDay ? (
             <View style={{ gap: 6 }}>
               <Text style={[s.caption, { color: colors.textSecondary }]}>시작 시간</Text>
@@ -194,12 +184,7 @@ export default function ScheduleDetail() {
             </View>
             {end ? <AssistantButton label="종료 시간 제거" icon="close-circle-outline" secondary onPress={() => setEnd('')} /> : null}
           </View>
-          <View style={s.row}>
-            <Text style={[s.body, { color: colors.text }]}>일정 알림</Text>
-            <Switch accessibilityLabel="일정 알림" value={notification} onValueChange={setNotification}
-              trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
-              thumbColor={notification ? colors.primary : colors.surfaceBorder} />
-          </View>
+          <SettingRow title="일정 알림" value={notification} onValueChange={setNotification} />
           <Text style={[s.caption, { color: colors.textSecondary }]}>알림은 기기 권한과 전체 알림 설정에 따라 전달됩니다.</Text>
           <Text style={[s.caption, { color: colors.textSecondary }]}>반복</Text>
           {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
