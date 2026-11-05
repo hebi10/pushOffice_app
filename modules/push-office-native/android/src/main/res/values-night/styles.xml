@@ -2,5 +2,8 @@
   <style name="PushOfficeDialog" parent="@android:style/Theme.Material.Dialog.NoActionBar">
     <item name="android:colorAccent">#60A5FA</item>
     <item name="android:windowIsTranslucent">true</item>
+    <item name="android:windowBackground">@drawable/push_office_dialog_background</item>
+    <item name="android:textColorPrimary">#F1F5F9</item>
+    <item name="android:textColorSecondary">#CBD5E1</item>
   </style>
 </resources>
