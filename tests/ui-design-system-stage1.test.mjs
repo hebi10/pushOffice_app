@@ -72,7 +72,7 @@ test('settings and schedule details preserve existing actions via common control
   assert.match(settings, /<SettingsToggleRow/);
   assert.match(settings, /<AssistantTextField/);
   assert.match(detail, /<SettingRow title="하루 종일"/);
-  assert.match(detail, /<SettingRow title="일정 알림"/);
+  assert.match(detail, /<SettingRow\s+title="일정 알림"/);
   assert.match(detail, /<AssistantTextField/);
   assert.match(settings, /saveAssistantSettings\(patch\)/);
   assert.match(detail, /await update\.mutateAsync/);

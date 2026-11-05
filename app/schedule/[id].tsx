@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SchedulePickerDialog } from '@/src/components/schedule/SchedulePickerDialog';
+import { SchedulePickerField } from '@/src/components/schedule/SchedulePickerField';
+import { EmptyState } from '@/src/components/EmptyState';
+import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
+import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
@@ -116,8 +121,24 @@ export default function ScheduleDetail() {
 
   if (!detail.data) {
     return (
-      <View style={s.content}>
-        <Text style={{ color: colors.text }}>{detail.isLoading ? '일정을 불러오는 중…' : '일정을 찾을 수 없습니다. 삭제되었을 수 있습니다.'}</Text>
+      <View style={[s.content, styles.missingScreen, { backgroundColor: colors.background }]}>
+        <ScreenIntro
+          eyebrow="PUSH OFFICE · 일정"
+          title="일정 상세"
+          description="기기에 저장된 일정의 상세 정보를 확인합니다."
+        />
+        {detail.isLoading ? (
+          <View style={styles.missingContent}>
+            <ActivityIndicator accessibilityLabel="일정 불러오는 중" size="large" color={colors.primary} />
+            <Text style={[s.body, { color: colors.textSecondary }]}>일정을 불러오는 중입니다.</Text>
+          </View>
+        ) : (
+          <EmptyState message={detail.isError
+            ? '일정을 불러오지 못했습니다. 다시 확인해 주세요.'
+            : '일정을 찾을 수 없습니다. 삭제되었을 수 있습니다.'}
+          />
+        )}
+        <AssistantButton label="일정 목록으로 돌아가기" icon="arrow-back-outline" secondary onPress={() => router.back()} />
       </View>
     );
   }
@@ -129,64 +150,61 @@ export default function ScheduleDetail() {
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
       >
-        <AssistantCard title="일정 수정" icon="create-outline" subtitle="제목과 시간을 확인하고 필요한 항목만 수정하세요.">
+        <ScreenIntro
+          eyebrow="PUSH OFFICE · 일정"
+          title="일정 상세"
+          description="제목과 날짜, 반복과 알림을 확인하세요."
+        />
+        <AssistantCard title="기본 정보" icon="create-outline" subtitle="일정 제목을 수정할 수 있습니다.">
           {field('제목', title, setTitle)}
-          <View style={{ gap: 6 }}>
-            <Text style={[s.caption, { color: colors.textSecondary }]}>날짜</Text>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="일정 날짜 선택"
-              onPress={() => openDatePicker('start')}
-              style={[s.row, { borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 12 }]}
-            >
-              <Ionicons name="calendar-outline" size={19} color={colors.primary} />
-              <Text style={[s.body, { color: colors.text, flex: 1 }]}>{date ? dayjs(date).format('YYYY년 M월 D일') : '날짜 선택'}</Text>
-              <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-          <SettingRow title="하루 종일" value={allDay} onValueChange={setAllDay} />
+        </AssistantCard>
+
+        <AssistantCard title="날짜와 시간" icon="calendar-outline" subtitle="시작 날짜와 선택적인 종료 시각을 관리합니다.">
+          <SchedulePickerField
+            label="시작 날짜"
+            accessibilityLabel="일정 날짜 선택"
+            value={date ? dayjs(date).format('YYYY년 M월 D일') : '날짜 선택'}
+            icon="calendar-outline"
+            onPress={() => openDatePicker('start')}
+          />
+          <SettingRow title="하루 종일" description="시간 없이 하루 전체를 표시합니다." value={allDay} onValueChange={setAllDay} />
           {!allDay ? (
-            <View style={{ gap: 6 }}>
-              <Text style={[s.caption, { color: colors.textSecondary }]}>시작 시간</Text>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="시작 시간 선택"
-                onPress={() => openTimePicker('start')}
-                style={[s.row, { borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 12 }]}
-              >
-                <Ionicons name="time-outline" size={19} color={colors.primary} />
-                <Text style={[s.body, { color: colors.text, flex: 1 }]}>{time}</Text>
-                <Ionicons name="chevron-down" size={17} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+            <SchedulePickerField
+              label="시작 시간"
+              accessibilityLabel="시작 시간 선택"
+              value={time}
+              icon="time-outline"
+              onPress={() => openTimePicker('start')}
+            />
           ) : null}
-          <View style={{ gap: 8 }}>
-            <Text style={[s.caption, { color: colors.textSecondary }]}>종료 날짜와 시간 (선택)</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity
-                accessibilityRole="button"
+          <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>종료 날짜·시간 (선택)</Text>
+          <View style={styles.endRow}>
+            <View style={styles.endField}>
+              <SchedulePickerField
+                label="종료 날짜"
                 accessibilityLabel="종료 날짜 선택"
+                value={end ? end.split(' ')[0] : '날짜 선택'}
+                icon="calendar-outline"
                 onPress={() => openDatePicker('end')}
-                style={[s.row, { flex: 1.5, justifyContent: 'flex-start', borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 10 }]}
-              >
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
-                <Text style={[s.caption, { color: colors.text, flexShrink: 1 }]}>{end ? end.split(' ')[0] : '날짜 선택'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="종료 시간 선택"
-                onPress={() => openTimePicker('end')}
-                style={[s.row, { flex: 1, justifyContent: 'flex-start', borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 10 }]}
-              >
-                <Ionicons name="time-outline" size={18} color={colors.primary} />
-                <Text style={[s.caption, { color: colors.text }]}>{end ? end.split(' ')[1] : '시간'}</Text>
-              </TouchableOpacity>
+              />
             </View>
-            {end ? <AssistantButton label="종료 시간 제거" icon="close-circle-outline" secondary onPress={() => setEnd('')} /> : null}
+            <View style={styles.endField}>
+              <SchedulePickerField
+                label="종료 시간"
+                accessibilityLabel="종료 시간 선택"
+                value={end ? end.split(' ')[1] : '시간 선택'}
+                icon="time-outline"
+                onPress={() => openTimePicker('end')}
+              />
+            </View>
           </View>
-          <SettingRow title="일정 알림" value={notification} onValueChange={setNotification} />
-          <Text style={[s.caption, { color: colors.textSecondary }]}>알림은 기기 권한과 전체 알림 설정에 따라 전달됩니다.</Text>
-          <Text style={[s.caption, { color: colors.textSecondary }]}>반복</Text>
+          {end ? (
+            <AssistantButton label="종료 시간 제거" icon="close-circle-outline" secondary onPress={() => setEnd('')} />
+          ) : null}
+        </AssistantCard>
+
+        <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle="반복 변경은 모든 해당 일정에 적용됩니다.">
+          <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>반복 주기</Text>
           {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
             <TouchableOpacity
               key={key}
@@ -194,16 +212,38 @@ export default function ScheduleDetail() {
               accessibilityLabel={label}
               accessibilityState={{ checked: repeat === key }}
               onPress={() => setRepeat(key)}
-              style={[s.row, { paddingHorizontal: 12, borderWidth: 1, borderColor: repeat === key ? colors.primary : colors.inputBorder, borderRadius: 10 }]}
+              style={[
+                styles.repeatChoice,
+                {
+                  borderColor: repeat === key ? colors.primary : colors.inputBorder,
+                  backgroundColor: repeat === key ? colors.primaryLight : colors.surface,
+                },
+              ]}
             >
-              <Text style={[s.body, { color: colors.text, flex: 1 }]}>{label}</Text>
-              <Ionicons name={repeat === key ? 'radio-button-on' : 'radio-button-off'} color={repeat === key ? colors.primary : colors.textTertiary} size={20} />
+              <Text style={[styles.repeatLabel, { color: colors.text }]}>{label}</Text>
+              <Ionicons
+                name={repeat === key ? 'radio-button-on' : 'radio-button-off'}
+                color={repeat === key ? colors.primary : colors.textTertiary}
+                size={22}
+              />
             </TouchableOpacity>
           ))}
-          <AssistantButton label="변경 사항 저장" icon="checkmark-outline" busy={update.isPending} onPress={confirmSave} />
+          <SettingRow
+            title="일정 알림"
+            description="기기 알림 권한과 전체 알림 설정에 따라 전달됩니다."
+            value={notification}
+            onValueChange={setNotification}
+          />
         </AssistantCard>
-        <AssistantCard title="재알림" icon="alarm-outline">
-          <Text style={[s.caption, { color: colors.textSecondary }]}>반복 기준 날짜를 바꾸지 않고 한 번 더 알려드립니다.</Text>
+        <AssistantButton
+          label="변경 사항 저장"
+          icon="checkmark-outline"
+          busy={update.isPending}
+          disabled={remove.isPending}
+          onPress={confirmSave}
+        />
+
+        <AssistantCard title="재알림" icon="alarm-outline" subtitle="반복 기준일을 변경하지 않고 한 번 더 알립니다.">
           <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary onPress={() =>
             PushOfficeNative.snoozeSchedule(id, 10).then(() => showToast('10분 뒤 재알림을 예약했습니다.')).catch(e => showError(e, '예약하지 못했습니다.'))
           } />
@@ -211,82 +251,99 @@ export default function ScheduleDetail() {
             PushOfficeNative.cancelSnooze(id).then(() => showToast('재알림을 취소했습니다.')).catch(e => showError(e, '취소하지 못했습니다.'))
           } />
         </AssistantCard>
-        <AssistantButton
-          label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
-          icon="trash-outline"
-          variant="destructive"
-          busy={remove.isPending}
-          onPress={() => setPendingDialog('delete')}
-        />
+        <AssistantCard title="삭제 전 확인" icon="trash-outline" subtitle="일정과 연결된 알림도 함께 삭제됩니다.">
+          <AssistantButton
+            label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
+            icon="trash-outline"
+            variant="destructive"
+            busy={remove.isPending}
+            disabled={update.isPending}
+            onPress={() => setPendingDialog('delete')}
+          />
+        </AssistantCard>
       </ScrollView>
-      <Modal transparent animationType="fade" visible={dateOpen} onRequestClose={() => setDateOpen(false)}>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 16, gap: 12, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
-            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}</Text>
-            <Calendar
-              key={isDark ? 'dark' : 'light'}
-              current={(pickerTarget === 'start' ? date : end.split(' ')[0] || date) || undefined}
-              onDayPress={day => {
-                if (pickerTarget === 'start') {
-                  setDate(day.dateString);
-                } else {
-                  setEnd(`${day.dateString} ${end.trim().split(' ')[1] || time}`);
-                }
-                setDateOpen(false);
-              }}
-              markedDates={(pickerTarget === 'start' ? date : end.split(' ')[0]) ? { [(pickerTarget === 'start' ? date : end.split(' ')[0])]: { selected: true, selectedColor: colors.primary } } : {}}
-              theme={{
-                calendarBackground: colors.surface, dayTextColor: colors.text,
-                monthTextColor: colors.text, arrowColor: colors.primary,
-                todayTextColor: colors.primary, textDisabledColor: colors.textTertiary,
-                selectedDayTextColor: isDark ? colors.background : '#FFFFFF',
-              }}
+
+      <SchedulePickerDialog
+        visible={dateOpen}
+        title={pickerTarget === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}
+        description="날짜를 선택하면 수정 화면으로 돌아갑니다."
+        onDismiss={() => setDateOpen(false)}
+      >
+        <Calendar
+          key={isDark ? 'dark' : 'light'}
+          current={(pickerTarget === 'start' ? date : end.split(' ')[0] || date) || undefined}
+          onDayPress={day => {
+            if (pickerTarget === 'start') {
+              setDate(day.dateString);
+            } else {
+              setEnd(day.dateString + ' ' + (end.trim().split(' ')[1] || time));
+            }
+            setDateOpen(false);
+          }}
+          markedDates={(pickerTarget === 'start' ? date : end.split(' ')[0])
+            ? { [(pickerTarget === 'start' ? date : end.split(' ')[0])]: { selected: true, selectedColor: colors.primary } }
+            : {}}
+          theme={{
+            calendarBackground: colors.surface,
+            dayTextColor: colors.text,
+            monthTextColor: colors.text,
+            arrowColor: colors.primary,
+            todayTextColor: colors.primary,
+            textDisabledColor: colors.textTertiary,
+            selectedDayTextColor: colors.onPrimary,
+          }}
+        />
+        <AssistantButton label="닫기" secondary icon="close-outline" onPress={() => setDateOpen(false)} />
+      </SchedulePickerDialog>
+
+      <SchedulePickerDialog
+        visible={timeOpen}
+        title={pickerTarget === 'start' ? '시작 시간 선택' : '종료 시간 선택'}
+        description="시간은 0–23시, 분은 0–59분으로 입력해 주세요."
+        onDismiss={() => setTimeOpen(false)}
+      >
+        <View style={styles.timeRow}>
+          <View style={styles.timeField}>
+            <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>시</Text>
+            <TextInput
+              accessibilityLabel="시"
+              keyboardType="number-pad"
+              maxLength={2}
+              value={hour}
+              onChangeText={setHour}
+              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
             />
-            <AssistantButton label="닫기" secondary icon="close-outline" onPress={() => setDateOpen(false)} />
+          </View>
+          <Text style={[styles.timeSeparator, { color: colors.textSecondary }]}>:</Text>
+          <View style={styles.timeField}>
+            <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>분</Text>
+            <TextInput
+              accessibilityLabel="분"
+              keyboardType="number-pad"
+              maxLength={2}
+              value={minute}
+              onChangeText={setMinute}
+              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
+            />
           </View>
         </View>
-      </Modal>
-      <Modal transparent animationType="fade" visible={timeOpen} onRequestClose={() => setTimeOpen(false)}>
-        <View style={{ flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 20, gap: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
-            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 시간 선택' : '종료 시간 선택'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <TextInput
-                accessibilityLabel="시"
-                keyboardType="number-pad"
-                maxLength={2}
-                value={hour}
-                onChangeText={setHour}
-                style={[s.input, { flex: 1, color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
-              />
-              <Text style={{ color: colors.text, fontWeight: '700' }}>:</Text>
-              <TextInput
-                accessibilityLabel="분"
-                keyboardType="number-pad"
-                maxLength={2}
-                value={minute}
-                onChangeText={setMinute}
-                style={[s.input, { flex: 1, color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
-              />
-            </View>
-            <AssistantButton label="시간 적용" icon="checkmark-outline" onPress={() => {
-              const h = Number(hour), m = Number(minute);
-              if (!/^\d{1,2}$/.test(hour) || !/^\d{1,2}$/.test(minute) || h > 23 || m > 59) {
-                setPendingDialog('invalid-time');
-                return;
-              }
-              const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-              if (pickerTarget === 'start') {
-                setTime(formatted);
-              } else {
-                setEnd(`${end.split(' ')[0] || date} ${formatted}`);
-              }
-              setTimeOpen(false);
-            }} />
-            <AssistantButton label="취소" icon="close-outline" secondary onPress={() => setTimeOpen(false)} />
-          </View>
-        </View>
-      </Modal>
+        <AssistantButton label="시간 적용" icon="checkmark-outline" onPress={() => {
+          const h = Number(hour), m = Number(minute);
+          if (!/^\d{1,2}$/.test(hour) || !/^\d{1,2}$/.test(minute) || h > 23 || m > 59) {
+            setPendingDialog('invalid-time');
+            return;
+          }
+          const formatted = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+          if (pickerTarget === 'start') {
+            setTime(formatted);
+          } else {
+            setEnd((end.split(' ')[0] || date) + ' ' + formatted);
+          }
+          setTimeOpen(false);
+        }} />
+        <AssistantButton label="취소" icon="close-outline" secondary onPress={() => setTimeOpen(false)} />
+      </SchedulePickerDialog>
+
       <AppDialog
         visible={pendingDialog === 'repeat'}
         title="반복 일정 전체 수정"
@@ -318,3 +375,31 @@ export default function ScheduleDetail() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  missingScreen: { flex: 1 },
+  missingContent: {
+    paddingVertical: uiSpacing.xxl,
+    gap: uiSpacing.sm,
+    alignItems: 'center',
+  },
+  groupCaption: uiTypography.caption,
+  endRow: { flexDirection: 'row', flexWrap: 'wrap', gap: uiSpacing.xs },
+  endField: { flexGrow: 1, flexBasis: 138, minWidth: 0 },
+  repeatChoice: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: uiSpacing.sm,
+    minHeight: uiSizes.controlMinHeight,
+    paddingHorizontal: uiSpacing.md,
+    paddingVertical: uiSpacing.sm,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+  },
+  repeatLabel: { ...uiTypography.body, flex: 1, minWidth: 0 },
+  timeRow: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.sm },
+  timeField: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
+  timeSeparator: { ...uiTypography.sectionTitle, paddingTop: uiSpacing.md },
+  timeInput: { minWidth: 0, textAlign: 'center' },
+});
