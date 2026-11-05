@@ -68,7 +68,7 @@ export default function CalendarScreen() {
             arrowColor: colors.primary,
             textDisabledColor: colors.textTertiary,
             textSectionTitleColor: colors.textSecondary,
-            selectedDayTextColor: '#FFFFFF',
+            selectedDayTextColor: isDark ? colors.background : '#FFFFFF',
             textDayFontSize: 15,
             textMonthFontSize: 17,
             textDayHeaderFontSize: 13,
