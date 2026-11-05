@@ -69,7 +69,7 @@ test('shared components use the same spacing, control and typography tokens', ()
 test('settings and schedule details preserve existing actions via common controls', () => {
   const settings = source('app/(tabs)/settings.tsx');
   const detail = source('app/schedule/[id].tsx');
-  assert.match(settings, /<SettingRow title=\{label\}/);
+  assert.match(settings, /<SettingsToggleRow/);
   assert.match(settings, /<AssistantTextField/);
   assert.match(detail, /<SettingRow title="하루 종일"/);
   assert.match(detail, /<SettingRow title="일정 알림"/);
