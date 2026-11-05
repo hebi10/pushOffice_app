@@ -120,7 +120,7 @@ class QuickEntryActivity : Activity() {
       setPadding(0,0,0,dp(12))
     })
     fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
-      val textColor=if(primary) Color.WHITE else foregroundColor
+      val textColor=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor
       val row=LinearLayout(this).apply {
         orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
@@ -356,7 +356,7 @@ class QuickEntryActivity : Activity() {
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {
     val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
-    val color=if(primary) Color.WHITE else blue
+    val color=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else blue
     root.addView(Button(this).apply {
       text=label
       contentDescription=description
