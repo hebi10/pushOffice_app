@@ -15,7 +15,8 @@ import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ForegroundRequest, runForegroundRequest } from '@/src/features/notifications/foregroundRequest';
-import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 export default function HomeScreen() {
     const { colors } = useTheme();
     const now = useClock();
@@ -71,11 +72,19 @@ export default function HomeScreen() {
             } });
     };
     const nextAt = next?.startAt?.toDate?.();
-    const readableSummary = schedules.isLoading
-        ? '저장된 일정을 확인하고 있습니다.'
-        : todayItems.length
-            ? `오늘 등록된 일정이 ${todayItems.length}개 있습니다.`
-            : '오늘 등록된 일정이 없습니다.';
+    const nextEndAt = next?.endAt?.toDate?.();
+    const nextEndIsValid = Boolean(nextAt && nextEndAt && nextEndAt.getTime() > nextAt.getTime());
+    const nextEndSameDay = Boolean(nextAt && nextEndAt && dayjs(nextAt).isSame(dayjs(nextEndAt), 'day'));
+    const nextEndLabel = nextEndIsValid && nextEndAt && !next?.isAllDay
+        ? nextEndSameDay ? `~ ${dayjs(nextEndAt).format('HH:mm')}` : `~ ${dayjs(nextEndAt).format('M/D HH:mm')}`
+        : '';
+    const todayHeadline = schedules.isError
+        ? '일정을 불러오지 못했습니다.'
+        : schedules.isLoading
+            ? '기기에 저장된 일정을 확인하는 중입니다.'
+            : todayItems.length
+                ? '오늘의 일정을 한눈에 확인하세요.'
+                : '오늘은 예정된 일정이 없습니다.';
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
@@ -83,96 +92,206 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
       >
         <ScreenIntro
-          eyebrow="내 기기에 머무는 일정 비서"
+          eyebrow="PUSH OFFICE · 로컬 일정 비서"
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
           description={dayjs(now).format('M월 D일 dddd')}
           artwork={require('@/assets/images/illustration-home.jpg')}
         />
-        <AssistantButton
-          label="텍스트 · 음성으로 일정 추가"
-          icon="add-circle-outline"
-          onPress={open}
-        />
-        <AssistantCard title="오늘의 브리핑" icon="sunny-outline">
-          <Text style={[s.body, { color: colors.text, fontWeight: '600' }]}>
-            {refined || readableSummary}
+
+        <View style={styles.quickEntry}>
+          <AssistantButton
+            label="일정 빠르게 추가"
+            icon="add-circle-outline"
+            onPress={open}
+          />
+          <Text style={[styles.quickEntryHint, { color: colors.textSecondary }]}>
+            텍스트 또는 음성으로 새 일정을 기록하세요.
           </Text>
-          {todayItems.length > 0 ? (
-            <Text style={[s.subtitle, { color: colors.textSecondary }]}>
-              {todayItems.slice(0, 2).map(x => `${x.isAllDay ? '종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(' · ')}
-              {todayItems.length > 2 ? ` 외 ${todayItems.length - 2}개` : ''}
-            </Text>
-          ) : null}
+        </View>
+
+        <AssistantCard title="오늘의 브리핑" icon="sunny-outline">
+          <View style={styles.briefingHeading}>
+            <View style={styles.briefingCopy}>
+              <Text style={[styles.briefingHeadline, { color: colors.text }]}>
+                {refined || todayHeadline}
+              </Text>
+            </View>
+            {!schedules.isLoading && !schedules.isError ? (
+              <View style={[styles.countPill, { backgroundColor: colors.primaryLight }]}>
+                <Text style={[styles.countText, { color: colors.primary }]}>
+                  {todayItems.length}건
+                </Text>
+              </View>
+            ) : null}
+          </View>
           {ai.status === 'available' ? (
-            <AssistantButton label="기기 AI로 브리핑 다듬기" icon="sparkles-outline" secondary busy={busy} onPress={refine} />
+            <AssistantButton
+              label="기기 AI로 브리핑 다듬기"
+              icon="sparkles-outline"
+              secondary
+              busy={busy}
+              onPress={refine}
+            />
           ) : null}
           <Text style={[s.caption, { color: colors.textSecondary }]}>
-            {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정으로 만든 요약'}
+            {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정만으로 만든 요약'}
           </Text>
         </AssistantCard>
-        {next && nextAt ? (
-          <AssistantCard title="다음 일정" icon="calendar-outline">
+
+        <AssistantCard title="다음 일정" icon="calendar-outline">
+          {schedules.isLoading ? (
+            <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
+          ) : schedules.isError ? (
+            <Text style={[s.body, { color: colors.danger }]}>일정 조회 오류로 다음 일정을 표시할 수 없습니다.</Text>
+          ) : next && nextAt ? (
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel={`${next.title}, 일정 상세 보기`}
+              accessibilityLabel={`${next.title}, ${dayjs(nextAt).format('M월 D일')}, ${next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}${nextEndLabel ? ` ${nextEndLabel}` : ''}, 일정 상세 보기`}
               accessibilityState={{ disabled: !next.id }}
               disabled={!next.id}
               onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
               activeOpacity={0.75}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                minHeight: 64,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.inputBorder,
-                borderRadius: 10,
-                backgroundColor: colors.inputBackground,
-              }}
+              style={[styles.nextCard, { backgroundColor: colors.primaryLight, borderColor: colors.surfaceBorder }]}
             >
-              <View style={{ flex: 1, gap: 5 }}>
-                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]} numberOfLines={2}>
-                  {next.title}
+              <View style={styles.nextTimeCol}>
+                <Text style={[styles.nextTime, { color: colors.primary }]}>
+                  {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
                 </Text>
-                <Text style={[s.subtitle, { color: colors.primary, fontWeight: '700' }]}>
-                  {dayjs(nextAt).format('M월 D일 (ddd) HH:mm')}
+                {nextEndLabel && nextEndSameDay ? (
+                  <Text style={[styles.nextEnd, { color: colors.textSecondary }]}>{nextEndLabel}</Text>
+                ) : null}
+              </View>
+              <View style={styles.nextContent}>
+                <Text style={[styles.nextTitle, { color: colors.text }]} numberOfLines={2}>{next.title}</Text>
+                <Text style={[styles.nextDate, { color: colors.textSecondary }]}>
+                  {dayjs(nextAt).format('M월 D일 (ddd)')}
+                  {nextEndLabel && !nextEndSameDay ? ` · ${nextEndLabel}` : ''}
+                  {next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
                 </Text>
               </View>
-              {next.id ? <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} /> : null}
+              {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}
             </TouchableOpacity>
-          </AssistantCard>
-        ) : null}
-        <AssistantCard title={`오늘 일정 ${todayItems.length}개`} icon="list-outline">
-          {schedules.isError ? (
-            <Text style={[s.body, { color: colors.danger }]}>일정을 불러오지 못했습니다. 아래로 당겨 다시 확인해 주세요.</Text>
-          ) : todayItems.length ? (
-            todayItems.map(x => <ScheduleItem key={x.id} schedule={x} />)
           ) : (
-            <Text style={[s.body, { color: colors.textSecondary }]}>아직 일정이 없습니다. “내일 오전 9시 회의”처럼 입력해 보세요.</Text>
+            <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다. 빠른 입력으로 등록해 보세요.</Text>
           )}
         </AssistantCard>
-        <AssistantCard title="선택한 외부 브리핑" icon="cloud-outline">
-          <Text style={[s.caption, { color: colors.textSecondary }]}>
-            설정에서 선택한 날씨·뉴스·주식을 직접 불러옵니다. 일정 내용은 외부로 전송하지 않습니다.
-          </Text>
-          <AssistantButton
-            label="외부 브리핑 불러오기"
-            icon="cloud-download-outline"
-            secondary
-            busy={external.isPending}
-            onPress={() => external.mutate({ input: {
-              ownerId: uid ?? 'local', ownerType: 'device', dateKey: today,
-              timezone: settings.timezone, types: settings.digestTypes,
-              city: settings.digestCity, stockTickers: settings.stockTickers,
-              newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage,
-              allowExternal: true,
-            }, force: true })}
-          />
-          {external.isError ? <Text style={[s.caption, { color: colors.danger }]}>외부 정보를 가져오지 못했습니다. 로컬 일정은 계속 사용할 수 있습니다.</Text> : null}
+
+        <AssistantCard title="오늘 일정" icon="list-outline">
+          <View style={styles.agendaHeading}>
+            <Text style={[s.caption, { color: colors.textSecondary }]}>
+              {schedules.isLoading ? '일정을 확인하고 있습니다.' : `오늘 등록된 일정 ${todayItems.length}건`}
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="캘린더에서 일정 전체 보기"
+              onPress={() => router.push('/(tabs)/calendar')}
+              style={styles.calendarLink}
+            >
+              <Text style={[styles.calendarLinkText, { color: colors.primary }]}>캘린더</Text>
+              <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          {schedules.isError ? (
+            <Text style={[s.body, { color: colors.danger }]}>
+              일정을 불러오지 못했습니다. 아래로 당겨 다시 확인해 주세요.
+            </Text>
+          ) : schedules.isLoading ? (
+            <Text style={[s.body, { color: colors.textSecondary }]}>일정 목록을 불러오는 중입니다.</Text>
+          ) : todayItems.length ? (
+            <View style={styles.agendaList}>
+              {todayItems.map((item, index) => (
+                <ScheduleItem
+                  key={`${item.id ?? index}-${item.startAt.toMillis()}`}
+                  schedule={item}
+                />
+              ))}
+            </View>
+          ) : (
+            <Text style={[s.body, { color: colors.textSecondary }]}>
+              아직 일정이 없습니다. “내일 오전 9시 회의”처럼 입력해 보세요.
+            </Text>
+          )}
         </AssistantCard>
-        {external.data?.weatherData ? <BriefingWeatherCard {...external.data.weatherData} /> : null}
-        {external.data?.newsData ? <BriefingNewsCard items={external.data.newsData} /> : null}
-        {external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
+
+        <View style={styles.externalSection}>
+          <Text style={[styles.externalLabel, { color: colors.textSecondary }]}>
+            선택한 외부 정보
+          </Text>
+          <AssistantCard title="외부 브리핑" icon="cloud-outline">
+            <Text style={[s.caption, { color: colors.textSecondary }]}>
+              날씨·뉴스·주식은 요청할 때만 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.
+            </Text>
+            <AssistantButton
+              label="외부 브리핑 불러오기"
+              icon="cloud-download-outline"
+              secondary
+              busy={external.isPending}
+              onPress={() => external.mutate({ input: {
+                ownerId: uid ?? 'local', ownerType: 'device', dateKey: today,
+                timezone: settings.timezone, types: settings.digestTypes,
+                city: settings.digestCity, stockTickers: settings.stockTickers,
+                newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage,
+                allowExternal: true,
+              }, force: true })}
+            />
+            {external.isError ? (
+              <Text style={[s.caption, { color: colors.danger }]}>
+                외부 정보를 가져오지 못했습니다. 로컬 일정은 계속 사용할 수 있습니다.
+              </Text>
+            ) : null}
+          </AssistantCard>
+          {external.data?.weatherData ? <BriefingWeatherCard {...external.data.weatherData} /> : null}
+          {external.data?.newsData ? <BriefingNewsCard items={external.data.newsData} /> : null}
+          {external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
+        </View>
       </ScrollView>
     );
+
 }
+
+
+const styles = StyleSheet.create({
+  quickEntry: { gap: uiSpacing.xs },
+  quickEntryHint: {
+    ...uiTypography.caption,
+    paddingHorizontal: uiSpacing.xxs,
+  },
+  briefingHeading: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: uiSpacing.sm,
+  },
+  briefingCopy: { flex: 1 },
+  briefingHeadline: { ...uiTypography.body, fontWeight: '600' },
+  countPill: {
+    minHeight: 30,
+    minWidth: 42,
+    borderRadius: uiRadii.button,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xxs,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  countText: { ...uiTypography.caption, fontWeight: '700' },
+  nextCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 76,
+    padding: uiSpacing.sm,
+    gap: uiSpacing.sm,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+  },
+  nextTimeCol: { width: 68, gap: uiSpacing.xxs },
+  nextTime: { ...uiTypography.body, fontSize: 18, fontWeight: '800' },
+  nextEnd: { ...uiTypography.caption },
+  nextContent: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
+  nextTitle: { ...uiTypography.body, fontWeight: '700' },
+  nextDate: { ...uiTypography.caption },
+  agendaHeading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: uiSpacing.sm },
+  calendarLink: { minHeight: uiSizes.touchMinHeight, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: uiSpacing.xs, justifyContent: 'center' },
+  calendarLinkText: { ...uiTypography.caption, fontWeight: '700' },
+  agendaList: { gap: uiSpacing.xs },
+  externalSection: { gap: uiSpacing.sm, paddingTop: uiSpacing.xs },
+  externalLabel: { ...uiTypography.caption, fontWeight: '700', paddingHorizontal: uiSpacing.xxs },
+});
