@@ -16,7 +16,7 @@ import { retryLegacyRecovery } from '@/src/features/storage/legacyRecovery';
 import { subscribeOnActive, type LegacyCloudState } from '@/src/features/storage/recoveryPolicy';
 import type { UserSettings } from '@/src/types';
 export default function SettingsScreen() {
-    const { colors } = useTheme();
+    const { colors, isDark } = useTheme();
     const settings = useAppSelector(x => x.settings);
     const [cap, setCap] = useState<ReminderCapabilities | null>(null);
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
@@ -95,7 +95,7 @@ export default function SettingsScreen() {
                   justifyContent: 'center', alignItems: 'center', paddingHorizontal: 10,
                 }}
               >
-                <Text style={{ color: active ? '#FFFFFF' : colors.text, fontWeight: '700', fontSize: 14 }}>{label}</Text>
+                <Text style={{ color: active ? (isDark ? colors.background : '#FFFFFF') : colors.text, fontWeight: '700', fontSize: 14 }}>{label}</Text>
               </TouchableOpacity>
             );
           })}
