@@ -328,10 +328,29 @@ class QuickEntryActivity : Activity() {
   private fun form(title: String, dateTime: ZonedDateTime?, repeat: String, source: String, original: ScheduleRecord?, message: String) {
     val formZone=original?.let(::eventZone) ?: dateTime?.zone ?: zone
     page(
-      if(original==null) "저장 전 확인" else "변경 전 확인",
-      if(original==null) "$message\n시간대: ${formZone.id}"
-        else "변경되는 일정을 확인해 주세요.\n시간대: ${formZone.id}"
+      if(original==null) "일정 확인 및 저장" else "변경 내용 확인",
+      "입력 내용을 확인하고 필요한 항목을 수정한 뒤 저장하세요."
     )
+    val note=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(14),dp(12),dp(14),dp(12))
+      background=GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius=dp(12).toFloat()
+      }
+    }
+    note.addView(TextView(this).apply {
+      text=if(original==null) message else "기존 일정에서 변경되는 내용을 확인해 주세요."
+      textSize=14f
+      setTextColor(foregroundColor)
+    })
+    note.addView(TextView(this).apply {
+      text="시간대: ${formZone.id}"
+      textSize=12f
+      setTextColor(secondary)
+      setPadding(0,dp(6),0,0)
+    })
+    root.addView(note)
     if(original!=null && dateTime!=null) {
       val originalValue=Instant.ofEpochMilli(original.startAt).atZone(formZone).format(FORMAT)
       val updatedValue=dateTime.format(FORMAT)
@@ -344,15 +363,35 @@ class QuickEntryActivity : Activity() {
         }
       }
       summary.addView(TextView(this).apply {
-        text="변경 전  $originalValue"
-        textSize=14f; setTextColor(secondary)
+        text=original.title
+        textSize=16f
+        setTypeface(null,Typeface.BOLD)
+        setTextColor(foregroundColor)
+        setPadding(0,0,0,dp(8))
       })
       summary.addView(TextView(this).apply {
-        text="변경 후  $updatedValue"
-        textSize=16f; setTypeface(null,Typeface.BOLD)
-        setTextColor(blue); setPadding(0,dp(8),0,0)
+        text="변경 전"
+        textSize=12f
+        setTextColor(secondary)
       })
-      root.addView(summary)
+      summary.addView(TextView(this).apply {
+        text=originalValue
+        textSize=14f
+        setTextColor(foregroundColor)
+      })
+      summary.addView(TextView(this).apply {
+        text="변경 후"
+        textSize=12f
+        setTextColor(secondary)
+        setPadding(0,dp(10),0,0)
+      })
+      summary.addView(TextView(this).apply {
+        text=updatedValue
+        textSize=17f
+        setTypeface(null,Typeface.BOLD)
+        setTextColor(blue)
+      })
+      root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
