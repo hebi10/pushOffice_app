@@ -13,7 +13,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#4B94DC",
+        "backgroundColor": "#2563EB",
         "foregroundImage": "./assets/images/push-office-adaptive-foreground.png",
         "monochromeImage": "./assets/images/push-office-adaptive-monochrome.png"
       },
@@ -40,9 +40,9 @@
           "image": "./assets/images/push-office-splash.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#4B94DC",
+          "backgroundColor": "#2563EB",
           "dark": {
-            "backgroundColor": "#4B94DC"
+            "backgroundColor": "#2563EB"
           }
         }
       ],
