@@ -61,6 +61,8 @@ jobs:
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: bash tools/ui/install_and_capture.sh
+      - name: Verify all required UI captures and reject warnings
+        run: python3 tools/ui/verify_captures.py
       - name: Preserve screenshots and capture details
         if: always()
         uses: actions/upload-artifact@v4
