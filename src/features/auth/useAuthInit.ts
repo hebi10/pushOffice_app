@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Alert } from 'react-native';
+import { showNotice } from '@/src/components/ui/toast';
 import { setLoading, setUser } from '../../store/slices/authSlice';
 import { updateSettings } from '../../store/slices/settingsSlice';
 import { setDeviceKey, setMode } from '../../store/slices/storageModeSlice';
@@ -27,7 +27,7 @@ export function useAuthInit() {
     }).catch(error => {
       if (!active) return;
       // Do not configure native reminders with unknown defaults after a settings read failure.
-      Alert.alert('기기 설정 확인', `저장된 설정을 읽지 못했습니다. 기존 알림 설정을 보존하려면 앱을 다시 열어 주세요. ${String(error)}`);
+      showNotice('기기 설정 확인', `저장된 설정을 읽지 못했습니다. 기존 알림 설정을 보존하려면 앱을 다시 열어 주세요. ${String(error)}`);
       dispatch(setLoading(true));
     });
     return () => { active = false; };
