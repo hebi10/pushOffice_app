@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import time
+from datetime import date, timedelta
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def screenshot(name: str, note: str) -> None:
     print(f"Captured {path} ({len(raw)} bytes)")
 
 
-def find(label: str, bottom: bool = False) -> tuple[int, int] | None:
+def find(label: str, bottom: bool = False, class_name: str | None = None) -> tuple[int, int] | None:
     try:
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
         content = adb("exec-out", "cat", "/sdcard/ui.xml")
@@ -38,6 +39,8 @@ def find(label: str, bottom: bool = False) -> tuple[int, int] | None:
         return None
     matches = []
     for node in root.iter("node"):
+        if class_name and node.get("class") != class_name:
+            continue
         text = node.get("text", "")
         desc = node.get("content-desc", "")
         if label not in text and label not in desc:
@@ -56,18 +59,30 @@ def find(label: str, bottom: bool = False) -> tuple[int, int] | None:
     return min(matches, key=lambda center: center[1])
 
 
-def tap(label: str, bottom: bool = False) -> None:
+def tap(label: str, bottom: bool = False, scroll: bool = False) -> None:
     target = None
-    for _ in range(3):
+    for attempt in range(5 if scroll else 3):
         target = find(label, bottom=bottom)
         if target:
             break
+        if scroll and attempt > 0:
+            adb("shell", "input", "swipe", "360", "1200", "360", "440", "420")
         time.sleep(2)
     if not target:
         raise RuntimeError(f"Could not locate accessible action: {label}")
     adb("shell", "input", "tap", str(target[0]), str(target[1]))
     time.sleep(4)
     print(f"Tapped {label}: {target}")
+
+
+def type_field(label: str, value: str) -> None:
+    target = find(label, class_name="android.widget.EditText")
+    if not target:
+        raise RuntimeError(f"Missing editable field: {label}")
+    adb("shell", "input", "tap", str(target[0]), str(target[1]))
+    adb("shell", "input", "text", value)
+    adb("shell", "input", "keyevent", "4")
+    time.sleep(2)
 
 
 adb("shell", "wm", "size", "720x1600")
@@ -104,6 +119,33 @@ try:
         WARNINGS.append(f"Date/time picker capture: {exc}")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Native save-preview capture: {exc}")
+
+# A disposable emulator-only appointment exercises the real RN detail and
+# confirmation views; it is never written to the user's phone or Play app.
+try:
+    emulator_date = adb("shell", "date", "+%Y-%m-%d").decode().strip()
+    tomorrow = (date.fromisoformat(emulator_date) + timedelta(days=1)).isoformat()
+    type_field("일정 제목", "UITest")
+    type_field("날짜 (YYYY-MM-DD)", tomorrow)
+    type_field("시간 (HH:mm)", "09:00")
+    tap("일정 저장", scroll=True)
+    time.sleep(10)
+    screenshot("10-home-with-fixture", "next appointment created on isolated emulator")
+    tap("UITest", scroll=True)
+    screenshot("11-schedule-detail", "React Native schedule detail screen")
+    tap("일정 날짜 선택", scroll=True)
+    screenshot("12-schedule-date-modal", "branded calendar date picker")
+    adb("shell", "input", "keyevent", "4")
+    time.sleep(2)
+    tap("시작 시간 선택", scroll=True)
+    screenshot("13-schedule-time-modal", "branded time editor")
+    adb("shell", "input", "keyevent", "4")
+    time.sleep(2)
+    tap("일정 삭제", scroll=True)
+    screenshot("14-schedule-delete-dialog", "themed destructive confirmation dialog")
+    adb("shell", "input", "keyevent", "4")
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
+    WARNINGS.append(f"Sample schedule and detail-modal capture: {exc}")
 
 try:
     adb("shell", "cmd", "uimode", "night", "yes")
