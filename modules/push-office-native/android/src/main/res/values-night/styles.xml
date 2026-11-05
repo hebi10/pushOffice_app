@@ -1,0 +1,6 @@
+<resources>
+  <style name="PushOfficeDialog" parent="@android:style/Theme.Material.Dialog.NoActionBar">
+    <item name="android:colorAccent">#60A5FA</item>
+    <item name="android:windowIsTranslucent">true</item>
+  </style>
+</resources>

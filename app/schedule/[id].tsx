@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppDialog } from '@/src/components/ui/AppDialog';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -38,6 +39,8 @@ export default function ScheduleDetail() {
   const [timeOpen, setTimeOpen] = useState(false);
   const [hour, setHour] = useState('00');
   const [minute, setMinute] = useState('00');
+  const [pendingDialog, setPendingDialog] = useState<'repeat' | 'delete' | 'invalid-time' | null>(null);
+  const [pickerTarget, setPickerTarget] = useState<'start' | 'end'>('start');
 
   useEffect(() => {
     const record = detail.data;
@@ -82,13 +85,24 @@ export default function ScheduleDetail() {
 
   const confirmSave = () => {
     if (detail.data?.repeatType !== 'none' || repeat !== 'none') {
-      Alert.alert('반복 일정 전체 수정', '이 일정의 모든 반복에 적용됩니다. 원래 날짜를 바꾸면 반복 기준 날짜도 바뀝니다.', [
-        { text: '취소', style: 'cancel' },
-        { text: '전체 수정', onPress: () => { void save(); } },
-      ]);
+      setPendingDialog('repeat');
     } else {
       void save();
     }
+  };
+
+  const openDatePicker = (target: 'start' | 'end') => {
+    setPickerTarget(target);
+    setDateOpen(true);
+  };
+
+  const openTimePicker = (target: 'start' | 'end') => {
+    setPickerTarget(target);
+    const source = target === 'start' ? time : (end.trim().split(' ')[1] || time);
+    const [h = '00', m = '00'] = source.split(':');
+    setHour(h);
+    setMinute(m);
+    setTimeOpen(true);
   };
 
   const field = (label: string, value: string, onChangeText: (next: string) => void, placeholder?: string) => (
@@ -127,7 +141,7 @@ export default function ScheduleDetail() {
             <TouchableOpacity
               accessibilityRole="button"
               accessibilityLabel="일정 날짜 선택"
-              onPress={() => setDateOpen(true)}
+              onPress={() => openDatePicker('start')}
               style={[s.row, { borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 12 }]}
             >
               <Ionicons name="calendar-outline" size={19} color={colors.primary} />
@@ -145,10 +159,7 @@ export default function ScheduleDetail() {
               <TouchableOpacity
                 accessibilityRole="button"
                 accessibilityLabel="시작 시간 선택"
-                onPress={() => {
-                  const [h = '00', m = '00'] = time.split(':');
-                  setHour(h); setMinute(m); setTimeOpen(true);
-                }}
+                onPress={() => openTimePicker('start')}
                 style={[s.row, { borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 12 }]}
               >
                 <Ionicons name="time-outline" size={19} color={colors.primary} />
@@ -157,7 +168,30 @@ export default function ScheduleDetail() {
               </TouchableOpacity>
             </View>
           ) : null}
-          {field('종료 날짜와 시간 (선택)', end, setEnd, 'YYYY-MM-DD HH:mm')}
+          <View style={{ gap: 8 }}>
+            <Text style={[s.caption, { color: colors.textSecondary }]}>종료 날짜와 시간 (선택)</Text>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="종료 날짜 선택"
+                onPress={() => openDatePicker('end')}
+                style={[s.row, { flex: 1.5, justifyContent: 'flex-start', borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 10 }]}
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                <Text style={[s.caption, { color: colors.text, flexShrink: 1 }]}>{end ? end.split(' ')[0] : '날짜 선택'}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="종료 시간 선택"
+                onPress={() => openTimePicker('end')}
+                style={[s.row, { flex: 1, justifyContent: 'flex-start', borderWidth: 1, borderRadius: 10, borderColor: colors.inputBorder, backgroundColor: colors.background, paddingHorizontal: 10 }]}
+              >
+                <Ionicons name="time-outline" size={18} color={colors.primary} />
+                <Text style={[s.caption, { color: colors.text }]}>{end ? end.split(' ')[1] : '시간'}</Text>
+              </TouchableOpacity>
+            </View>
+            {end ? <AssistantButton label="종료 시간 제거" icon="close-circle-outline" secondary onPress={() => setEnd('')} /> : null}
+          </View>
           <View style={s.row}>
             <Text style={[s.body, { color: colors.text }]}>일정 알림</Text>
             <Switch accessibilityLabel="일정 알림" value={notification} onValueChange={setNotification} trackColor={{ true: colors.primary }} />
@@ -193,25 +227,25 @@ export default function ScheduleDetail() {
           icon="trash-outline"
           secondary
           busy={remove.isPending}
-          onPress={() => Alert.alert(
-            '일정 삭제',
-            detail.data?.repeatType === 'none' ? '일정과 알림을 삭제합니다.' : '전체 반복 일정과 모든 알림을 삭제합니다.',
-            [
-              { text: '취소', style: 'cancel' },
-              { text: '삭제', style: 'destructive', onPress: () => remove.mutateAsync(id).then(() => router.back()).catch(e => showError(e, '삭제하지 못했습니다.')) },
-            ],
-          )}
+          onPress={() => setPendingDialog('delete')}
         />
       </ScrollView>
       <Modal transparent animationType="fade" visible={dateOpen} onRequestClose={() => setDateOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 18, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 16, gap: 12 }}>
-            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>일정 날짜 선택</Text>
+          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 16, gap: 12, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
+            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 날짜 선택' : '종료 날짜 선택'}</Text>
             <Calendar
               key={isDark ? 'dark' : 'light'}
-              current={date || undefined}
-              onDayPress={day => { setDate(day.dateString); setDateOpen(false); }}
-              markedDates={date ? { [date]: { selected: true, selectedColor: colors.primary } } : {}}
+              current={(pickerTarget === 'start' ? date : end.split(' ')[0] || date) || undefined}
+              onDayPress={day => {
+                if (pickerTarget === 'start') {
+                  setDate(day.dateString);
+                } else {
+                  setEnd(`${day.dateString} ${end.trim().split(' ')[1] || time}`);
+                }
+                setDateOpen(false);
+              }}
+              markedDates={(pickerTarget === 'start' ? date : end.split(' ')[0]) ? { [(pickerTarget === 'start' ? date : end.split(' ')[0])]: { selected: true, selectedColor: colors.primary } } : {}}
               theme={{
                 calendarBackground: colors.surface, dayTextColor: colors.text,
                 monthTextColor: colors.text, arrowColor: colors.primary,
@@ -225,8 +259,8 @@ export default function ScheduleDetail() {
       </Modal>
       <Modal transparent animationType="fade" visible={timeOpen} onRequestClose={() => setTimeOpen(false)}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.48)' }}>
-          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 20, gap: 14 }}>
-            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>시작 시간 선택</Text>
+          <View style={{ borderRadius: 16, backgroundColor: colors.surface, padding: 20, gap: 14, width: '100%', maxWidth: 440, alignSelf: 'center' }}>
+            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{pickerTarget === 'start' ? '시작 시간 선택' : '종료 시간 선택'}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <TextInput
                 accessibilityLabel="시"
@@ -249,16 +283,49 @@ export default function ScheduleDetail() {
             <AssistantButton label="시간 적용" icon="checkmark-outline" onPress={() => {
               const h = Number(hour), m = Number(minute);
               if (!/^\d{1,2}$/.test(hour) || !/^\d{1,2}$/.test(minute) || h > 23 || m > 59) {
-                Alert.alert('시간 확인', '0–23시, 0–59분으로 입력해 주세요.');
+                setPendingDialog('invalid-time');
                 return;
               }
-              setTime(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+              const formatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+              if (pickerTarget === 'start') {
+                setTime(formatted);
+              } else {
+                setEnd(`${end.split(' ')[0] || date} ${formatted}`);
+              }
               setTimeOpen(false);
             }} />
             <AssistantButton label="취소" icon="close-outline" secondary onPress={() => setTimeOpen(false)} />
           </View>
         </View>
       </Modal>
+      <AppDialog
+        visible={pendingDialog === 'repeat'}
+        title="반복 일정 전체 수정"
+        message="변경 사항이 이 일정의 모든 반복에 적용됩니다. 날짜를 바꾸면 반복 기준일도 변경됩니다."
+        confirmLabel="전체 수정"
+        onDismiss={() => setPendingDialog(null)}
+        onConfirm={() => { setPendingDialog(null); void save(); }}
+      />
+      <AppDialog
+        visible={pendingDialog === 'delete'}
+        title={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
+        message={detail.data.repeatType === 'none' ? '일정과 알림을 삭제합니다. 이 작업은 되돌릴 수 없습니다.' : '전체 반복 일정과 모든 알림을 삭제합니다. 이 작업은 되돌릴 수 없습니다.'}
+        confirmLabel="삭제"
+        destructive
+        onDismiss={() => setPendingDialog(null)}
+        onConfirm={() => {
+          setPendingDialog(null);
+          void remove.mutateAsync(id).then(() => router.back()).catch(e => showError(e, '삭제하지 못했습니다.'));
+        }}
+      />
+      <AppDialog
+        visible={pendingDialog === 'invalid-time'}
+        title="시간 확인"
+        message="시는 0–23, 분은 0–59 범위로 입력해 주세요."
+        showCancel={false}
+        onDismiss={() => setPendingDialog(null)}
+        onConfirm={() => setPendingDialog(null)}
+      />
     </>
   );
 }

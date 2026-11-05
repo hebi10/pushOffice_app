@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, AppState, Linking, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppState, Linking, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { useFocusEffect } from 'expo-router';
 import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
@@ -22,6 +23,7 @@ export default function SettingsScreen() {
     const [recovering, setRecovering] = useState(false);
     const [ai, setAi] = useState('기기 지원 상태를 확인하고 있습니다.');
     const [section, setSection] = useState<'basic' | 'advanced'>('basic');
+    const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
     const [hour, setHour] = useState(String(settings.dailyBriefingTime.hour).padStart(2, '0'));
     const [minute, setMinute] = useState(String(settings.dailyBriefingTime.minute).padStart(2, '0'));
     const [city, setCity] = useState(settings.digestCity);
@@ -51,19 +53,20 @@ export default function SettingsScreen() {
     const addTile = async () => { try {
         const status = await PushOfficeNative.requestAddTile();
         const labels: Record<string, string> = { added: '빠른 설정에 타일을 추가했어요.', already_added: '이미 빠른 설정에 추가되어 있어요.', not_added: '추가하지 않았어요. 빠른 설정 편집에서도 직접 배치할 수 있어요.', unsupported_manual: '이 Android 버전에서는 빠른 설정 편집에서 Push Office를 직접 추가해 주세요.' };
-        Alert.alert('빠른 설정 타일', labels[status] ?? `시스템 응답: ${status}`);
+        setNotice({ title: '빠른 설정 타일', message: labels[status] ?? `시스템 응답: ${status}` });
     }
     catch (e) {
         showError(e, '타일 추가 요청을 열 수 없습니다.');
     } };
     const pin = async (kind: 'small' | 'agenda') => { try {
         const accepted = await PushOfficeNative.requestPinWidget(kind);
-        Alert.alert('홈 화면 위젯', accepted ? '런처에 추가 요청을 전달했어요. 표시된 확인 창에서 추가를 완료해 주세요.' : '이 런처는 위젯 추가 요청을 지원하지 않아요. 홈 화면을 길게 누른 뒤 위젯에서 Push Office를 선택해 주세요.');
+        setNotice({ title: '홈 화면 위젯', message: accepted ? '런처에 추가 요청을 전달했습니다. 표시된 확인 창에서 추가를 완료해 주세요.' : '이 런처는 위젯 추가 요청을 지원하지 않습니다. 홈 화면을 길게 누른 뒤 위젯에서 Push Office를 선택해 주세요.' });
     }
     catch (e) {
         showError(e, '위젯 추가 요청을 열 수 없습니다.');
     } };
     return (
+      <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={s.content}
@@ -110,7 +113,7 @@ export default function SettingsScreen() {
               <AssistantButton label="브리핑 시간 저장" icon="time-outline" secondary onPress={() => {
                 const h = Number(hour), m = Number(minute);
                 if (!/^\d{1,2}$/.test(hour) || !/^\d{1,2}$/.test(minute) || h > 23 || m > 59) {
-                  Alert.alert('시간 확인', '0–23시, 0–59분으로 입력해 주세요.');
+                  setNotice({ title: '시간 확인', message: '0–23시, 0–59분으로 입력해 주세요.' });
                   return;
                 }
                 void save({ dailyBriefingTime: { hour: h, minute: m } });
@@ -211,5 +214,14 @@ export default function SettingsScreen() {
           </>
         )}
       </ScrollView>
+      <AppDialog
+        visible={notice !== null}
+        title={notice?.title ?? ''}
+        message={notice?.message ?? ''}
+        showCancel={false}
+        onDismiss={() => setNotice(null)}
+        onConfirm={() => setNotice(null)}
+      />
+      </>
     );
 }

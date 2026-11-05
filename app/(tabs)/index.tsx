@@ -1,5 +1,6 @@
 import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
+import { Ionicons } from '@expo/vector-icons';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { BriefingNewsCard, BriefingStockCard, BriefingWeatherCard } from '@/src/components/briefing';
 import { useTheme } from '@/src/contexts/ThemeContext';
@@ -12,9 +13,9 @@ import { useAppSelector } from '@/src/store/store';
 import { PushOfficeNative } from '@/modules/push-office-native';
 import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ForegroundRequest, runForegroundRequest } from '@/src/features/notifications/foregroundRequest';
-import { AppState, RefreshControl, ScrollView, Text } from 'react-native';
+import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 export default function HomeScreen() {
     const { colors } = useTheme();
     const now = useClock();
@@ -111,10 +112,34 @@ export default function HomeScreen() {
         </AssistantCard>
         {next && nextAt ? (
           <AssistantCard title="다음 일정" icon="calendar-outline">
-            <Text style={[s.body, { color: colors.text, fontWeight: '700' }]} numberOfLines={2}>{next.title}</Text>
-            <Text style={[s.subtitle, { color: colors.primary, fontWeight: '700' }]}>
-              {dayjs(nextAt).format('M월 D일 (ddd) HH:mm')}
-            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`${next.title}, 일정 상세 보기`}
+              accessibilityState={{ disabled: !next.id }}
+              disabled={!next.id}
+              onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
+              activeOpacity={0.75}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                minHeight: 64,
+                padding: 12,
+                borderWidth: 1,
+                borderColor: colors.inputBorder,
+                borderRadius: 10,
+                backgroundColor: colors.inputBackground,
+              }}
+            >
+              <View style={{ flex: 1, gap: 5 }}>
+                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]} numberOfLines={2}>
+                  {next.title}
+                </Text>
+                <Text style={[s.subtitle, { color: colors.primary, fontWeight: '700' }]}>
+                  {dayjs(nextAt).format('M월 D일 (ddd) HH:mm')}
+                </Text>
+              </View>
+              {next.id ? <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} /> : null}
+            </TouchableOpacity>
           </AssistantCard>
         ) : null}
         <AssistantCard title={`오늘 일정 ${todayItems.length}개`} icon="list-outline">
