@@ -1,5 +1,5 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
+import { uiRadii, uiSizes } from '@/src/lib/designTokens';
 import React, { PropsWithChildren } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
