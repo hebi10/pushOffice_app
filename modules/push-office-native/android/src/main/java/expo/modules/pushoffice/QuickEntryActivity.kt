@@ -78,7 +78,8 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
     root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(secondary); setPadding(0,0,0,dp(14)) })
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setGravity(Gravity.CENTER)
+    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(440)),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
     exitEditor()
@@ -93,8 +94,12 @@ class QuickEntryActivity : Activity() {
     val maxHeight=(availableHeight-dp(32)).coerceAtLeast(1)
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      setPadding(dp(22),dp(18),dp(22),dp(12))
-      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
+      setPadding(dp(20),dp(12),dp(20),dp(22))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        val r=dp(20).toFloat()
+        cornerRadii=floatArrayOf(r,r,r,r,0f,0f,0f,0f)
+      }
     }
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -104,69 +109,123 @@ class QuickEntryActivity : Activity() {
       }
     }.apply { addView(root); isFillViewport=false }
     setContentView(scroll)
-    root.addView(TextView(this).apply {
-      text=getString(R.string.tile_label); textSize=12f; setTextColor(blue); setTypeface(null,Typeface.BOLD)
+    root.addView(View(this).apply {
+      background=GradientDrawable().apply {
+        setColor(inputBorder)
+        cornerRadius=dp(3).toFloat()
+      }
+      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    },LinearLayout.LayoutParams(dp(42),dp(4)).apply {
+      gravity=Gravity.CENTER_HORIZONTAL
+      bottomMargin=dp(10)
     })
-    val chooserHeading=LinearLayout(this).apply {
+    val heading=LinearLayout(this).apply {
       orientation=LinearLayout.HORIZONTAL
       gravity=Gravity.CENTER_VERTICAL
     }
-    chooserHeading.addView(TextView(this).apply {
+    heading.addView(TextView(this).apply {
+      text=getString(R.string.tile_label)
+      textSize=12f
+      setTextColor(blue)
+      setTypeface(null,Typeface.BOLD)
+    },LinearLayout.LayoutParams(0,-2,1f))
+    heading.addView(TextView(this).apply {
+      text="×"
+      contentDescription=getString(R.string.quick_entry_close)
+      textSize=28f
+      gravity=Gravity.CENTER
+      setTextColor(secondary)
+      minimumHeight=dp(48)
+      minimumWidth=dp(48)
+      isClickable=true
+      isFocusable=true
+      setOnClickListener { finish() }
+    },LinearLayout.LayoutParams(dp(48),dp(48)))
+    root.addView(heading)
+    if (!isDark) root.addView(ImageView(this).apply {
+      setImageResource(R.drawable.quick_entry_illustration)
+      scaleType=ImageView.ScaleType.FIT_CENTER
+      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+    },LinearLayout.LayoutParams(dp(112),dp(90)).apply {
+      gravity=Gravity.CENTER_HORIZONTAL
+      bottomMargin=dp(8)
+    })
+    root.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
-      textSize=22f
+      textSize=23f
       setTextColor(foregroundColor)
       setTypeface(null,Typeface.BOLD)
-      setPadding(0,dp(8),0,dp(6))
-    }, LinearLayout.LayoutParams(0,-2,1f))
-    // The light illustration has an opaque white background; hide it on dark surfaces.
-    if (!isDark) chooserHeading.addView(ImageView(this).apply {
-      setImageResource(R.drawable.quick_entry_illustration)
-      scaleType=ImageView.ScaleType.CENTER_CROP
-      importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    }, LinearLayout.LayoutParams(dp(64),dp(56)))
-    root.addView(chooserHeading)
-    root.addView(TextView(this).apply {
-      text=getString(R.string.quick_entry_description); textSize=14f; setTextColor(secondary)
-      setPadding(0,0,0,dp(12))
+      gravity=Gravity.CENTER
+      setPadding(0,0,0,dp(8))
     })
-    fun choice(title: Int, detail: Int, description: Int, primary: Boolean, action: ()->Unit) {
+    root.addView(TextView(this).apply {
+      text=getString(R.string.quick_entry_description)
+      textSize=14f
+      setTextColor(secondary)
+      gravity=Gravity.CENTER
+      setPadding(0,0,0,dp(16))
+    })
+    fun choice(title: Int, detail: Int, description: Int, iconRes: Int, primary: Boolean, action: ()->Unit) {
       val textColor=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor
       val row=LinearLayout(this).apply {
-        orientation=LinearLayout.VERTICAL; gravity=Gravity.CENTER_VERTICAL
-        setPadding(dp(16),dp(12),dp(16),dp(12)); minimumHeight=dp(64)
+        orientation=LinearLayout.HORIZONTAL
+        gravity=Gravity.CENTER_VERTICAL
+        setPadding(dp(14),dp(12),dp(14),dp(12))
+        minimumHeight=dp(68)
         background=GradientDrawable().apply {
           setColor(if(primary) blue else fieldBackground)
           cornerRadius=dp(12).toFloat()
           if(!primary) setStroke(dp(1),inputBorder)
         }
         val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
-        foreground=attributes.getDrawable(0); attributes.recycle()
-        isClickable=true; isFocusable=true; contentDescription=getString(description)
+        foreground=attributes.getDrawable(0)
+        attributes.recycle()
+        isClickable=true
+        isFocusable=true
+        contentDescription=getString(description)
         accessibilityDelegate=object: View.AccessibilityDelegate() {
           override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfo) {
-            super.onInitializeAccessibilityNodeInfo(host,info); info.className=Button::class.java.name
+            super.onInitializeAccessibilityNodeInfo(host,info)
+            info.className=Button::class.java.name
           }
         }
         setOnClickListener { action() }
       }
-      row.addView(TextView(this).apply {
-        text=getString(title); textSize=16f; setTextColor(textColor); setTypeface(null,Typeface.BOLD)
+      row.addView(ImageView(this).apply {
+        setImageResource(iconRes)
+        setColorFilter(textColor)
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      },LinearLayout.LayoutParams(dp(24),dp(24)).apply { marginEnd=dp(12) })
+      val copy=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+      copy.addView(TextView(this).apply {
+        text=getString(title)
+        textSize=16f
+        setTextColor(textColor)
+        setTypeface(null,Typeface.BOLD)
         importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
-      row.addView(TextView(this).apply {
-        text=getString(detail); textSize=13f; setTextColor(if(primary) Color.WHITE else secondary)
-        setPadding(0,dp(3),0,0); importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      copy.addView(TextView(this).apply {
+        text=getString(detail)
+        textSize=13f
+        setTextColor(if(primary) textColor else secondary)
+        alpha=if(primary) 0.85f else 1f
+        setPadding(0,dp(3),0,0)
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       })
+      row.addView(copy,LinearLayout.LayoutParams(0,-2,1f))
+      row.addView(TextView(this).apply {
+        text="›"
+        textSize=24f
+        setTextColor(textColor)
+        gravity=Gravity.CENTER
+        importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
+      },LinearLayout.LayoutParams(dp(22),-2))
       root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
     }
-    choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,true) { editor(false) }
-    choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,false) { editor(true) }
-    root.addView(Button(this).apply {
-      text=getString(R.string.quick_entry_close); contentDescription=text; textSize=14f
-      isAllCaps=false; setTextColor(blue); background=null; minimumHeight=dp(48)
-      setPadding(dp(12),0,dp(12),0); setOnClickListener { finish() }
-    },LinearLayout.LayoutParams(-2,-2).apply { gravity=Gravity.END; topMargin=dp(4) })
-    window.setLayout((availableWidth-dp(32)).coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+    choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
+    choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
+    window.setGravity(Gravity.BOTTOM)
+    window.setLayout(availableWidth.coerceAtMost(dp(440)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun editor(voice: Boolean) {
     page("일정을 남겨 보세요", "예: 내일 오후 3시 고객 미팅\n변경: 고객 미팅 한 시간 늦춰")
