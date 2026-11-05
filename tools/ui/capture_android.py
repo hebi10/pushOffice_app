@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import re
+import struct
+import zlib
 import subprocess
 import time
 from datetime import date, timedelta
@@ -28,6 +30,65 @@ def screenshot(name: str, note: str) -> None:
     path.write_bytes(raw)
     REPORT.append({"file": path.name, "expected": note})
     print(f"Captured {path} ({len(raw)} bytes)")
+
+
+def pixel_rgb(path: Path, x: int, y: int) -> tuple[int, int, int]:
+    """Read an RGB pixel from an Android PNG without optional Python packages."""
+    raw = path.read_bytes()
+    if raw[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+        raise RuntimeError(f"{path.name}: invalid PNG")
+    offset, width, height, depth, kind, pieces = 8, 0, 0, 0, 0, []
+    while offset < len(raw):
+        length = struct.unpack_from(">I", raw, offset)[0]
+        tag = raw[offset + 4:offset + 8]
+        payload = raw[offset + 8:offset + 8 + length]
+        offset += length + 12
+        if tag == b"IHDR":
+            width, height, depth, kind, _, _, interlace = struct.unpack(">IIBBBBB", payload)
+            if depth != 8 or kind not in (2, 6) or interlace:
+                raise RuntimeError(f"{path.name}: unsupported PNG mode")
+        elif tag == b"IDAT":
+            pieces.append(payload)
+        elif tag == b"IEND":
+            break
+    if not 0 <= x < width or not 0 <= y < height:
+        raise RuntimeError(f"{path.name}: sample coordinate outside screenshot")
+    bpp = 3 if kind == 2 else 4
+    stride = width * bpp
+    inflated = zlib.decompress(b"".join(pieces))
+    pointer = 0
+    previous = bytearray(stride)
+    for _ in range(y + 1):
+        filter_kind = inflated[pointer]
+        pointer += 1
+        row = bytearray(inflated[pointer:pointer + stride])
+        pointer += stride
+        for i in range(stride):
+            left = row[i - bpp] if i >= bpp else 0
+            up = previous[i]
+            upper_left = previous[i - bpp] if i >= bpp else 0
+            if filter_kind == 1:
+                row[i] = (row[i] + left) & 255
+            elif filter_kind == 2:
+                row[i] = (row[i] + up) & 255
+            elif filter_kind == 3:
+                row[i] = (row[i] + (left + up) // 2) & 255
+            elif filter_kind == 4:
+                candidate = left + up - upper_left
+                da, db, dc = abs(candidate - left), abs(candidate - up), abs(candidate - upper_left)
+                predictor = left if da <= db and da <= dc else up if db <= dc else upper_left
+                row[i] = (row[i] + predictor) & 255
+            elif filter_kind != 0:
+                raise RuntimeError(f"{path.name}: unknown PNG filter {filter_kind}")
+        previous = row
+    return tuple(previous[x*bpp:x*bpp + 3])
+
+
+def assert_dark_surface(name: str, x: int, y: int) -> None:
+    rgb = pixel_rgb(OUT / f"{name}.png", x, y)
+    if max(rgb) > 115:
+        raise RuntimeError(f"{name}: expected a dark surface at ({x},{y}), got RGB {rgb}")
+    print(f"Verified real dark-mode surface in {name}: RGB {rgb}")
 
 
 def find(label: str, bottom: bool = False, class_name: str | None = None) -> tuple[int, int] | None:
@@ -147,23 +208,23 @@ try:
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
     WARNINGS.append(f"Sample schedule and detail-modal capture: {exc}")
 
-try:
-    adb("shell", "cmd", "uimode", "night", "yes")
-    adb("shell", "am", "force-stop", APP)
-    adb("shell", "monkey", "-p", APP, "1")
-    time.sleep(12)
-    screenshot("10-home-dark", "home screen with system dark mode enabled")
-    tap("텍스트 · 음성으로 일정 추가")
-    screenshot("11-quick-entry-dark", "branded native chooser in dark mode")
-    tap("텍스트로 일정 입력")
-    screenshot("12-native-editor-dark", "native editor in dark mode")
-except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
-    WARNINGS.append(f"Dark-mode capture: {exc}")
-finally:
-    try:
-        adb("shell", "cmd", "uimode", "night", "no")
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        pass
+# Check the real in-app "dark" setting, not just the emulator system
+# preference: cmd uimode alone did not change the prior captured app surfaces.
+adb("shell", "input", "keyevent", "4")
+time.sleep(3)
+tap("설정", bottom=True)
+tap("고급 설정")
+tap("어두운 테마", scroll=True)
+time.sleep(6)
+tap("홈", bottom=True)
+screenshot("10-home-dark", "home with explicit dark app theme")
+assert_dark_surface("10-home-dark", 4, 400)
+tap("텍스트 · 음성으로 일정 추가")
+screenshot("11-quick-entry-dark", "branded native chooser with explicit dark app theme")
+assert_dark_surface("11-quick-entry-dark", 100, 500)
+tap("텍스트로 일정 입력")
+screenshot("12-native-editor-dark", "native editor with explicit dark app theme")
+assert_dark_surface("12-native-editor-dark", 100, 500)
 
 (OUT / "capture-manifest.json").write_text(
     json.dumps(
