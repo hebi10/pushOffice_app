@@ -64,6 +64,11 @@ class PushOfficeNativeModule : Module() {
       NanoClient.briefing(prompt)
     }
     AsyncFunction("refreshWidgets") { ScheduleWidgetProvider.refreshAll(context) }
+    AsyncFunction("setUiTheme") { mode: String ->
+      require(mode in setOf("system","light","dark")) { "지원하지 않는 테마입니다." }
+      context.getSharedPreferences("push_office_ui",android.content.Context.MODE_PRIVATE)
+        .edit().putString("themeMode",mode).apply()
+    }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
     AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
       ScheduleRuntime.save(context, ScheduleRecord.fromMap(value)).toMap()
