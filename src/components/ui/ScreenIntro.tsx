@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { APP_FONT_FAMILY } from '@/src/lib/typography';
+import { uiRadii, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
 export function ScreenIntro({ eyebrow, title, description, artwork }: {
   eyebrow?: string;
@@ -23,10 +23,10 @@ export function ScreenIntro({ eyebrow, title, description, artwork }: {
 }
 
 const styles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 104 },
-  copy: { flex: 1, minWidth: 0, gap: 5 },
-  eyebrow: { fontFamily: APP_FONT_FAMILY, fontSize: 12, fontWeight: '700', lineHeight: 18 },
-  title: { fontFamily: APP_FONT_FAMILY, fontSize: 26, fontWeight: '800', lineHeight: 33, letterSpacing: -0.5 },
-  description: { fontFamily: APP_FONT_FAMILY, fontSize: 13, lineHeight: 19 },
-  artwork: { width: 104, height: 88, borderRadius: 12 },
+  container: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs, minHeight: 104 },
+  copy: { flex: 1, minWidth: 0, gap: uiSpacing.xxs + 1 },
+  eyebrow: { ...uiTypography.caption, fontWeight: '700' },
+  title: { ...uiTypography.screenTitle, lineHeight: 33, letterSpacing: -0.5 },
+  description: { ...uiTypography.body, fontSize: 13, lineHeight: 19 },
+  artwork: { width: 104, height: 88, borderRadius: uiRadii.button },
 });

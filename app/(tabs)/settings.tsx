@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { AppState, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { useFocusEffect } from 'expo-router';
-import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
+import { AssistantButton, AssistantCard, AssistantTextField, SettingRow, assistantStyles as s } from '@/src/components/AssistantUI';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
@@ -41,20 +41,22 @@ export default function SettingsScreen() {
     catch (e) {
         showError(e, '설정을 저장하지 못했어요.');
     } };
-    const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => <View style={s.row}>
-    <Text style={[s.body, { color: colors.text, flex: 1 }]}>{label}</Text>
-    <Switch
-      accessibilityLabel={label}
-      value={value}
-      onValueChange={onChange}
-      trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
-      thumbColor={value ? colors.primary : colors.surfaceBorder}
-    />
-    </View>;
-    const input = (label: string, value: string, onChangeText: (s: string) => void, keyboardType: 'default' | 'number-pad' = 'default') => <View style={{ gap: 5 }}>
-    <Text style={[s.caption, { color: colors.textSecondary }]}>{label}</Text>
-    <TextInput accessibilityLabel={label} value={value} onChangeText={onChangeText} keyboardType={keyboardType} placeholderTextColor={colors.textTertiary} style={[s.input, { borderColor: colors.divider, color: colors.text, backgroundColor: colors.background }]}/>
-    </View>;
+    const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => (
+        <SettingRow title={label} value={value} onValueChange={onChange} />
+    );
+    const input = (
+        label: string,
+        value: string,
+        onChangeText: (next: string) => void,
+        keyboardType: 'default' | 'number-pad' = 'default',
+    ) => (
+        <AssistantTextField
+            label={label}
+            value={value}
+            onChangeText={onChangeText}
+            keyboardType={keyboardType}
+        />
+    );
     const permission = async () => { await requestNotificationPermission(); refresh(); };
     const addTile = async () => { try {
         const status = await PushOfficeNative.requestAddTile();

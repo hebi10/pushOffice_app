@@ -2,6 +2,7 @@
  * 테마 시스템 – 라이트 / 다크 색상 정의
  */
 import type { FontFamily } from '../types';
+import { APP_FONT_FAMILY } from './typography';
 
 export interface AppColors {
   background: string;
@@ -11,11 +12,14 @@ export interface AppColors {
   textSecondary: string;
   textTertiary: string;
   primary: string;
+  onPrimary: string;
+  brandAccent: string;
   primaryLight: string;
   inputBackground: string;
   inputBorder: string;
   divider: string;
   danger: string;
+  onDanger: string;
   success: string;
   tabBar: string;
   tabBarBorder: string;
@@ -36,11 +40,14 @@ export const lightColors: AppColors = {
   textSecondary: '#64748B',
   textTertiary: '#6B7280',
   primary: '#2563EB',
+  onPrimary: '#FFFFFF',
+  brandAccent: '#4B94DC',
   primaryLight: '#EFF6FF',
   inputBackground: '#F1F5F9',
   inputBorder: '#CBD5E1',
   divider: '#E2E8F0',
-  danger: '#E55555',
+  danger: '#B91C1C',
+  onDanger: '#FFFFFF',
   success: '#27AE60',
   tabBar: '#FFFFFF',
   tabBarBorder: '#E2E8F0',
@@ -59,13 +66,16 @@ export const darkColors: AppColors = {
   surfaceBorder: '#334155',
   text: '#E0E0E0',
   textSecondary: '#AAAAAA',
-  textTertiary: '#777777',
+  textTertiary: '#94A3B8',
   primary: '#5B9FE6',
+  onPrimary: '#121212',
+  brandAccent: '#93C5FD',
   primaryLight: '#1E3A5F',
   inputBackground: '#2A2A2A',
   inputBorder: '#444444',
   divider: '#334155',
   danger: '#FF6B6B',
+  onDanger: '#121212',
   success: '#2ECC71',
   tabBar: '#1A1A1A',
   tabBarBorder: '#334155',
@@ -78,10 +88,13 @@ export const darkColors: AppColors = {
   statusBar: 'light',
 };
 
-/** 폰트 패밀리 매핑 */
+/**
+ * Optional Korean font files are not bundled. Keep stored font preferences but
+ * render with the available Korean-capable system font until assets are licensed.
+ */
 export const FONT_MAP: Record<FontFamily, { regular: string; bold: string; label: string }> = {
-  pretendard: { regular: 'Pretendard-Regular', bold: 'Pretendard-Bold', label: 'Pretendard' },
-  'noto-sans': { regular: 'NotoSansKR-Regular', bold: 'NotoSansKR-Bold', label: 'Noto Sans KR' },
-  'nanum-gothic': { regular: 'NanumGothic', bold: 'NanumGothic-Bold', label: '나눔 고딕' },
-  'nanum-myeongjo': { regular: 'NanumMyeongjo', bold: 'NanumMyeongjo-Bold', label: '나눔 명조' },
+  pretendard: { regular: APP_FONT_FAMILY, bold: APP_FONT_FAMILY, label: 'Pretendard (시스템 대체)' },
+  'noto-sans': { regular: APP_FONT_FAMILY, bold: APP_FONT_FAMILY, label: 'Noto Sans KR (시스템 대체)' },
+  'nanum-gothic': { regular: APP_FONT_FAMILY, bold: APP_FONT_FAMILY, label: '나눔 고딕 (시스템 대체)' },
+  'nanum-myeongjo': { regular: APP_FONT_FAMILY, bold: APP_FONT_FAMILY, label: '나눔 명조 (시스템 대체)' },
 };

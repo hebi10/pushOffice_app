@@ -1,14 +1,8 @@
 import React from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { APP_FONT_FAMILY } from '@/src/lib/typography';
+import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
 type AppDialogProps = {
   visible: boolean;
@@ -33,9 +27,9 @@ export function AppDialog({
   onDismiss,
   showCancel = true,
 }: AppDialogProps) {
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const actionColor = destructive ? colors.danger : colors.primary;
-  const actionTextColor = isDark ? colors.background : '#FFFFFF';
+  const actionTextColor = destructive ? colors.onDanger : colors.onPrimary;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
@@ -58,9 +52,11 @@ export function AppDialog({
             />
           </View>
           <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-          <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
+          <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator={false}>
+            <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
+          </ScrollView>
           <View style={styles.actions}>
-            {showCancel && (
+            {showCancel ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={cancelLabel}
@@ -69,7 +65,7 @@ export function AppDialog({
               >
                 <Text style={[styles.label, { color: colors.text }]}>{cancelLabel}</Text>
               </Pressable>
-            )}
+            ) : null}
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={confirmLabel}
@@ -90,31 +86,38 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15,23,42,0.58)',
     justifyContent: 'center',
-    padding: 20,
+    padding: uiSpacing.lg,
   },
   panel: {
     width: '100%',
-    maxWidth: 440,
+    maxWidth: uiSizes.dialogMaxWidth,
+    maxHeight: '88%',
     alignSelf: 'center',
-    padding: 22,
-    borderRadius: 16,
-    borderWidth: 1,
-    gap: 12,
+    padding: uiSpacing.lg + 2,
+    borderRadius: uiRadii.dialog,
+    borderWidth: uiSizes.borderWidth,
+    gap: uiSpacing.sm,
   },
   iconWrap: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: uiRadii.button,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700', lineHeight: 28 },
-  message: { fontFamily: APP_FONT_FAMILY, fontSize: 14, lineHeight: 22 },
-  actions: { flexDirection: 'row', gap: 10, marginTop: 8 },
+  title: uiTypography.dialogTitle,
+  messageScroll: { flexShrink: 1 },
+  message: { ...uiTypography.body, fontSize: 14, lineHeight: 22 },
+  actions: { flexDirection: 'row', gap: uiSpacing.xs + 2, marginTop: uiSpacing.xs },
   action: {
-    flex: 1, minHeight: 48, paddingHorizontal: 10,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderRadius: 10,
+    flex: 1,
+    minHeight: uiSizes.touchMinHeight,
+    paddingHorizontal: uiSpacing.xs + 2,
+    paddingVertical: uiSpacing.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
   },
-  label: { fontFamily: APP_FONT_FAMILY, fontSize: 15, fontWeight: '700' },
+  label: { ...uiTypography.button, textAlign: 'center' },
 });
