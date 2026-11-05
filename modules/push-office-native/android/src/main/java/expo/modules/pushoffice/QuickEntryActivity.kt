@@ -434,11 +434,21 @@ class QuickEntryActivity : Activity() {
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
   }
   private fun field(label: String, hintText: String, value: String, multi: Boolean=false): EditText {
-    root.addView(TextView(this).apply {
+    val card=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(12),dp(10),dp(12),dp(12))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(12).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
+    }
+    card.addView(TextView(this).apply {
       text=label
       textSize=13f
-      setTextColor(secondary)
-      setPadding(0,dp(12),0,dp(6))
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),0,0,dp(8))
     })
     return EditText(this).apply {
       hint=hintText
@@ -446,17 +456,18 @@ class QuickEntryActivity : Activity() {
       setText(value)
       textSize=16f
       setTextColor(foregroundColor)
-      setHintTextColor(Color.rgb(107,114,128))
+      setHintTextColor(secondary)
       setSingleLine(!multi)
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
-      minimumHeight=dp(if(multi)104 else 50)
+      minimumHeight=dp(if(multi)104 else 48)
       setPadding(dp(12),dp(10),dp(12),dp(10))
       background=GradientDrawable().apply {
         setColor(fieldBackground)
         cornerRadius=dp(10).toFloat()
         setStroke(dp(1),inputBorder)
       }
-      root.addView(this,LinearLayout.LayoutParams(-1,-2))
+      card.addView(this,LinearLayout.LayoutParams(-1,-2))
+      root.addView(card,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
     }
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {
