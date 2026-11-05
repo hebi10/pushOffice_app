@@ -57,7 +57,14 @@ class QuickEntryActivity : Activity() {
   private fun page(title: String, subtitle: String) {
     exitEditor()
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(22),dp(18),dp(22),dp(18)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
-    val scroll=ScrollView(this).apply { addView(root); isFillViewport=false }
+    val limit=(resources.displayMetrics.heightPixels-dp(64)).coerceAtLeast(dp(180))
+    val scroll=object: ScrollView(this) {
+      override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
+          else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(limit)
+        super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
+      }
+    }.apply { addView(root); isFillViewport=false }
     setContentView(scroll)
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
     root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foreground); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
@@ -211,10 +218,77 @@ class QuickEntryActivity : Activity() {
   }
   private fun form(title: String, dateTime: ZonedDateTime?, repeat: String, source: String, original: ScheduleRecord?, message: String) {
     val formZone=original?.let(::eventZone) ?: dateTime?.zone ?: zone
-    page(if(original==null) "저장 전 확인" else "변경 전 확인","$message\n시간대: ${formZone.id}")
+    page(
+      if(original==null) "저장 전 확인" else "변경 전 확인",
+      if(original==null) "$message\n시간대: ${formZone.id}"
+        else "변경되는 일정을 확인해 주세요.\n시간대: ${formZone.id}"
+    )
+    if(original!=null && dateTime!=null) {
+      val originalValue=Instant.ofEpochMilli(original.startAt).atZone(formZone).format(FORMAT)
+      val updatedValue=dateTime.format(FORMAT)
+      val summary=LinearLayout(this).apply {
+        orientation=LinearLayout.VERTICAL
+        setPadding(dp(14),dp(12),dp(14),dp(12))
+        background=GradientDrawable().apply {
+          setColor(fieldBackground); cornerRadius=dp(12).toFloat()
+          setStroke(dp(1),inputBorder)
+        }
+      }
+      summary.addView(TextView(this).apply {
+        text="변경 전  $originalValue"
+        textSize=14f; setTextColor(secondary)
+      })
+      summary.addView(TextView(this).apply {
+        text="변경 후  $updatedValue"
+        textSize=16f; setTypeface(null,Typeface.BOLD)
+        setTextColor(blue); setPadding(0,dp(8),0,0)
+      })
+      root.addView(summary)
+    }
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
+    val pickerRow=LinearLayout(this).apply {
+      orientation=LinearLayout.HORIZONTAL
+      setPadding(0,dp(8),0,dp(4))
+    }
+    fun pickerButton(label: String, action: ()->Unit) {
+      pickerRow.addView(TextView(this).apply {
+        text=label
+        contentDescription=label
+        textSize=14f
+        setTypeface(null,Typeface.BOLD)
+        setTextColor(blue)
+        gravity=Gravity.CENTER
+        minimumHeight=dp(48)
+        isClickable=true
+        isFocusable=true
+        background=GradientDrawable().apply {
+          setColor(surface)
+          cornerRadius=dp(10).toFloat()
+          setStroke(dp(1),inputBorder)
+        }
+        setOnClickListener { action() }
+      },LinearLayout.LayoutParams(0,dp(48),1f).apply {
+        val margin=dp(4)
+        setMargins(margin,0,margin,0)
+      })
+    }
+    pickerButton("달력에서 날짜 선택") {
+      val initial=runCatching { LocalDate.parse(dateField.text.toString().trim()) }
+        .getOrDefault(dateTime?.toLocalDate() ?: LocalDate.now(formZone))
+      DatePickerDialog(this@QuickEntryActivity, { _,year,month,day ->
+        dateField.setText(LocalDate.of(year,month+1,day).toString())
+      },initial.year,initial.monthValue-1,initial.dayOfMonth).show()
+    }
+    pickerButton("시간 선택") {
+      val initial=runCatching { LocalTime.parse(timeField.text.toString().trim()) }
+        .getOrDefault(dateTime?.toLocalTime() ?: LocalTime.of(9,0))
+      TimePickerDialog(this@QuickEntryActivity, { _,hour,minute ->
+        timeField.setText(String.format(java.util.Locale.ROOT,"%02d:%02d",hour,minute))
+      },initial.hour,initial.minute,true).show()
+    }
+    root.addView(pickerRow)
     root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(secondary); setPadding(0,dp(12),0,dp(5)) })
     val repeats=listOf("none","monthly","yearly")
     val spinner=Spinner(this).apply {
