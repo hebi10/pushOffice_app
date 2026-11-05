@@ -10,8 +10,11 @@ const marker = (uid: string) => `@pushoffice/native-cloud-settings-v1/${uid}`;
 export const legacySettingsRecovered = async (uid: string) => !!await AsyncStorage.getItem(marker(uid));
 async function configure(settings: Partial<UserSettings>, unresolved: boolean) {
     const effective = effectiveSchedulingSettings(settings, unresolved, Intl.DateTimeFormat().resolvedOptions().timeZone);
-    if (isPushOfficeNativeAvailable) await PushOfficeNative.configure({ ...effective,
-        dailyBriefingTime: `${String(effective.dailyBriefingTime.hour).padStart(2, '0')}:${String(effective.dailyBriefingTime.minute).padStart(2, '0')}` });
+    if (isPushOfficeNativeAvailable) {
+        await PushOfficeNative.configure({ ...effective,
+            dailyBriefingTime: `${String(effective.dailyBriefingTime.hour).padStart(2, '0')}:${String(effective.dailyBriefingTime.minute).padStart(2, '0')}` });
+        if (settings.themeMode) await PushOfficeNative.setUiTheme(settings.themeMode);
+    }
     store.dispatch(updateSettings(effective));
 }
 async function settingsUnresolved() {
