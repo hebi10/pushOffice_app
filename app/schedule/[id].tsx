@@ -251,7 +251,7 @@ export default function ScheduleDetail() {
             PushOfficeNative.cancelSnooze(id).then(() => showToast('재알림을 취소했습니다.')).catch(e => showError(e, '취소하지 못했습니다.'))
           } />
         </AssistantCard>
-        <AssistantCard title="일정 삭제" icon="trash-outline" subtitle="일정과 연결된 알림도 함께 삭제됩니다.">
+        <AssistantCard title="삭제 전 확인" icon="trash-outline" subtitle="일정과 연결된 알림도 함께 삭제됩니다.">
           <AssistantButton
             label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
             icon="trash-outline"
