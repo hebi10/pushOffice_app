@@ -8,6 +8,7 @@ import { Loading } from '@/src/components/Loading';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { AssistantButton } from '@/src/components/AssistantUI';
 import { APP_FONT_FAMILY } from '@/src/lib/typography';
+import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import { confirmAction, showError, showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useChatHistory, useUpdateChatMessage } from '@/src/features/chat';
@@ -37,7 +38,7 @@ type ListItem = DateGroup | ChatMessage;
 
 export default function ChatHistoryScreen() {
   const { colors } = useTheme();
-  const { data: messages, isLoading, refetch } = useChatHistory();
+  const { data: messages, isLoading, isError, refetch } = useChatHistory();
   const deleteMutation = useDeleteSchedule();
   const updateChatMsg = useUpdateChatMessage();
   const flatListRef = useRef<FlatList>(null);
@@ -157,6 +158,9 @@ export default function ChatHistoryScreen() {
               <View style={styles.actionRow}>
                 <TouchableOpacity
                   style={[styles.actionBtn, { borderColor: colors.divider }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="일정 수정"
+                  accessibilityHint={msg.text}
                   onPress={() => handleEdit(msg)}
                 >
                   <Ionicons name="create-outline" size={13} color={colors.primary} />
@@ -164,6 +168,9 @@ export default function ChatHistoryScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, { borderColor: colors.divider }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="일정 취소"
+                  accessibilityHint={msg.text}
                   onPress={() => handleCancel(msg)}
                 >
                   <Ionicons name="close-circle-outline" size={13} color={colors.danger} />
@@ -182,6 +189,24 @@ export default function ChatHistoryScreen() {
   );
 
   if (isLoading) return <Loading />;
+
+  if (isError && !messages?.length) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
+        <View style={styles.pageHeading}>
+          <ScreenIntro eyebrow="지난 일정 기록" title="채팅 내역" description="일정 등록·변경 내역을 확인하세요." />
+        </View>
+        <View style={styles.emptyContainer}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>채팅 내역을 불러오지 못했습니다</Text>
+          <Text style={[styles.emptyHint, { color: colors.textSecondary }]}>연결 상태를 확인한 뒤 다시 시도해 주세요.</Text>
+          <View style={styles.emptyAction}>
+            <AssistantButton label="다시 불러오기" icon="refresh-outline" onPress={() => refetch()} />
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
@@ -229,20 +254,20 @@ export default function ChatHistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  pageHeading: { paddingHorizontal: 16, paddingTop: 8 },
-  listContent: { paddingVertical: 12, paddingHorizontal: 16, paddingBottom: 32 },
+  pageHeading: { paddingHorizontal: uiSizes.screenGutter, paddingTop: uiSpacing.xs },
+  listContent: { paddingVertical: uiSpacing.sm, paddingHorizontal: uiSizes.screenGutter, paddingBottom: uiSpacing.xxl },
 
   /* 날짜 구분선 */
   dateSepContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 12,
-    paddingHorizontal: 4,
+    marginVertical: uiSpacing.sm,
+    paddingHorizontal: uiSpacing.xxs,
   },
   dateSepLine: { flex: 1, height: StyleSheet.hairlineWidth },
   dateSepText: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 12,
-    paddingHorizontal: 10,
+    ...uiTypography.caption,
+    paddingHorizontal: uiSpacing.xs + 2,
     fontWeight: '500',
   },
 
@@ -251,15 +276,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     marginVertical: 3,
-    gap: 6,
+    gap: uiSpacing.xxs + 2,
   },
   bubbleRowRight: { justifyContent: 'flex-end' },
   bubbleRowLeft: { justifyContent: 'flex-start' },
   bubble: {
     maxWidth: '82%',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: uiRadii.button,
+    paddingHorizontal: uiSpacing.sm + 2,
+    paddingVertical: uiSpacing.xs + 2,
     overflow: 'hidden',
   },
   userBubble: {
@@ -285,24 +310,24 @@ const styles = StyleSheet.create({
   /* 액션 버튼 */
   actionRow: {
     flexDirection: 'row',
-    marginTop: 10,
-    gap: 8,
+    marginTop: uiSpacing.xs + 2,
+    gap: uiSpacing.xs,
   },
   actionBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    minHeight: 42,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
+    gap: uiSpacing.xxs,
+    minHeight: uiSizes.touchMinHeight,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+    paddingHorizontal: uiSpacing.xs,
+    paddingVertical: uiSpacing.xs,
   },
   actionText: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 12,
-    fontWeight: '500',
+    ...uiTypography.caption,
+    fontWeight: '600',
   },
 
   /* 빈 상태 */
@@ -310,7 +335,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: uiSpacing.xl,
   },
   emptyTitle: {
     fontFamily: APP_FONT_FAMILY,    fontSize: 16,
@@ -323,5 +348,5 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
-  emptyAction: { width: '100%', maxWidth: 320, marginTop: 20 },
+  emptyAction: { width: '100%', maxWidth: 320, marginTop: uiSpacing.lg },
 });
