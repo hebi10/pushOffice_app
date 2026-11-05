@@ -269,7 +269,7 @@ class QuickEntryActivity : Activity() {
           setStroke(dp(1),inputBorder)
         }
         setOnClickListener { action() }
-      },LinearLayout.LayoutParams(0,dp(48),1f).apply {
+      },LinearLayout.LayoutParams(0,-2,1f).apply {
         val margin=dp(4)
         setMargins(margin,0,margin,0)
       })
@@ -366,8 +366,11 @@ class QuickEntryActivity : Activity() {
         cornerRadius=dp(12).toFloat()
         setStroke(dp(1),if(primary) blue else inputBorder)
       }
+      minHeight=dp(50)
+      setSingleLine(false)
+      setPadding(dp(12),dp(10),dp(12),dp(10))
       setOnClickListener { action() }
-    },LinearLayout.LayoutParams(-1,dp(50)).apply { topMargin=dp(if(primary)14 else 8) })
+    },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(primary)14 else 8) })
   }
   private fun beginSpeech() {
     session.inputChanged(); cancelModel()
