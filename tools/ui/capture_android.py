@@ -35,7 +35,7 @@ def screenshot(name: str, note: str) -> None:
 def pixel_rgb(path: Path, x: int, y: int) -> tuple[int, int, int]:
     """Read an RGB pixel from an Android PNG without optional Python packages."""
     raw = path.read_bytes()
-    if raw[:8] != b"\\x89PNG\\r\\n\\x1a\\n":
+    if raw[:8] != b"\x89PNG\r\n\x1a\n":
         raise RuntimeError(f"{path.name}: invalid PNG")
     offset, width, height, depth, kind, pieces = 8, 0, 0, 0, 0, []
     while offset < len(raw):
