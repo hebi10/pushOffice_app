@@ -38,3 +38,13 @@ test('all retained app routes use the same heading or dialog components', () => 
   assert.match(auth, /showNotice/);
   assert.match(permission, /showNotice/);
 });
+
+test('native quick-entry follows explicit app theme without altering reminder state', () => {
+  const module = source('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/PushOfficeNativeModule.kt');
+  const editor = source('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/QuickEntryActivity.kt');
+  const settings = source('src/features/storage/nativeSettings.ts');
+  assert.match(module, /AsyncFunction\("setUiTheme"\)/);
+  assert.match(editor, /"dark" -> setTheme\(R\.style\.PushOfficeDialogDark\)/);
+  assert.match(editor, /"light" -> setTheme\(R\.style\.PushOfficeDialogLight\)/);
+  assert.match(settings, /PushOfficeNative\.setUiTheme\(settings\.themeMode\)/);
+});
