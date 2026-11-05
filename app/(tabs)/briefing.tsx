@@ -103,7 +103,7 @@ export default function BriefingScreen() {
   const settings = useAppSelector((s) => s.settings);
   const storageMode = useAppSelector((s) => s.storageMode);
   const { date } = useLocalSearchParams<{ date?: string }>();
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   const now = useClock();
   const targetDate = date || dayjs(now).format('YYYY-MM-DD');
@@ -361,8 +361,8 @@ export default function BriefingScreen() {
                 onPress={handleShare}
                 activeOpacity={0.7}
               >
-                <Ionicons name="share-outline" size={16} color="#FFF" />
-                <Text style={styles.actionBtnText}>공유하기</Text>
+                <Ionicons name="share-outline" size={16} color={isDark ? colors.background : '#FFF'} />
+                <Text style={[styles.actionBtnText, { color: isDark ? colors.background : '#FFF' }]}>공유하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -398,9 +398,9 @@ export default function BriefingScreen() {
                 disabled={generateMutation.isPending}
               >
                 {generateMutation.isPending ? (
-                  <ActivityIndicator size="small" color="#FFF" />
+                  <ActivityIndicator size="small" color={isDark ? colors.background : '#FFF'} />
                 ) : (
-                  <Text style={styles.generateBtnText}>
+                  <Text style={[styles.generateBtnText, { color: isDark ? colors.background : '#FFF' }]}>
                     {generateMutation.isError ? '다시 생성' : '브리핑 생성하기'}
                   </Text>
                 )}
