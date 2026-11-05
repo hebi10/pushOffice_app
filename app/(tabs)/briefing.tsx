@@ -22,6 +22,7 @@ import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { showToast } from '@/src/components/ui/toast';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { APP_FONT_FAMILY } from '@/src/lib/typography';
+import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
 import type { GenerateDigestInput } from '@/src/features/digest';
 import { isFallbackDigest, useDateDigest, useGenerateDigest } from '@/src/features/digest';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
@@ -103,7 +104,7 @@ export default function BriefingScreen() {
   const settings = useAppSelector((s) => s.settings);
   const storageMode = useAppSelector((s) => s.storageMode);
   const { date } = useLocalSearchParams<{ date?: string }>();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   const now = useClock();
   const targetDate = date || dayjs(now).format('YYYY-MM-DD');
@@ -288,6 +289,8 @@ export default function BriefingScreen() {
               </Text>
               <TouchableOpacity
                 style={[styles.actionBtnOutline, { borderColor: colors.primary }]}
+                accessibilityRole="button"
+                accessibilityLabel="브리핑 다시 불러오기"
                 onPress={() => refetchDigest()}
               >
                 <Text style={[styles.actionBtnOutlineText, { color: colors.primary }]}>새로고침</Text>
@@ -305,6 +308,8 @@ export default function BriefingScreen() {
                 </Text>
                 <TouchableOpacity
                   style={[styles.fallbackBtn, { borderColor: colors.primary }]}
+                  accessibilityRole="button"
+                  accessibilityLabel="브리핑 재생성"
                   onPress={handleRegenerate}
                   disabled={generateMutation.isPending}
                 >
@@ -358,15 +363,19 @@ export default function BriefingScreen() {
             <View style={styles.actionBar}>
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: colors.primary }]}
+                accessibilityRole="button"
+                accessibilityLabel="브리핑 공유하기"
                 onPress={handleShare}
                 activeOpacity={0.7}
               >
-                <Ionicons name="share-outline" size={16} color={isDark ? colors.background : '#FFF'} />
-                <Text style={[styles.actionBtnText, { color: isDark ? colors.background : '#FFF' }]}>공유하기</Text>
+                <Ionicons name="share-outline" size={16} color={colors.onPrimary} />
+                <Text style={[styles.actionBtnText, { color: colors.onPrimary }]}>공유하기</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.surfaceBorder }]}
+                style={[styles.actionBtn, { backgroundColor: colors.surface, borderWidth: uiSizes.borderWidth, borderColor: colors.surfaceBorder }]}
+                accessibilityRole="button"
+                accessibilityLabel="브리핑 복사하기"
                 onPress={handleCopy}
                 activeOpacity={0.7}
               >
@@ -394,13 +403,15 @@ export default function BriefingScreen() {
                   { backgroundColor: colors.primary },
                   generateMutation.isPending && { opacity: 0.6 },
                 ]}
+                accessibilityRole="button"
+                accessibilityLabel="브리핑 생성하기"
                 onPress={handleGenerate}
                 disabled={generateMutation.isPending}
               >
                 {generateMutation.isPending ? (
-                  <ActivityIndicator size="small" color={isDark ? colors.background : '#FFF'} />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
-                  <Text style={[styles.generateBtnText, { color: isDark ? colors.background : '#FFF' }]}>
+                  <Text style={[styles.generateBtnText, { color: colors.onPrimary }]}>
                     {generateMutation.isError ? '다시 생성' : '브리핑 생성하기'}
                   </Text>
                 )}
@@ -448,9 +459,9 @@ const styles = StyleSheet.create({
    * 기존 FlatList + ListHeaderComponent 구조에서는 이 값이 부족했음
    */
   scrollContent: {
-    paddingTop: 16,
-    paddingBottom: 48,
-    paddingHorizontal: 16,
+    paddingTop: uiSpacing.md,
+    paddingBottom: uiSizes.touchMinHeight,
+    paddingHorizontal: uiSizes.screenGutter,
   },
 
   /* 헤더 */
@@ -464,10 +475,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700' },
   headerDate: { fontFamily: APP_FONT_FAMILY, fontSize: 13, marginTop: 2 },
   refreshBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
+    width: uiSizes.touchMinHeight,
+    height: uiSizes.touchMinHeight,
+    borderRadius: uiRadii.field,
+    borderWidth: uiSizes.borderWidth,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 12,
@@ -491,11 +502,13 @@ const styles = StyleSheet.create({
   errorBox: { alignItems: 'center', paddingVertical: 16, gap: 8 },
   errorText: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   actionBtnOutline: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginTop: 4,
+    minHeight: uiSizes.touchMinHeight,
+    justifyContent: 'center',
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+    paddingHorizontal: uiSpacing.md,
+    paddingVertical: uiSpacing.xs,
+    marginTop: uiSpacing.xxs,
   },
   actionBtnOutlineText: { fontFamily: APP_FONT_FAMILY, fontSize: 13, fontWeight: '600' },
 
@@ -511,10 +524,12 @@ const styles = StyleSheet.create({
   },
   fallbackText: { flex: 1, fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   fallbackBtn: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    minHeight: uiSizes.touchMinHeight,
+    justifyContent: 'center',
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
   },
   fallbackBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 12, fontWeight: '600' },
 
@@ -535,25 +550,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    borderRadius: 10,
-    minHeight: 50,
-    paddingVertical: 12,
+    borderRadius: uiRadii.button,
+    minHeight: uiSizes.controlMinHeight,
+    paddingVertical: uiSpacing.sm,
   },
-  actionBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
+  actionBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 빈 상태 */
   emptyBox: { alignItems: 'center', paddingVertical: 24, gap: 10 },
   emptyTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   errorSmall: { fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   generateBtn: {
-    borderRadius: 10,
-    minHeight: 50,
+    borderRadius: uiRadii.button,
+    minHeight: uiSizes.controlMinHeight,
     justifyContent: 'center',
     paddingHorizontal: 24,
     paddingVertical: 12,
     marginTop: 4,
   },
-  generateBtnText: { color: '#FFF', fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
+  generateBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 레거시 일정 섹션 */
   legacySchedules: { marginTop: 16 },
