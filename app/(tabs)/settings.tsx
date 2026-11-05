@@ -4,7 +4,7 @@ import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { useFocusEffect } from 'expo-router';
 import { AssistantButton, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
-import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
+import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsStatusRow, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
 import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
@@ -211,11 +211,10 @@ export default function SettingsScreen() {
                 <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline" description="지원하는 기기에서만 일부 기능이 동작합니다.">
-                <SettingsActionRow
+                <SettingsStatusRow
                   icon="sparkles-outline"
                   title="Gemini Nano"
                   description={ai}
-                  onPress={() => { void PushOfficeNative.openQuickEntry().catch(e => showError(e, '입력 창을 열 수 없습니다.')); }}
                 />
                 <SettingsActionRow
                   icon="mic-outline"
