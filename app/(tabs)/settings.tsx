@@ -43,7 +43,13 @@ export default function SettingsScreen() {
     } };
     const toggle = (label: string, value: boolean, onChange: (v: boolean) => void) => <View style={s.row}>
     <Text style={[s.body, { color: colors.text, flex: 1 }]}>{label}</Text>
-    <Switch accessibilityLabel={label} value={value} onValueChange={onChange} trackColor={{ true: colors.primary }}/>
+    <Switch
+      accessibilityLabel={label}
+      value={value}
+      onValueChange={onChange}
+      trackColor={{ false: colors.inputBorder, true: colors.primaryLight }}
+      thumbColor={value ? colors.primary : colors.surfaceBorder}
+    />
     </View>;
     const input = (label: string, value: string, onChangeText: (s: string) => void, keyboardType: 'default' | 'number-pad' = 'default') => <View style={{ gap: 5 }}>
     <Text style={[s.caption, { color: colors.textSecondary }]}>{label}</Text>
