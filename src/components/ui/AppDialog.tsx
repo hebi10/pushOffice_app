@@ -33,8 +33,9 @@ export function AppDialog({
   onDismiss,
   showCancel = true,
 }: AppDialogProps) {
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
   const actionColor = destructive ? colors.danger : colors.primary;
+  const actionTextColor = isDark ? colors.background : '#FFFFFF';
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDismiss}>
@@ -75,7 +76,7 @@ export function AppDialog({
               onPress={onConfirm}
               style={[styles.action, { backgroundColor: actionColor, borderColor: actionColor }]}
             >
-              <Text style={[styles.label, { color: '#FFFFFF' }]}>{confirmLabel}</Text>
+              <Text style={[styles.label, { color: actionTextColor }]}>{confirmLabel}</Text>
             </Pressable>
           </View>
         </View>
