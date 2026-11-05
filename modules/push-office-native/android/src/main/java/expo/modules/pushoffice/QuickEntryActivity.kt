@@ -38,8 +38,13 @@ class QuickEntryActivity : Activity() {
   private val session=CaptureSession()
   private var applyingSpeech=false
   private var modelJob: Job?=null
-  private val isDark: Boolean get() =
-    (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+  private val isDark: Boolean get() = when(
+    getSharedPreferences("push_office_ui", MODE_PRIVATE).getString("themeMode","system")
+  ) {
+    "dark" -> true
+    "light" -> false
+    else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+  }
   private val blue: Int get() = if(isDark) Color.rgb(96,165,250) else Color.rgb(37,99,235)
   private val surface: Int get() = if(isDark) Color.rgb(30,41,59) else Color.WHITE
   private val foregroundColor: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
@@ -49,6 +54,10 @@ class QuickEntryActivity : Activity() {
   private val zone get()=ScheduleZone.fallback(ReminderSettings.load(this).timezone,ZoneId.systemDefault())
   private fun eventZone(record: ScheduleRecord)=record.anchorZone?.let(ZoneId::of) ?: zone
   override fun onCreate(state: Bundle?) {
+    when(getSharedPreferences("push_office_ui",MODE_PRIVATE).getString("themeMode","system")) {
+      "dark" -> setTheme(R.style.PushOfficeDialogDark)
+      "light" -> setTheme(R.style.PushOfficeDialogLight)
+    }
     super.onCreate(state)
     window.setBackgroundDrawableResource(android.R.color.transparent)
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
