@@ -393,6 +393,7 @@ class QuickEntryActivity : Activity() {
       })
       root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
+    sectionLabel("일정 정보", "일정 이름, 날짜 및 시작 시간을 확인하세요.")
     val titleField=field("일정 제목","일정 제목",title)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
@@ -437,11 +438,44 @@ class QuickEntryActivity : Activity() {
       },initial.hour,initial.minute,true).show()
     }
     root.addView(pickerRow)
-    root.addView(TextView(this).apply { text="반복"; textSize=13f; setTextColor(secondary); setPadding(0,dp(12),0,dp(5)) })
+    val repeatCard=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(12),dp(10),dp(12),dp(12))
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(12).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
+    }
+    repeatCard.addView(TextView(this).apply {
+      text="반복"
+      textSize=13f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(foregroundColor)
+      setPadding(dp(2),0,0,dp(8))
+    })
     val repeats=listOf("none","monthly","yearly")
+    val repeatLabels=listOf("반복 없음","매월","매년")
     val spinner=Spinner(this).apply {
       contentDescription="반복 설정"
-      adapter=ArrayAdapter(this@QuickEntryActivity,android.R.layout.simple_spinner_dropdown_item,listOf("반복 없음","매월","매년"))
+      adapter=object: ArrayAdapter<String>(
+        this@QuickEntryActivity,
+        android.R.layout.simple_spinner_item,
+        repeatLabels
+      ) {
+        override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getView(position,convertView,parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            textSize=15f
+          }
+        override fun getDropDownView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getDropDownView(position,convertView,parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            setBackgroundColor(surface)
+            textSize=15f
+            setPadding(dp(14),dp(12),dp(14),dp(12))
+          }
+      }
       setSelection(repeats.indexOf(repeat).coerceAtLeast(0))
       minimumHeight=dp(50)
       setPadding(dp(10),0,dp(10),0)
@@ -451,8 +485,15 @@ class QuickEntryActivity : Activity() {
         setStroke(dp(1),inputBorder)
       }
     }
-    root.addView(spinner)
-    val error=TextView(this).apply { setTextColor(Color.rgb(185,28,28)); accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE }; root.addView(error)
+    repeatCard.addView(spinner,LinearLayout.LayoutParams(-1,-2))
+    root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
+    val error=TextView(this).apply {
+      setTextColor(if(isDark) Color.rgb(248,113,113) else Color.rgb(185,28,28))
+      textSize=13f
+      setPadding(dp(2),dp(8),dp(2),0)
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    root.addView(error)
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
       try {
         val start=LocalDate.parse(dateField.text.toString().trim()).atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
