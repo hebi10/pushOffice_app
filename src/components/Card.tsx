@@ -1,13 +1,9 @@
-/**
- * 카드 컴포넌트 – 최소 R12 padding 12~16
- */
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
 import React, { PropsWithChildren } from 'react';
 import { StyleSheet, View, ViewStyle } from 'react-native';
 
-type CardProps = PropsWithChildren<{
-  style?: ViewStyle;
-}>;
+type CardProps = PropsWithChildren<{ style?: ViewStyle }>;
 
 export function Card({ children, style }: CardProps) {
   const { colors } = useTheme();
@@ -26,10 +22,10 @@ export function Card({ children, style }: CardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: uiRadii.card,
+    padding: uiSizes.cardPadding,
+    borderWidth: uiSizes.borderWidth,
     marginVertical: 0,
     marginHorizontal: 0,
-    borderWidth: StyleSheet.hairlineWidth,
   },
 });
