@@ -16,15 +16,16 @@ import { useTheme } from '../contexts/ThemeContext';
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 export type AssistantButtonVariant = 'primary' | 'secondary' | 'destructive';
 
-export function AssistantCard({ title, subtitle, icon, children }: {
+export function AssistantCard({ title, subtitle, icon, compact = false, children }: {
   title?: string;
   subtitle?: string;
   icon?: IconName;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
+    <View style={[styles.card, compact && styles.compactCard, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
       {title ? (
         <View style={styles.cardHeader}>
           {icon ? <Ionicons name={icon} size={20} color={colors.primary} /> : null}
@@ -205,6 +206,7 @@ const styles = StyleSheet.create({
     borderRadius: uiRadii.card,
     gap: uiSpacing.sm,
   },
+  compactCard: { paddingVertical: uiSpacing.sm, gap: uiSpacing.xs },
   cardHeader: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
   headerText: { flex: 1, gap: uiSpacing.xxs },
   title: uiTypography.sectionTitle,

@@ -109,11 +109,14 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <AssistantCard title="오늘의 브리핑" icon="sunny-outline">
+        <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
             <View style={styles.briefingCopy}>
               <Text style={[styles.briefingHeadline, { color: colors.text }]}>
                 {refined || todayHeadline}
+              </Text>
+              <Text style={[s.caption, { color: colors.textSecondary }]}>
+                {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정만으로 만든 요약'}
               </Text>
             </View>
             {!schedules.isLoading && !schedules.isError ? (
@@ -133,12 +136,9 @@ export default function HomeScreen() {
               onPress={refine}
             />
           ) : null}
-          <Text style={[s.caption, { color: colors.textSecondary }]}>
-            {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정만으로 만든 요약'}
-          </Text>
         </AssistantCard>
 
-        <AssistantCard title="다음 일정" icon="calendar-outline">
+        <AssistantCard title="다음 일정" icon="calendar-outline" compact>
           {schedules.isLoading ? (
             <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
           ) : schedules.isError ? (
@@ -153,6 +153,7 @@ export default function HomeScreen() {
               activeOpacity={0.75}
               style={[styles.nextCard, { backgroundColor: colors.primaryLight, borderColor: colors.surfaceBorder }]}
             >
+              <View style={[styles.nextAccent, { backgroundColor: colors.primary }]} />
               <View style={styles.nextTimeCol}>
                 <Text style={[styles.nextTime, { color: colors.primary }]}>
                   {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
@@ -176,7 +177,7 @@ export default function HomeScreen() {
           )}
         </AssistantCard>
 
-        <AssistantCard title="오늘 일정" icon="list-outline">
+        <AssistantCard title="오늘 일정" icon="list-outline" compact>
           <View style={styles.agendaHeading}>
             <Text style={[s.caption, { color: colors.textSecondary }]}>
               {schedules.isLoading ? '일정을 확인하고 있습니다.' : `오늘 등록된 일정 ${todayItems.length}건`}
@@ -258,10 +259,10 @@ const styles = StyleSheet.create({
   },
   briefingHeading: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: uiSpacing.sm,
   },
-  briefingCopy: { flex: 1 },
+  briefingCopy: { flex: 1, gap: uiSpacing.xxs },
   briefingHeadline: { ...uiTypography.body, fontWeight: '600' },
   countPill: {
     minHeight: 30,
@@ -276,13 +277,15 @@ const styles = StyleSheet.create({
   nextCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 76,
-    padding: uiSpacing.sm,
+    minHeight: 68,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
     gap: uiSpacing.sm,
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
   },
-  nextTimeCol: { width: 68, gap: uiSpacing.xxs },
+  nextAccent: { width: 3, alignSelf: 'stretch' },
+  nextTimeCol: { width: 62, gap: uiSpacing.xxs },
   nextTime: { ...uiTypography.body, fontSize: 18, fontWeight: '800' },
   nextEnd: { ...uiTypography.caption },
   nextContent: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
