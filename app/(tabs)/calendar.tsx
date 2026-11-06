@@ -77,7 +77,7 @@ export default function CalendarScreen() {
       contentContainerStyle={s.content}
     >
       <ScreenIntro
-        eyebrow="PUSH OFFICE · 일정"
+        eyebrow="날짜별 일정"
         title="일정 · 캘린더"
         description="날짜를 선택해 일정을 확인하세요."
         artwork={require('@/assets/images/illustration-calendar.jpg')}
