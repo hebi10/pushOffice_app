@@ -2,6 +2,7 @@
   <color name="po_widget_surface">#1E1E1E</color>
   <color name="po_widget_text">#E0E0E0</color>
   <color name="po_widget_accent">#5B9FE6</color>
+  <color name="po_widget_on_primary">#121212</color>
   <color name="po_widget_border">#334155</color>
   <color name="po_widget_action_surface">#2A2A2A</color>
 </resources>
