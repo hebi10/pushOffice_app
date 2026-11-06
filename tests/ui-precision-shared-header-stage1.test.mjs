@@ -23,7 +23,7 @@ test('precision stage 1 shows one branded header on every main tab without new t
   assert.match(tabs, /name="chatHistory"[\s\S]*?href: null/);
   assert.match(tabs, /name="briefing"[\s\S]*?href: null/);
   assert.doesNotMatch(tabs, /name="(?:todos|tasks|focus|profile|ai)"/);
-  assert.match(brand, /assets\/images\/push-office-mark\.png/);
+  assert.match(brand, /assets\/images\/push-office-icon\.png/);
   assert.match(brand, /PushOffice/);
   assert.match(brand, /accessibilityRole="header"/);
 });
