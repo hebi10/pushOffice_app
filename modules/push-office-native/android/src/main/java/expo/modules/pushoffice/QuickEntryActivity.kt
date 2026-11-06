@@ -288,6 +288,7 @@ class QuickEntryActivity : Activity() {
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    val optionalToolsStart=root.childCount
     sectionLabel("음성 입력", "시작 버튼을 누른 후에만 녹음합니다.")
     pairedButtons(
       "음성 입력 시작", { beginSpeech() },
@@ -314,6 +315,26 @@ class QuickEntryActivity : Activity() {
         }
       }
     }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
+    val optionalTools=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+    while(root.childCount>optionalToolsStart) {
+      val item=root.getChildAt(optionalToolsStart)
+      root.removeViewAt(optionalToolsStart)
+      optionalTools.addView(item)
+    }
+    val toolsToggle=Button(this).apply {
+      text=if(voice) "음성·AI 도구 접기" else "음성·AI 도구 펼치기"
+      isAllCaps=false
+      contentDescription=text
+      minimumHeight=dp(48)
+      setOnClickListener {
+        optionalTools.visibility=if(optionalTools.visibility==View.VISIBLE) View.GONE else View.VISIBLE
+        text=if(optionalTools.visibility==View.VISIBLE) "음성·AI 도구 접기" else "음성·AI 도구 펼치기"
+        contentDescription=text
+      }
+    }
+    root.addView(toolsToggle)
+    optionalTools.visibility=if(voice) View.VISIBLE else View.GONE
+    root.addView(optionalTools)
     sectionLabel("내용 확인")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
     button("뒤로") { chooser() }
