@@ -50,7 +50,9 @@ export default function HomeScreen() {
         return projectOccurrences((schedules.data ?? []).map(toNativeSchedule), start, end).map(hydrateSchedule);
     }, [schedules.data, now]);
     const today = dayjs(now).format('YYYY-MM-DD');
-    const todayItems = occurrences.filter(x => dayjs(x.startAt.toDate()).format('YYYY-MM-DD') === today);
+    const todayItems = occurrences.filter(x => dayjs(x.startAt.toDate()).format('YYYY-MM-DD') === today)
+        .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis());
+    const firstToday = todayItems[0];
     const next = useMemo(() => {
         const record = nextSchedule((schedules.data ?? []).map(toNativeSchedule), now);
         return record ? hydrateSchedule(record) : null;
@@ -61,6 +63,7 @@ export default function HomeScreen() {
     request.setSource(source);
     useLayoutEffect(() => { setRefined(''); setBusy(false); }, [source]);
     const open = () => PushOfficeNative.openQuickEntry().catch(e => showError(e, '빠른 입력을 열 수 없습니다.'));
+    const openVoice = () => PushOfficeNative.openVoiceQuickEntry().catch(e => showError(e, '음성 입력을 열 수 없습니다.'));
     const refine = async () => {
         const valid = request.begin();
         setBusy(true);
@@ -83,8 +86,8 @@ export default function HomeScreen() {
         : schedules.isLoading
             ? '기기에 저장된 일정을 확인하는 중입니다.'
             : todayItems.length
-                ? '오늘의 일정을 한눈에 확인하세요.'
-                : '오늘은 예정된 일정이 없습니다.';
+                ? `첫 일정 ${firstToday.isAllDay ? '종일' : dayjs(firstToday.startAt.toDate()).format('HH:mm')} · ${firstToday.title}`
+                : '오늘은 예정된 일정이 없어요.';
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
@@ -92,10 +95,11 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
       >
         <ScreenIntro
-          eyebrow="로컬 일정 비서"
+          eyebrow={dayjs(now).format('M월 D일 dddd')}
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
-          description={dayjs(now).format('M월 D일 dddd')}
+          description="중요한 일정부터 하나씩 살펴보세요."
           artwork={require('@/assets/images/illustration-home.jpg')}
+          featured
         />
 
         <View style={styles.quickEntry}>
@@ -104,9 +108,21 @@ export default function HomeScreen() {
             icon="add-circle-outline"
             onPress={open}
           />
-          <Text style={[styles.quickEntryHint, { color: colors.textSecondary }]}>
-            텍스트 또는 음성으로 새 일정을 기록하세요.
-          </Text>
+          <View style={styles.quickEntryTools}>
+            <Text style={[styles.quickEntryHint, { color: colors.textSecondary }]}>
+              텍스트·음성 중 입력 방식 선택
+            </Text>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="음성 입력 바로 열기"
+              accessibilityHint="녹음은 음성 입력 시작을 누를 때만 실행됩니다."
+              onPress={openVoice}
+              style={styles.voiceAction}
+            >
+              <Ionicons name="mic-outline" size={17} color={colors.primary} />
+              <Text style={[styles.voiceActionText, { color: colors.primary }]}>음성 입력</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
@@ -119,7 +135,7 @@ export default function HomeScreen() {
                 {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정만으로 만든 요약'}
               </Text>
             </View>
-            {!schedules.isLoading && !schedules.isError ? (
+            {!schedules.isLoading && !schedules.isError && todayItems.length > 0 ? (
               <View style={[styles.countPill, { backgroundColor: colors.primaryLight }]}>
                 <Text style={[styles.countText, { color: colors.primary }]}>
                   {todayItems.length}건
@@ -173,14 +189,15 @@ export default function HomeScreen() {
               {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}
             </TouchableOpacity>
           ) : (
-            <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다. 빠른 입력으로 등록해 보세요.</Text>
+            <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
           )}
         </AssistantCard>
 
-        <AssistantCard title="오늘 일정" icon="list-outline" compact>
+        {(schedules.isLoading || schedules.isError || todayItems.length > 0) ? (
+          <AssistantCard title="오늘 일정" icon="list-outline" compact>
           <View style={styles.agendaHeading}>
             <Text style={[s.caption, { color: colors.textSecondary }]}>
-              {schedules.isLoading ? '일정을 확인하고 있습니다.' : `오늘 등록된 일정 ${todayItems.length}건`}
+              {schedules.isLoading ? '일정을 확인하고 있습니다.' : '시간순 일정 목록'}
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
@@ -212,12 +229,10 @@ export default function HomeScreen() {
               아직 일정이 없습니다. “내일 오전 9시 회의”처럼 입력해 보세요.
             </Text>
           )}
-        </AssistantCard>
+          </AssistantCard>
+        ) : null}
 
         <View style={styles.externalSection}>
-          <Text style={[styles.externalLabel, { color: colors.textSecondary }]}>
-            선택한 외부 정보
-          </Text>
           <AssistantCard title="외부 브리핑" icon="cloud-outline">
             <Text style={[s.caption, { color: colors.textSecondary }]}>
               날씨·뉴스·주식은 요청할 때만 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.
@@ -252,11 +267,18 @@ export default function HomeScreen() {
 
 
 const styles = StyleSheet.create({
-  quickEntry: { gap: uiSpacing.xs },
-  quickEntryHint: {
-    ...uiTypography.caption,
-    paddingHorizontal: uiSpacing.xxs,
+  quickEntry: { gap: uiSpacing.xxs },
+  quickEntryTools: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
+  quickEntryHint: { ...uiTypography.caption, flex: 1, minWidth: 0 },
+  voiceAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: uiSizes.touchMinHeight,
+    paddingHorizontal: uiSpacing.xs,
+    gap: uiSpacing.xxs,
   },
+  voiceActionText: { ...uiTypography.caption, fontWeight: '700' },
   briefingHeading: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -295,6 +317,5 @@ const styles = StyleSheet.create({
   calendarLink: { minHeight: uiSizes.touchMinHeight, flexDirection: 'row', alignItems: 'center', gap: 2, paddingHorizontal: uiSpacing.xs, justifyContent: 'center' },
   calendarLinkText: { ...uiTypography.caption, fontWeight: '700' },
   agendaList: { gap: uiSpacing.xs },
-  externalSection: { gap: uiSpacing.sm, paddingTop: uiSpacing.xs },
-  externalLabel: { ...uiTypography.caption, fontWeight: '700', paddingHorizontal: uiSpacing.xxs },
+  externalSection: { gap: uiSpacing.sm, paddingTop: uiSpacing.xxs },
 });
