@@ -69,7 +69,7 @@ class QuickEntryActivity : Activity() {
     exitEditor()
     confirmationFooter=null
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
-    val limit=(resources.displayMetrics.heightPixels-dp(64)).coerceAtLeast(dp(180))
+    val limit=(resources.displayMetrics.heightPixels-dp(160)).coerceAtLeast(dp(180))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
