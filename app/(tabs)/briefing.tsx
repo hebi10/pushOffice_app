@@ -460,6 +460,9 @@ const styles = StyleSheet.create({
    * 기존 FlatList + ListHeaderComponent 구조에서는 이 값이 부족했음
    */
   scrollContent: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     paddingTop: uiSpacing.sm,
     paddingBottom: uiSizes.touchMinHeight,
     paddingHorizontal: uiSizes.screenGutter,

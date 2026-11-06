@@ -356,6 +356,115 @@ def capture_preserved_route(page: str, expected_label: str, screenshot_name: str
 capture_preserved_route("briefing", "데일리 다이제스트", "18-legacy-briefing")
 capture_preserved_route("chatHistory", "채팅 내역", "19-legacy-chat-history")
 
+
+# Final QA matrix: system font enlargement and a tablet-class portrait viewport.
+# This uses the installed production app; the test emulator contains disposable data.
+QA_PROFILES = {
+    "large_font": {
+        "font_scale": 1.3,
+        "viewport": "720x1600",
+        "screens": [
+            "20a-large-font-home.png",
+            "20b-large-font-calendar.png",
+            "20c-large-font-settings.png",
+            "20d-large-font-chooser.png",
+            "20e-large-font-editor.png",
+        ],
+    },
+    "tablet_viewport": {
+        "font_scale": 1.0,
+        "viewport": "1440x2160",
+        "screens": [
+            "21a-tablet-home.png",
+            "21b-tablet-calendar.png",
+            "21c-tablet-settings.png",
+            "21d-tablet-chooser.png",
+            "21e-tablet-editor.png",
+        ],
+    },
+}
+widget_providers = {"small": False, "agenda": False}
+try:
+    widget_dump = adb("shell", "dumpsys", "appwidget", timeout=60).decode(
+        "utf-8", errors="replace"
+    )
+    widget_providers["small"] = (
+        "ScheduleWidgetProvider" in widget_dump
+        and "com.hebi96.pushOffice_app" in widget_dump
+    )
+    widget_providers["agenda"] = (
+        "ScheduleAgendaWidgetProvider" in widget_dump
+        and "com.hebi96.pushOffice_app" in widget_dump
+    )
+    if not all(widget_providers.values()):
+        WARNINGS.append("Installed Android app does not register both widget providers")
+except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    WARNINGS.append(f"Android widget provider registry inspection: {exc}")
+
+try:
+    adb("shell", "settings", "put", "system", "font_scale", "1.3")
+    if adb("shell", "settings", "get", "system", "font_scale").decode().strip() != "1.3":
+        raise RuntimeError("Android did not apply 130% system font scaling")
+    adb("shell", "am", "force-stop", APP)
+    adb("shell", "monkey", "-p", APP, "1")
+    time.sleep(11)
+    if not find("일정 빠르게 추가"):
+        raise RuntimeError("Large-font home is missing its quick-add action")
+    screenshot("20a-large-font-home", "130% font scale: home")
+    tap("일정", bottom=True)
+    screenshot("20b-large-font-calendar", "130% font scale: calendar")
+    tap("설정", bottom=True)
+    screenshot("20c-large-font-settings", "130% font scale: settings")
+    tap("홈", bottom=True)
+    tap("일정 빠르게 추가")
+    screenshot("20d-large-font-chooser", "130% font scale: native input chooser")
+    tap("텍스트로 일정 입력")
+    screenshot("20e-large-font-editor", "130% font scale: native text editor")
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    WARNINGS.append(f"130% Android font-scale QA: {exc}")
+finally:
+    adb("shell", "settings", "put", "system", "font_scale", "1.0")
+
+try:
+    adb("shell", "wm", "size", "1440x2160")
+    adb("shell", "wm", "density", "280")
+    adb("shell", "am", "force-stop", APP)
+    adb("shell", "monkey", "-p", APP, "1")
+    time.sleep(11)
+    if not find("일정 빠르게 추가"):
+        raise RuntimeError("Tablet-size home is missing its quick-add action")
+    screenshot("21a-tablet-home", "1440x2160 tablet-class viewport: home")
+    tap("일정", bottom=True)
+    screenshot("21b-tablet-calendar", "1440x2160 tablet-class viewport: calendar")
+    tap("설정", bottom=True)
+    screenshot("21c-tablet-settings", "1440x2160 tablet-class viewport: settings")
+    tap("홈", bottom=True)
+    tap("일정 빠르게 추가")
+    screenshot("21d-tablet-chooser", "1440x2160 tablet-class viewport: native chooser")
+    tap("텍스트로 일정 입력")
+    screenshot("21e-tablet-editor", "1440x2160 tablet-class viewport: native editor")
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    WARNINGS.append(f"Tablet-class viewport QA: {exc}")
+finally:
+    adb("shell", "wm", "size", "720x1600")
+    adb("shell", "wm", "density", "280")
+    adb("shell", "settings", "put", "system", "font_scale", "1.0")
+
+(OUT / "device-matrix.json").write_text(
+    json.dumps({
+        "profiles": QA_PROFILES,
+        "widget_providers_registered": widget_providers,
+        "not_verified": [
+            "Physical phone and real tablet hardware",
+            "Launcher widget placement, resize and click on third-party launchers",
+            "Microphone-based speech recognition (emulator uses -noaudio)",
+            "Gemini Nano inference on supported real hardware",
+            "Play Store install/update on a tester account",
+        ],
+    }, ensure_ascii=False, indent=2),
+    encoding="utf-8",
+)
+
 (OUT / "capture-manifest.json").write_text(
     json.dumps({
         "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",

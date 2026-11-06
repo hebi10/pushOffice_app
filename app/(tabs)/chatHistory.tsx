@@ -255,8 +255,8 @@ export default function ChatHistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  pageHeading: { paddingHorizontal: uiSizes.screenGutter, paddingTop: uiSpacing.sm },
-  listContent: { paddingVertical: uiSpacing.xs, paddingHorizontal: uiSizes.screenGutter, paddingBottom: uiSpacing.xxl },
+  pageHeading: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingHorizontal: uiSizes.screenGutter, paddingTop: uiSpacing.sm },
+  listContent: { width: '100%', maxWidth: 720, alignSelf: 'center', paddingVertical: uiSpacing.xs, paddingHorizontal: uiSizes.screenGutter, paddingBottom: uiSpacing.xxl },
 
   /* 날짜 구분선 */
   dateSepContainer: {
@@ -328,6 +328,9 @@ const styles = StyleSheet.create({
   /* 빈 상태 */
   emptyContainer: {
     flex: 1,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
     padding: uiSpacing.xl,
