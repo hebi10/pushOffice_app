@@ -331,6 +331,31 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) 
 finally:
     adb("shell", "wm", "size", "720x1600")
 
+# Preserved screens are hidden from the tab bar, but must remain deep-linkable.
+# Verify the actual screens on Android rather than assuming routes from code.
+def capture_preserved_route(page: str, expected_label: str, screenshot_name: str) -> None:
+    adb("shell", "am", "force-stop", APP)
+    urls = [
+        f"pushofficeapp://{page}",
+        f"pushofficeapp:///{page}",
+        f"pushofficeapp:///(tabs)/{page}",
+    ]
+    for url in urls:
+        try:
+            adb("shell", "am", "start", "-W", "-a", "android.intent.action.VIEW",
+                "-d", url, "-p", APP, timeout=60)
+            time.sleep(7)
+            if find(expected_label):
+                screenshot(screenshot_name, f"preserved {page} route opened by deep link")
+                return
+        except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+            continue
+    raise RuntimeError(f"Preserved route {page} could not be opened on Android")
+
+
+capture_preserved_route("briefing", "데일리 다이제스트", "18-legacy-briefing")
+capture_preserved_route("chatHistory", "채팅 내역", "19-legacy-chat-history")
+
 (OUT / "capture-manifest.json").write_text(
     json.dumps({
         "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",
