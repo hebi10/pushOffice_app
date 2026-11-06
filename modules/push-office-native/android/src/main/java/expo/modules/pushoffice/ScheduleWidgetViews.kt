@@ -46,7 +46,7 @@ internal object ScheduleWidgetViews {
     fun measuredRowHeight() = samples.maxOf { measure(context, it, eventSize, width, rowPadding, 28, lines = lines).measuredHeight }
     var rowHeight = measuredRowHeight()
     val headingView = measure(context, heading, 14f, width, 0, 24, bold = true)
-    val brandView = measure(context, "PUSH OFFICE", 10f, width, 0, 0, bold = true)
+    val brandView = measure(context, "PushOffice", 10f, width, 0, 0, bold = true)
     val actionHeight = dp(context, 48)
     val gap = dp(context, 6)
     var padding = dp(context, 12)
