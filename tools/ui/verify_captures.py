@@ -53,6 +53,8 @@ REQUIRED = {
     "21c-tablet-settings.png",
     "21d-tablet-chooser.png",
     "21e-tablet-editor.png",
+    "22a-home-today-one.png",
+    "22b-home-today-three.png",
 }
 
 
