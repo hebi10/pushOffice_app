@@ -243,6 +243,7 @@ export default function BriefingScreen() {
               eyebrow="일정과 외부 정보"
               title="데일리 다이제스트"
               description={dayjs(targetDate).format('YYYY년 M월 D일 (ddd)')}
+              compact
             />
           </View>
 
@@ -459,7 +460,7 @@ const styles = StyleSheet.create({
    * 기존 FlatList + ListHeaderComponent 구조에서는 이 값이 부족했음
    */
   scrollContent: {
-    paddingTop: uiSpacing.md,
+    paddingTop: uiSpacing.sm,
     paddingBottom: uiSizes.touchMinHeight,
     paddingHorizontal: uiSizes.screenGutter,
   },
@@ -469,9 +470,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: uiSpacing.xs,
   },
-  headerLeft: { flex: 1 },
+  headerLeft: { flex: 1, minWidth: 0 },
   headerTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 20, fontWeight: '700' },
   headerDate: { fontFamily: APP_FONT_FAMILY, fontSize: 13, marginTop: 2 },
   refreshBtn: {
@@ -541,8 +542,8 @@ const styles = StyleSheet.create({
   /* 하단 액션 바 */
   actionBar: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
+    gap: uiSpacing.sm,
+    marginTop: uiSpacing.sm,
   },
   actionBtn: {
     flex: 1,
@@ -557,7 +558,7 @@ const styles = StyleSheet.create({
   actionBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 빈 상태 */
-  emptyBox: { alignItems: 'center', paddingVertical: 24, gap: 10 },
+  emptyBox: { alignItems: 'center', paddingVertical: uiSpacing.lg, gap: uiSpacing.sm },
   emptyTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 14 },
   errorSmall: { fontFamily: APP_FONT_FAMILY, fontSize: 12 },
   generateBtn: {
@@ -571,7 +572,7 @@ const styles = StyleSheet.create({
   generateBtnText: { fontFamily: APP_FONT_FAMILY, fontSize: 14, fontWeight: '600' },
 
   /* 레거시 일정 섹션 */
-  legacySchedules: { marginTop: 16 },
+  legacySchedules: { marginTop: uiSpacing.sm },
   scheduleSectionTitle: {
     fontFamily: APP_FONT_FAMILY, fontSize: 14,
     fontWeight: '600',
