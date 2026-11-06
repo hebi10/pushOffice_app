@@ -194,6 +194,12 @@ try:
         tap("시간 선택")
         screenshot("09-native-time-picker", "native time picker")
         adb("shell", "input", "keyevent", "4")
+        time.sleep(2)
+        adb("shell", "input", "swipe", "360", "1200", "360", "460", "420")
+        if find("일정 저장") is None:
+            raise RuntimeError("Native confirmation save button is unreachable after scrolling")
+        screenshot("07b-native-confirmation-actions", "native confirmation save action after scrolling")
+        adb("shell", "input", "swipe", "360", "440", "360", "1300", "420")
     except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         WARNINGS.append(f"Date/time picker capture: {exc}")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
@@ -316,6 +322,10 @@ try:
     screenshot("16-compact-editor", "editor on compact portrait screen")
     tap("직접 날짜와 시간 지정", scroll=True)
     screenshot("17-compact-confirmation", "confirmation form on compact portrait screen")
+    adb("shell", "input", "swipe", "360", "1180", "360", "430", "420")
+    if find("일정 저장") is None:
+        raise RuntimeError("Compact confirmation save button is unreachable after scrolling")
+    screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Compact-screen capture: {exc}")
 finally:

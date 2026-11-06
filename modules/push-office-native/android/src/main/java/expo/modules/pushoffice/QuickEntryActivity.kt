@@ -65,7 +65,7 @@ class QuickEntryActivity : Activity() {
   }
   private fun page(title: String, subtitle: String) {
     exitEditor()
-    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(22),dp(18),dp(22),dp(18)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
+    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
     val limit=(resources.displayMetrics.heightPixels-dp(64)).coerceAtLeast(dp(180))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -75,9 +75,9 @@ class QuickEntryActivity : Activity() {
       }
     }.apply { addView(root); isFillViewport=false }
     setContentView(scroll)
-    root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=12f; setTypeface(null,Typeface.BOLD) })
-    root.addView(TextView(this).apply { text=title; textSize=24f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(10),0,dp(6)) })
-    root.addView(TextView(this).apply { text=subtitle; textSize=14f; setTextColor(secondary); setPadding(0,0,0,dp(14)) })
+    root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=11f; setTypeface(null,Typeface.BOLD) })
+    root.addView(TextView(this).apply { text=title; textSize=22f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(6),0,dp(4)) })
+    root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(440)),WindowManager.LayoutParams.WRAP_CONTENT)
   }
@@ -146,13 +146,13 @@ class QuickEntryActivity : Activity() {
       setImageResource(R.drawable.quick_entry_illustration)
       scaleType=ImageView.ScaleType.FIT_CENTER
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    },LinearLayout.LayoutParams(dp(112),dp(90)).apply {
+    },LinearLayout.LayoutParams(dp(140),dp(106)).apply {
       gravity=Gravity.CENTER_HORIZONTAL
-      bottomMargin=dp(8)
+      bottomMargin=dp(10)
     })
     root.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
-      textSize=23f
+      textSize=22f
       setTextColor(foregroundColor)
       setTypeface(null,Typeface.BOLD)
       gravity=Gravity.CENTER
@@ -163,7 +163,7 @@ class QuickEntryActivity : Activity() {
       textSize=14f
       setTextColor(secondary)
       gravity=Gravity.CENTER
-      setPadding(0,0,0,dp(16))
+      setPadding(0,0,0,dp(12))
     })
     fun choice(title: Int, detail: Int, description: Int, iconRes: Int, primary: Boolean, action: ()->Unit) {
       val textColor=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor
@@ -171,7 +171,7 @@ class QuickEntryActivity : Activity() {
         orientation=LinearLayout.HORIZONTAL
         gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(14),dp(12),dp(14),dp(12))
-        minimumHeight=dp(68)
+        minimumHeight=dp(72)
         background=GradientDrawable().apply {
           setColor(if(primary) blue else fieldBackground)
           cornerRadius=dp(12).toFloat()
@@ -220,7 +220,7 @@ class QuickEntryActivity : Activity() {
         gravity=Gravity.CENTER
         importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
       },LinearLayout.LayoutParams(dp(22),-2))
-      root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+      root.addView(row,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
     }
     choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
     choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
@@ -233,25 +233,25 @@ class QuickEntryActivity : Activity() {
       textSize=14f
       setTypeface(null,Typeface.BOLD)
       setTextColor(foregroundColor)
-      setPadding(dp(2),dp(16),dp(2),dp(4))
+      setPadding(dp(2),dp(11),dp(2),dp(3))
     })
     if(!detail.isNullOrBlank()) root.addView(TextView(this).apply {
       text=detail
       textSize=12f
       setTextColor(secondary)
-      setPadding(dp(2),0,dp(2),dp(4))
+      setPadding(dp(2),0,dp(2),dp(2))
     })
   }
   private fun editor(voice: Boolean) {
-    page("일정 입력", "날짜·시간·제목을 적으면 저장 전 확인할 수 있습니다.")
+    page("일정 입력", "텍스트나 음성으로 기록하고 저장 전에 확인하세요.")
     root.addView(TextView(this).apply {
-      text="예: 내일 오후 3시 고객 미팅 · 고객 미팅 한 시간 늦춰"
+      text="예: 내일 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
       textSize=13f
       setTextColor(secondary)
       setPadding(dp(2),0,dp(2),dp(6))
     })
     session.enterEditor()
-    transcript=field("일정 입력", "날짜, 시간, 일정 제목을 입력하세요", "", true)
+    transcript=field("일정 내용", "날짜, 시간, 일정 제목을 입력하세요", "", true)
     transcript.addTextChangedListener(object: TextWatcher {
       override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
       override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
@@ -264,8 +264,8 @@ class QuickEntryActivity : Activity() {
       text="모든 입력은 기기에서 처리합니다."
       setTextColor(secondary)
       textSize=13f
-      minimumHeight=dp(44)
-      setPadding(dp(12),dp(9),dp(12),dp(9))
+      minimumHeight=dp(40)
+      setPadding(dp(10),dp(8),dp(10),dp(8))
       gravity=Gravity.CENTER_VERTICAL
       background=GradientDrawable().apply {
         setColor(fieldBackground)
@@ -273,13 +273,13 @@ class QuickEntryActivity : Activity() {
       }
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
-    sectionLabel("음성 입력", "말하기 버튼을 눌러야 녹음이 시작됩니다.")
+    root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    sectionLabel("음성 입력", "시작 버튼을 누른 후에만 녹음합니다.")
     pairedButtons(
       "음성 입력 시작", { beginSpeech() },
       "음성 입력 중지", { stopSpeech() }
     )
-    sectionLabel("기기 AI", "지원 기기에서만 로컬 AI 해석을 사용할 수 있습니다.")
+    sectionLabel("기기 AI", "지원하는 기기에서만 로컬 해석을 사용합니다.")
     pairedButtons("기기 AI로 해석", {
       stopSpeech(); cancelModel()
       val request=session.startModel(transcript.text.toString())
@@ -300,10 +300,10 @@ class QuickEntryActivity : Activity() {
         }
       }
     }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
-    sectionLabel("내용 확인", "직접 수정한 후 일정을 저장할 수 있습니다.")
+    sectionLabel("내용 확인")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
-    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
     button("뒤로") { chooser() }
+    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
     if(voice) status.text="음성 입력 시작을 누르면 기기 내 한국어 인식을 확인합니다."
   }
   private fun preview(parsed: ParsedSchedule, source: String) {
@@ -329,11 +329,11 @@ class QuickEntryActivity : Activity() {
     val formZone=original?.let(::eventZone) ?: dateTime?.zone ?: zone
     page(
       if(original==null) "일정 확인 및 저장" else "변경 내용 확인",
-      "입력 내용을 확인하고 필요한 항목을 수정한 뒤 저장하세요."
+      "제목, 날짜, 시간, 반복을 확인한 뒤 저장하세요."
     )
     val note=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      setPadding(dp(14),dp(12),dp(14),dp(12))
+      setPadding(dp(12),dp(9),dp(12),dp(9))
       background=GradientDrawable().apply {
         setColor(fieldBackground)
         cornerRadius=dp(12).toFloat()
@@ -393,13 +393,13 @@ class QuickEntryActivity : Activity() {
       })
       root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
-    sectionLabel("일정 정보", "일정 이름, 날짜 및 시작 시간을 확인하세요.")
-    val titleField=field("일정 제목","일정 제목",title)
-    val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty())
-    val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty())
+    sectionLabel("일정 정보")
+    val titleField=field("일정 제목","일정 제목",title,compact=true)
+    val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty(),compact=true)
+    val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(),compact=true)
     val pickerRow=LinearLayout(this).apply {
       orientation=LinearLayout.HORIZONTAL
-      setPadding(0,dp(8),0,dp(4))
+      setPadding(0,dp(6),0,dp(2))
     }
     fun pickerButton(label: String, action: ()->Unit) {
       pickerRow.addView(TextView(this).apply {
@@ -440,7 +440,7 @@ class QuickEntryActivity : Activity() {
     root.addView(pickerRow)
     val repeatCard=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      setPadding(dp(12),dp(10),dp(12),dp(12))
+      setPadding(dp(10),dp(8),dp(10),dp(10))
       background=GradientDrawable().apply {
         setColor(surface)
         cornerRadius=dp(12).toFloat()
@@ -452,7 +452,7 @@ class QuickEntryActivity : Activity() {
       textSize=13f
       setTypeface(null,Typeface.BOLD)
       setTextColor(foregroundColor)
-      setPadding(dp(2),0,0,dp(8))
+      setPadding(dp(2),0,0,dp(5))
     })
     val repeats=listOf("none","monthly","yearly")
     val repeatLabels=listOf("반복 없음","매월","매년")
@@ -486,7 +486,7 @@ class QuickEntryActivity : Activity() {
       }
     }
     repeatCard.addView(spinner,LinearLayout.LayoutParams(-1,-2))
-    root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
+    root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(6) })
     val error=TextView(this).apply {
       setTextColor(if(isDark) Color.rgb(248,113,113) else Color.rgb(185,28,28))
       textSize=13f
@@ -494,6 +494,7 @@ class QuickEntryActivity : Activity() {
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     root.addView(error)
+    button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
       try {
         val start=LocalDate.parse(dateField.text.toString().trim()).atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
@@ -511,12 +512,11 @@ class QuickEntryActivity : Activity() {
         Toast.makeText(this,"일정을 저장했습니다.",Toast.LENGTH_SHORT).show(); finish()
       } catch(e: Exception) { error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") } ?: "날짜와 시간을 YYYY-MM-DD, HH:mm 형식으로 확인해 주세요." }
     }
-    button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
   }
-  private fun field(label: String, hintText: String, value: String, multi: Boolean=false): EditText {
+  private fun field(label: String, hintText: String, value: String, multi: Boolean=false, compact: Boolean=false): EditText {
     val card=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      setPadding(dp(12),dp(10),dp(12),dp(12))
+      setPadding(dp(if(compact) 10 else 12),dp(if(compact) 8 else 10),dp(if(compact) 10 else 12),dp(if(compact) 9 else 12))
       background=GradientDrawable().apply {
         setColor(surface)
         cornerRadius=dp(12).toFloat()
@@ -528,7 +528,7 @@ class QuickEntryActivity : Activity() {
       textSize=13f
       setTypeface(null,Typeface.BOLD)
       setTextColor(foregroundColor)
-      setPadding(dp(2),0,0,dp(8))
+      setPadding(dp(2),0,0,dp(if(compact) 5 else 8))
     })
     return EditText(this).apply {
       hint=hintText
@@ -547,7 +547,7 @@ class QuickEntryActivity : Activity() {
         setStroke(dp(1),inputBorder)
       }
       card.addView(this,LinearLayout.LayoutParams(-1,-2))
-      root.addView(card,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(10) })
+      root.addView(card,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(compact) 6 else 10) })
     }
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {
@@ -570,7 +570,7 @@ class QuickEntryActivity : Activity() {
       setSingleLine(false)
       setPadding(dp(12),dp(10),dp(12),dp(10))
       setOnClickListener { action() }
-    },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(primary)14 else 8) })
+    },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(if(primary)12 else 6) })
   }
   private fun pairedButtons(
     leftLabel: String, leftAction: () -> Unit,

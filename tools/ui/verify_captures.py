@@ -17,6 +17,7 @@ REQUIRED = {
     "05-quick-entry.png",
     "06-native-editor.png",
     "07-native-save-preview.png",
+    "07b-native-confirmation-actions.png",
     "08-native-date-picker.png",
     "09-native-time-picker.png",
     "10-home-with-fixture.png",
@@ -39,6 +40,7 @@ REQUIRED = {
     "15-compact-chooser.png",
     "16-compact-editor.png",
     "17-compact-confirmation.png",
+    "17b-compact-confirmation-actions.png",
 }
 
 
