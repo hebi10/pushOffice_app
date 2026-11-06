@@ -81,7 +81,7 @@ class QuickEntryActivity : Activity() {
       orientation=LinearLayout.VERTICAL
       background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
     }
-    frame.addView(scroll,LinearLayout.LayoutParams(-1,0,1f))
+    frame.addView(scroll,LinearLayout.LayoutParams(-1,-2))
     confirmationFooter=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(18),0,dp(18),dp(12))
