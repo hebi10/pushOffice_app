@@ -1,5 +1,6 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import { AppBrandHeader, NotificationSettingsAction } from '@/src/components/ui/AppBrandHeader';
 import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,10 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
+        headerTitle: () => <AppBrandHeader />,
+        headerRight: () => <NotificationSettingsAction />,
+        headerTitleAlign: 'left',
+        headerShadowVisible: false,
         headerStyle: { backgroundColor: colors.headerBackground },
         headerTintColor: colors.text,
         headerTitleStyle: { fontFamily: APP_FONT_FAMILY, fontWeight: '600', fontSize: 17 },
@@ -63,6 +68,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: '설정',
+          headerRight: () => null,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size ?? 22} color={color} />
           ),
