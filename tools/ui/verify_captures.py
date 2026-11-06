@@ -41,6 +41,8 @@ REQUIRED = {
     "16-compact-editor.png",
     "17-compact-confirmation.png",
     "17b-compact-confirmation-actions.png",
+    "18-legacy-briefing.png",
+    "19-legacy-chat-history.png",
 }
 
 
