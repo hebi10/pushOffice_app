@@ -11,7 +11,7 @@ export function AppBrandHeader() {
   return (
     <View style={styles.brand} accessible accessibilityRole="header" accessibilityLabel="Push Office">
       <Image
-        source={require('@/assets/images/push-office-mark.png')}
+        source={require('@/assets/images/push-office-icon.png')}
         style={styles.logo}
         resizeMode="contain"
         accessible={false}
