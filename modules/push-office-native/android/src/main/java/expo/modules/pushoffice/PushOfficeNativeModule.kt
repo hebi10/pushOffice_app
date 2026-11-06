@@ -27,6 +27,16 @@ class PushOfficeNativeModule : Module() {
         catch(e: Exception) { promise.reject("OPEN_ENTRY",e.message,e) }
       }
     }
+    AsyncFunction("openVoiceQuickEntry") { promise: Promise ->
+      val activity=appContext.currentActivity
+      if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 음성 입력을 열어 주세요.",null)
+      else activity.runOnUiThread {
+        try {
+          activity.startActivity(Intent(activity,QuickEntryActivity::class.java).putExtra("entryMode","voice"))
+          promise.resolve(null)
+        } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
+      }
+    }
     AsyncFunction("requestAddTile") { promise: Promise ->
       val activity=appContext.currentActivity
       if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 타일 추가를 요청해 주세요.",null)
