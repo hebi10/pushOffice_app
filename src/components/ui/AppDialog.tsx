@@ -44,14 +44,16 @@ export function AppDialog({
           accessibilityViewIsModal
           style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
         >
-          <View style={[styles.iconWrap, { backgroundColor: destructive ? colors.inputBackground : colors.primaryLight }]}>
-            <Ionicons
-              name={destructive ? 'trash-outline' : 'information-circle-outline'}
-              size={26}
-              color={actionColor}
-            />
+          <View style={styles.heading}>
+            <View style={[styles.iconWrap, { backgroundColor: destructive ? colors.inputBackground : colors.primaryLight }]}>
+              <Ionicons
+                name={destructive ? 'trash-outline' : 'information-circle-outline'}
+                size={22}
+                color={actionColor}
+              />
+            </View>
+            <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</Text>
           </View>
-          <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
           <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator={false}>
             <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
           </ScrollView>
@@ -93,19 +95,20 @@ const styles = StyleSheet.create({
     maxWidth: uiSizes.dialogMaxWidth,
     maxHeight: '88%',
     alignSelf: 'center',
-    padding: uiSpacing.lg + 2,
+    padding: uiSpacing.md + 2,
     borderRadius: uiRadii.dialog,
     borderWidth: uiSizes.borderWidth,
     gap: uiSpacing.sm,
   },
+  heading: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.sm },
   iconWrap: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     borderRadius: uiRadii.button,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  title: uiTypography.dialogTitle,
+  title: { ...uiTypography.dialogTitle, flex: 1, minWidth: 0 },
   messageScroll: { flexShrink: 1 },
   message: { ...uiTypography.body, fontSize: 14, lineHeight: 22 },
   actions: { flexDirection: 'row', gap: uiSpacing.xs + 2, marginTop: uiSpacing.xs },
