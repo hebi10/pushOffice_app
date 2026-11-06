@@ -43,6 +43,16 @@ REQUIRED = {
     "17b-compact-confirmation-actions.png",
     "18-legacy-briefing.png",
     "19-legacy-chat-history.png",
+    "20a-large-font-home.png",
+    "20b-large-font-calendar.png",
+    "20c-large-font-settings.png",
+    "20d-large-font-chooser.png",
+    "20e-large-font-editor.png",
+    "21a-tablet-home.png",
+    "21b-tablet-calendar.png",
+    "21c-tablet-settings.png",
+    "21d-tablet-chooser.png",
+    "21e-tablet-editor.png",
 }
 
 
@@ -97,6 +107,44 @@ def verify() -> None:
     compact = dimensions.get("17a-schedule-detail-compact.png")
     if full and compact and compact[0] >= full[0]:
         errors.append("compact detail screenshot was not captured at a narrower viewport")
+
+    normal = dimensions.get("01-home.png")
+    for name in [
+        "20a-large-font-home.png",
+        "20b-large-font-calendar.png",
+        "20c-large-font-settings.png",
+        "20d-large-font-chooser.png",
+        "20e-large-font-editor.png",
+    ]:
+        if normal and name in dimensions and dimensions[name] != normal:
+            errors.append(f"large-font screenshot has wrong viewport: {name}")
+
+    for name in [
+        "21a-tablet-home.png",
+        "21b-tablet-calendar.png",
+        "21c-tablet-settings.png",
+        "21d-tablet-chooser.png",
+        "21e-tablet-editor.png",
+    ]:
+        if normal and name in dimensions:
+            tablet_w, tablet_h = dimensions[name]
+            if tablet_w <= normal[0] or tablet_h <= normal[1]:
+                errors.append(f"tablet-class screenshot was not captured at a larger viewport: {name}")
+
+    matrix_path = ROOT / "device-matrix.json"
+    if not matrix_path.is_file():
+        errors.append("device-matrix.json is missing")
+    else:
+        matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+        profiles = matrix.get("profiles", {})
+        large = profiles.get("large_font", {})
+        tablet = profiles.get("tablet_viewport", {})
+        if large.get("font_scale") != 1.3 or large.get("viewport") != "720x1600":
+            errors.append("large-font runtime profile is not the requested QA configuration")
+        if tablet.get("font_scale") != 1.0 or tablet.get("viewport") != "1440x2160":
+            errors.append("tablet-class runtime profile is not the requested QA configuration")
+        if not all(matrix.get("widget_providers_registered", {}).get(key) is True for key in ("small", "agenda")):
+            errors.append("both installed Android widget providers were not verified")
 
     if errors:
         print("Push Office UI capture verification failed:")
