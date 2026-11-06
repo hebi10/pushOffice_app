@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AppState, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { useFocusEffect } from 'expo-router';
@@ -117,10 +118,17 @@ export default function SettingsScreen() {
                     backgroundColor: active ? colors.primary : colors.surface,
                     justifyContent: 'center',
                     alignItems: 'center',
+                    flexDirection: 'row',
+                    gap: uiSpacing.xs,
                     paddingHorizontal: uiSpacing.sm,
                   }}
                 >
-                  <Text style={{ color: active ? colors.onPrimary : colors.text, fontWeight: '700', fontSize: 14 }}>{label}</Text>
+                  <Ionicons
+                    name={value === 'basic' ? 'settings-outline' : 'options-outline'}
+                    size={18}
+                    color={active ? colors.onPrimary : colors.textSecondary}
+                  />
+                  <Text style={{ color: active ? colors.onPrimary : colors.text, fontWeight: '700', fontSize: 14, flexShrink: 1 }}>{label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -130,7 +138,6 @@ export default function SettingsScreen() {
               <SettingsGroup
                 title="알림과 아침 브리핑"
                 icon="notifications-outline"
-                description="일정 알림과 하루 요약을 관리합니다."
               >
                 <SettingsToggleRow
                   icon="notifications-outline"
@@ -187,14 +194,13 @@ export default function SettingsScreen() {
               <SettingsGroup
                 title="빠른 설정과 홈 위젯"
                 icon="grid-outline"
-                description="홈 화면이나 빠른 설정에서 일정에 접근합니다."
               >
                 <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 일정 입력을 추가합니다." onPress={() => { void addTile(); }} />
                 <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가장 가까운 일정 하나를 표시합니다." onPress={() => { void pin('small'); }} />
                 <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘의 일정 목록을 표시합니다." onPress={() => { void pin('agenda'); }} />
                 <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
               </SettingsGroup>
-              <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline" description="지원하는 기기에서만 일부 기능이 동작합니다.">
+              <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
                 <SettingsStatusRow
                   icon="sparkles-outline"
                   title="Gemini Nano"
@@ -210,7 +216,7 @@ export default function SettingsScreen() {
             </>
           ) : (
             <>
-              <SettingsGroup title="선택한 외부 정보" icon="cloud-outline" description="홈에서 직접 불러올 때만 요청합니다. 일정 내용은 전송하지 않습니다.">
+              <SettingsGroup title="선택한 외부 정보" icon="cloud-outline" description="요청할 때만 조회 · 일정 내용은 전송하지 않음">
                 <SettingsToggleRow
                   icon="cloudy-outline"
                   title="날씨"
@@ -266,7 +272,7 @@ export default function SettingsScreen() {
                   onPress={() => { void retryImport(); }}
                 />
               </SettingsGroup>
-              <SettingsGroup title="화면과 보관" icon="color-palette-outline" description="화면 테마를 선택하고 데이터 저장 방식을 확인하세요.">
+              <SettingsGroup title="화면과 보관" icon="color-palette-outline">
                 <SettingsChoiceRow icon="phone-portrait-outline" title="시스템 테마" selected={settings.themeMode === 'system'} onPress={() => { void save({ themeMode: 'system' }); }} />
                 <SettingsChoiceRow icon="sunny-outline" title="밝은 테마" selected={settings.themeMode === 'light'} onPress={() => { void save({ themeMode: 'light' }); }} />
                 <SettingsChoiceRow icon="moon-outline" title="어두운 테마" selected={settings.themeMode === 'dark'} onPress={() => { void save({ themeMode: 'dark' }); }} />
