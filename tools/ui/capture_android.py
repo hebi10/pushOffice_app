@@ -186,6 +186,8 @@ WARNINGS: list[str] = []
 try:
     tap("직접 날짜와 시간 지정")
     screenshot("07-native-save-preview", "branded native date/time confirmation form")
+    tap("일정 저장", scroll=True)
+    screenshot("07d-native-confirmation-invalid", "inline error after attempting to save incomplete schedule")
     try:
         tap("달력에서 날짜 선택")
         screenshot("08-native-date-picker", "native calendar picker")
@@ -213,6 +215,7 @@ try:
     type_field("일정 제목", "UITest")
     type_field("날짜 (YYYY-MM-DD)", tomorrow)
     type_field("시간 (HH:mm)", "09:00")
+    screenshot("07c-native-confirmation-populated", "real filled schedule with localized datetime summary and footer action")
     tap("일정 저장", scroll=True)
     time.sleep(10)
     screenshot("10-home-with-fixture", "next appointment created on isolated emulator")
