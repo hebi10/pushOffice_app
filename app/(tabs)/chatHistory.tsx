@@ -194,7 +194,7 @@ export default function ChatHistoryScreen() {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
         <View style={styles.pageHeading}>
-          <ScreenIntro eyebrow="지난 일정 기록" title="채팅 내역" description="일정 등록·변경 내역을 확인하세요." />
+          <ScreenIntro eyebrow="지난 일정 기록" title="채팅 내역" description="일정 등록·변경 내역을 확인하세요." compact />
         </View>
         <View style={styles.emptyContainer}>
           <Ionicons name="alert-circle-outline" size={40} color={colors.textSecondary} />
@@ -215,6 +215,7 @@ export default function ChatHistoryScreen() {
           eyebrow="지난 일정 기록"
           title="채팅 내역"
           description="일정 등록·변경 내역을 확인하세요."
+          compact
         />
       </View>
       {(!messages || messages.length === 0) ? (
@@ -224,7 +225,7 @@ export default function ChatHistoryScreen() {
             아직 채팅 내역이 없습니다
           </Text>
           <Text style={[styles.emptyHint, { color: colors.textTertiary }]}>
-            홈 탭에서 AI와 대화하여 일정을 등록하면{'\n'}이곳에 이력이 표시됩니다.
+            기록된 일정 대화가 생기면{'\n'}이곳에서 확인할 수 있습니다.
           </Text>
           <View style={styles.emptyAction}>
             <AssistantButton
@@ -254,8 +255,8 @@ export default function ChatHistoryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  pageHeading: { paddingHorizontal: uiSizes.screenGutter, paddingTop: uiSpacing.xs },
-  listContent: { paddingVertical: uiSpacing.sm, paddingHorizontal: uiSizes.screenGutter, paddingBottom: uiSpacing.xxl },
+  pageHeading: { paddingHorizontal: uiSizes.screenGutter, paddingTop: uiSpacing.sm },
+  listContent: { paddingVertical: uiSpacing.xs, paddingHorizontal: uiSizes.screenGutter, paddingBottom: uiSpacing.xxl },
 
   /* 날짜 구분선 */
   dateSepContainer: {
@@ -295,17 +296,11 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
   },
   cancelledBubble: { opacity: 0.5 },
-  bubbleText: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 14,
-    lineHeight: 20,
-  },
+  bubbleText: { ...uiTypography.body, fontSize: 14, lineHeight: 21 },
   cancelledText: {
     textDecorationLine: 'line-through',
   },
-  timeText: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 10,
-    marginBottom: 2,
-  },
+  timeText: { ...uiTypography.caption, fontSize: 11, marginBottom: uiSpacing.xxs },
 
   /* 액션 버튼 */
   actionRow: {
@@ -337,16 +332,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: uiSpacing.xl,
   },
-  emptyTitle: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
-  },
-  emptyHint: {
-    fontFamily: APP_FONT_FAMILY,    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 20,
-  },
+  emptyTitle: { ...uiTypography.sectionTitle, fontSize: 16, fontWeight: '600', marginTop: uiSpacing.sm, textAlign: 'center' },
+  emptyHint: { ...uiTypography.body, fontSize: 13, lineHeight: 20, textAlign: 'center', marginTop: uiSpacing.xs },
   emptyAction: { width: '100%', maxWidth: 320, marginTop: uiSpacing.lg },
 });
