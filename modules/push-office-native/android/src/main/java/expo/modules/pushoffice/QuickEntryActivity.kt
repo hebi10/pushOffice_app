@@ -25,12 +25,14 @@ import android.widget.*
 import kotlinx.coroutines.*
 import java.time.*
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.UUID
 
 /** A small native surface shared by the tile, widgets and app. Recording is always user initiated. */
 class QuickEntryActivity : Activity() {
   private val scope=CoroutineScope(SupervisorJob()+Dispatchers.Main.immediate)
   private lateinit var root: LinearLayout
+  private var confirmationFooter: LinearLayout?=null
   private lateinit var transcript: EditText
   private lateinit var status: TextView
   private var recognizer: SpeechRecognizer?=null
@@ -65,8 +67,9 @@ class QuickEntryActivity : Activity() {
   }
   private fun page(title: String, subtitle: String) {
     exitEditor()
+    confirmationFooter=null
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
-    val limit=(resources.displayMetrics.heightPixels-dp(64)).coerceAtLeast(dp(180))
+    val limit=(resources.displayMetrics.heightPixels-dp(160)).coerceAtLeast(dp(180))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
@@ -74,7 +77,17 @@ class QuickEntryActivity : Activity() {
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
       }
     }.apply { addView(root); isFillViewport=false }
-    setContentView(scroll)
+    val frame=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
+    }
+    frame.addView(scroll,LinearLayout.LayoutParams(-1,-2))
+    confirmationFooter=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      setPadding(dp(18),0,dp(18),dp(12))
+      visibility=View.GONE
+    }.also { frame.addView(it,LinearLayout.LayoutParams(-1,-2)) }
+    setContentView(frame)
     root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=11f; setTypeface(null,Typeface.BOLD) })
     root.addView(TextView(this).apply { text=title; textSize=22f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(6),0,dp(4)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
@@ -82,6 +95,7 @@ class QuickEntryActivity : Activity() {
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(440)),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
+    confirmationFooter=null
     exitEditor()
     var availableWidth=resources.displayMetrics.widthPixels
     var availableHeight=resources.displayMetrics.heightPixels
@@ -274,6 +288,7 @@ class QuickEntryActivity : Activity() {
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     root.addView(status,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(8) })
+    val optionalToolsStart=root.childCount
     sectionLabel("음성 입력", "시작 버튼을 누른 후에만 녹음합니다.")
     pairedButtons(
       "음성 입력 시작", { beginSpeech() },
@@ -300,6 +315,26 @@ class QuickEntryActivity : Activity() {
         }
       }
     }, "AI 해석 취소", { session.inputChanged(); cancelModel(); status.text="기기 AI 해석을 취소했습니다." })
+    val optionalTools=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
+    while(root.childCount>optionalToolsStart) {
+      val item=root.getChildAt(optionalToolsStart)
+      root.removeViewAt(optionalToolsStart)
+      optionalTools.addView(item)
+    }
+    val toolsToggle=Button(this).apply {
+      text=if(voice) "음성·AI 도구 접기" else "음성·AI 도구 펼치기"
+      isAllCaps=false
+      contentDescription=text
+      minimumHeight=dp(48)
+      setOnClickListener {
+        optionalTools.visibility=if(optionalTools.visibility==View.VISIBLE) View.GONE else View.VISIBLE
+        text=if(optionalTools.visibility==View.VISIBLE) "음성·AI 도구 접기" else "음성·AI 도구 펼치기"
+        contentDescription=text
+      }
+    }
+    root.addView(toolsToggle)
+    optionalTools.visibility=if(voice) View.VISIBLE else View.GONE
+    root.addView(optionalTools)
     sectionLabel("내용 확인")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
     button("뒤로") { chooser() }
@@ -394,9 +429,30 @@ class QuickEntryActivity : Activity() {
       root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
     sectionLabel("일정 정보")
+    val localizedSummary=TextView(this).apply {
+      text=dateTime?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) ?: "날짜와 시간을 선택해 주세요."
+      textSize=15f
+      setTextColor(foregroundColor)
+      setTypeface(null,Typeface.BOLD)
+      setPadding(dp(3),dp(4),dp(3),dp(8))
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
+    }
+    root.addView(localizedSummary)
     val titleField=field("일정 제목","일정 제목",title,compact=true)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty(),compact=true)
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(),compact=true)
+    fun updateLocalizedSummary() {
+      val date=runCatching { LocalDate.parse(dateField.text.toString().trim()) }.getOrNull()
+      val time=runCatching { LocalTime.parse(timeField.text.toString().trim()) }.getOrNull()
+      localizedSummary.text=if(date!=null && time!=null) date.atTime(time).format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) else "날짜와 시간을 확인해 주세요."
+    }
+    val summaryWatcher=object: TextWatcher {
+      override fun beforeTextChanged(s: CharSequence?,start: Int,count: Int,after: Int) {}
+      override fun onTextChanged(s: CharSequence?,start: Int,before: Int,count: Int) { updateLocalizedSummary() }
+      override fun afterTextChanged(s: Editable?) {}
+    }
+    dateField.addTextChangedListener(summaryWatcher)
+    timeField.addTextChangedListener(summaryWatcher)
     val pickerRow=LinearLayout(this).apply {
       orientation=LinearLayout.HORIZONTAL
       setPadding(0,dp(6),0,dp(2))
@@ -553,7 +609,9 @@ class QuickEntryActivity : Activity() {
   private fun button(label: String, description: String=label, action: ()->Unit) {
     val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
     val color=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else blue
-    root.addView(Button(this).apply {
+    val target=if(label=="일정 저장" || label=="변경 내용 저장") confirmationFooter ?: root else root
+    if(target !== root) target.visibility=View.VISIBLE
+    target.addView(Button(this).apply {
       text=label
       contentDescription=description
       textSize=15f
