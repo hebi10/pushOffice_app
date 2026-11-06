@@ -8,7 +8,7 @@ import struct
 import zlib
 import subprocess
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -464,6 +464,41 @@ finally:
     }, ensure_ascii=False, indent=2),
     encoding="utf-8",
 )
+
+# A disposable three-event home fixture gives design reviewers a populated baseline.
+# Run after all previous emulator scenarios; clear only this isolated test installation.
+try:
+    adb("shell", "pm", "clear", APP)
+    adb("shell", "monkey", "-p", APP, "1")
+    time.sleep(22)
+    device_clock = datetime.strptime(
+        adb("shell", "date", "+%Y-%m-%dT%H:%M").decode().strip(), "%Y-%m-%dT%H:%M"
+    )
+    next_midnight = datetime.combine(device_clock.date() + timedelta(days=1), datetime.min.time())
+    minutes_left = int((next_midnight - device_clock).total_seconds() // 60)
+    if minutes_left < 16:
+        raise RuntimeError("Too near device midnight to capture three future appointments")
+    fixture_gap = max(5, min(40, (minutes_left - 8) // 4))
+    for sample in (1, 2, 3):
+        fixture = device_clock + timedelta(minutes=fixture_gap * sample)
+        tap("일정 빠르게 추가")
+        tap("텍스트로 일정 입력")
+        tap("직접 날짜와 시간 지정", scroll=True)
+        type_field("일정 제목", f"TodayQA{sample}")
+        type_field("날짜 (YYYY-MM-DD)", fixture.strftime("%Y-%m-%d"))
+        type_field("시간 (HH:mm)", fixture.strftime("%H:%M"))
+        tap("일정 저장", scroll=True)
+        time.sleep(4)
+        if sample == 1:
+            if find("TodayQA1") is None:
+                raise RuntimeError("Populated home did not show its first appointment")
+            screenshot("22a-home-today-one", "home with one real local appointment today")
+    if find("3건") is None:
+        raise RuntimeError("Populated home did not show three appointments today")
+    screenshot("22b-home-today-three", "home with three real local appointments today")
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
+    WARNINGS.append(f"Populated home fixture: {exc}")
+
 
 (OUT / "capture-manifest.json").write_text(
     json.dumps({

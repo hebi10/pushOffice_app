@@ -37,6 +37,8 @@ export interface AiStatus {
 export type PushOfficeNativeEvents = { schedulesChanged: () => void };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
+  /** Opens the existing voice editor without starting microphone capture. */
+  openVoiceQuickEntry(): Promise<void>;
   /** Actual system tile-add callback: added, already_added, not_added, error_<code>, unsupported_manual. */
   requestAddTile(): Promise<string>;
   /** Request accepted by launcher; true does not mean the user placed the widget. */
@@ -65,6 +67,7 @@ const unavailable = async (): Promise<never> => {
 /** Import-safe fallback; never silently claims a save or alarm was successful. */
 export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
+  openVoiceQuickEntry: unavailable,
   requestAddTile: unavailable,
   requestPinWidget: unavailable,
   getAiStatus: async () => ({ status: 'unavailable', message: '기기 AI는 지원되는 Android 기기에서 사용할 수 있습니다.' }),
