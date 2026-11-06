@@ -173,6 +173,9 @@ export function SettingRow({
 
 export const assistantStyles = StyleSheet.create({
   content: {
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
     paddingHorizontal: uiSizes.screenGutter,
     paddingTop: uiSpacing.sm,
     paddingBottom: uiSpacing.xxl + uiSpacing.sm,
