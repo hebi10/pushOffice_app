@@ -19,6 +19,10 @@ export const uiRadii = {
 
 export const uiSizes = {
   screenGutter: 16,
+  brandMark: 32,
+  introMinHeight: 88,
+  introArtworkWidth: 88,
+  introArtworkHeight: 74,
   cardPadding: 16,
   controlMinHeight: 50,
   touchMinHeight: 48,
@@ -27,7 +31,8 @@ export const uiSizes = {
 } as const;
 
 export const uiTypography = {
-  screenTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 26, lineHeight: 34, fontWeight: '800' as const },
+  brand: { fontFamily: APP_FONT_FAMILY, fontSize: 18, lineHeight: 24, fontWeight: '700' as const },
+  screenTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 25, lineHeight: 32, fontWeight: '800' as const },
   dialogTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 20, lineHeight: 28, fontWeight: '700' as const },
   sectionTitle: { fontFamily: APP_FONT_FAMILY, fontSize: 17, lineHeight: 23, fontWeight: '700' as const },
   body: { fontFamily: APP_FONT_FAMILY, fontSize: 15, lineHeight: 23 },
