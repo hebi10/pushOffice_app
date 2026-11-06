@@ -93,7 +93,7 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <ScreenIntro
-            eyebrow="PUSH OFFICE"
+            eyebrow="환경 설정"
             title="설정"
             description="일정과 알림을 원하는 방식으로 관리하세요."
             artwork={require('@/assets/images/illustration-settings.jpg')}

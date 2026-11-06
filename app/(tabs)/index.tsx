@@ -92,7 +92,7 @@ export default function HomeScreen() {
         refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
       >
         <ScreenIntro
-          eyebrow="PUSH OFFICE · 로컬 일정 비서"
+          eyebrow="로컬 일정 비서"
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
           description={dayjs(now).format('M월 D일 dddd')}
           artwork={require('@/assets/images/illustration-home.jpg')}
