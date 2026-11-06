@@ -18,6 +18,8 @@ REQUIRED = {
     "06-native-editor.png",
     "07-native-save-preview.png",
     "07b-native-confirmation-actions.png",
+    "07c-native-confirmation-populated.png",
+    "07d-native-confirmation-invalid.png",
     "08-native-date-picker.png",
     "09-native-time-picker.png",
     "10-home-with-fixture.png",
