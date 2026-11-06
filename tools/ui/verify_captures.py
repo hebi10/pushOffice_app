@@ -11,6 +11,8 @@ REQUIRED = {
     "01-home.png",
     "02-calendar.png",
     "03-settings.png",
+    "03c-settings-time-expanded.png",
+    "03d-settings-save-notice.png",
     "04-settings-advanced.png",
     "05-quick-entry.png",
     "06-native-editor.png",
