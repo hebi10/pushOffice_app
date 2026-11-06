@@ -172,9 +172,9 @@ export function SettingRow({
 export const assistantStyles = StyleSheet.create({
   content: {
     paddingHorizontal: uiSizes.screenGutter,
-    paddingTop: uiSpacing.lg,
+    paddingTop: uiSpacing.sm,
     paddingBottom: uiSpacing.xxl + uiSpacing.sm,
-    gap: uiSpacing.sm + 2,
+    gap: uiSpacing.sm,
   },
   heading: { ...uiTypography.screenTitle, letterSpacing: -0.5 },
   subtitle: { ...uiTypography.body, fontSize: 14, lineHeight: 21 },
