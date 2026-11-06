@@ -9,7 +9,8 @@ const card = read('src/components/AssistantUI.tsx');
 const item = read('src/components/ScheduleItem.tsx');
 
 test('precision stage 3 uses a compact calendar intro without changing other screens', () => {
-  assert.match(calendar, /eyebrow="날짜별 일정"[\s\S]*?title="일정 · 캘린더"[\s\S]*?compact/);
+  assert.match(calendar, /<ScreenIntro title="캘린더" compact \/>/);
+  assert.doesNotMatch(calendar, /eyebrow="날짜별 일정"/);
   assert.doesNotMatch(calendar, /artwork=\{require\(/);
   assert.match(intro, /compact = false/);
   assert.match(intro, /compact && styles\.compactContainer/);
@@ -20,7 +21,9 @@ test('precision stage 3 uses a compact calendar intro without changing other scr
 
 test('precision stage 3 reduces calendar week gaps while preserving month/date navigation', () => {
   assert.match(calendar, /stylesheet\.calendar\.main/);
-  assert.match(calendar, /marginTop: 3, marginBottom: 3/);
+  assert.match(calendar, /marginTop: 1, marginBottom: 1/);
+  assert.match(calendar, /dayTextAtIndex0: \{ color: colors\.danger \}/);
+  assert.match(calendar, /dayTextAtIndex6: \{ color: colors\.primary \}/);
   assert.match(calendar, /stylesheet\.calendar\.header/);
   assert.match(calendar, /theme=\{calendarTheme\}/);
   assert.match(calendar, /enableSwipeMonths/);
@@ -48,6 +51,8 @@ test('precision stage 3 flattens only the agenda wrapper and keeps agenda cards 
   assert.match(card, /flat && styles\.flatCard/);
   assert.match(card, /backgroundColor: flat \? colors\.background : colors\.surface/);
   assert.match(calendar, /items\.map\(item =>/);
+  assert.match(calendar, /\.sort\(\(a, b\) => a\.startAt\.toMillis\(\) - b\.startAt\.toMillis\(\)\)/);
+  assert.match(item, /calendarContainer: \{ minHeight: 68, gap: uiSpacing\.xs, paddingVertical: uiSpacing\.xs \}/);
   assert.match(calendar, /variant="calendar"/);
   assert.match(item, /numberOfLines=\{calendar \? 3 : 2\}/);
   assert.match(item, /router\.push\(/);
@@ -62,4 +67,17 @@ test('precision stage 3 retains quick entry and distinct loading, error and empt
   assert.match(calendar, /schedules\.isError/);
   assert.match(calendar, /<EmptyState message=/);
   assert.doesNotMatch(calendar, /회의실 A|Zoom|강남구/);
+});
+
+test('calendar redesign stage 2 captures selected days with one and three real local events', () => {
+  const capture = read('tools/ui/capture_android.py');
+  const verify = read('tools/ui/verify_captures.py');
+  for (const name of ['23a-calendar-today-one', '23b-calendar-today-three', '23c-calendar-today-three-list']) {
+    assert.ok(capture.includes('screenshot("' + name + '"'), 'Missing populated calendar screenshot ' + name);
+    assert.ok(verify.includes('"' + name + '.png"'), 'Missing required verification ' + name);
+  }
+  assert.match(capture, /find\("일정 1건"\)/);
+  assert.match(capture, /find\("일정 3건"\)/);
+  assert.match(capture, /find\("TodayQA1"\)/);
+  assert.match(calendar, /<EmptyState message="선택한 날짜에 일정이 없습니다\." \/>/);
 });
