@@ -108,13 +108,18 @@ export function SettingsActionRow({
       accessibilityLabel={title}
       accessibilityHint={description}
       accessibilityState={{ disabled: busy, busy, expanded }}
+      accessibilityValue={status ? { text: status } : undefined}
       disabled={busy}
       onPress={onPress}
       style={[styles.row, { opacity: busy ? 0.6 : 1 }]}
     >
       <RowIcon name={icon} />
       <RowCopy title={title} description={description} />
-      {status ? <Text style={[styles.status, { color: colors.primary }]}>{status}</Text> : null}
+      {status ? (
+        <View style={[styles.statusBadge, { backgroundColor: colors.primaryLight }]}>
+          <Text style={[styles.status, { color: colors.primary }]}>{status}</Text>
+        </View>
+      ) : null}
       {busy
         ? <ActivityIndicator color={colors.primary} size="small" />
         : <Ionicons name={expanded === undefined ? 'chevron-forward' : expanded ? 'chevron-up' : 'chevron-down'} color={colors.textSecondary} size={18} />}
@@ -185,30 +190,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: uiSpacing.sm,
-    paddingHorizontal: uiSpacing.md,
-    paddingVertical: uiSpacing.sm,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
   },
   groupTitle: { ...uiTypography.sectionTitle },
-  groupContent: { paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs, gap: uiSpacing.xs },
+  groupContent: { paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xxs, gap: 0 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: uiSpacing.sm,
+    gap: uiSpacing.xs,
     minHeight: 56,
     paddingHorizontal: uiSpacing.xs,
-    paddingVertical: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
   },
   iconBox: {
-    width: 38,
-    height: 38,
+    width: 34,
+    height: 34,
     borderRadius: uiRadii.field,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
   },
-  copy: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
+  copy: { flex: 1, minWidth: 0, gap: 2 },
   rowTitle: { ...uiTypography.body, fontWeight: '600' },
-  description: { ...uiTypography.caption, lineHeight: 19, flexShrink: 1 },
-  status: { ...uiTypography.caption, fontWeight: '700', maxWidth: 92, textAlign: 'right' },
-  note: { ...uiTypography.caption, lineHeight: 19, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xs },
+  description: { ...uiTypography.caption, lineHeight: 17, flexShrink: 1 },
+  statusBadge: { minHeight: 28, maxWidth: 88, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xxs, borderRadius: uiRadii.field, alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
+  status: { ...uiTypography.caption, fontWeight: '700', textAlign: 'center' },
+  note: { ...uiTypography.caption, lineHeight: 18, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xs },
 });
