@@ -43,7 +43,7 @@ test('precision stage 2 highlights actual next schedule and keeps every daily en
   assert.match(home, /todayItems\.map\(/);
   assert.match(scheduleRow, /<View style=\{\[styles\.accentRail/);
   assert.match(scheduleRow, /router\.push\(`\/schedule\/\$\{schedule\.id\}`\)/);
-  assert.match(scheduleRow, /calendarContainer: \{ minHeight: 74/);
+  assert.match(scheduleRow, /calendarContainer: \{ minHeight: 68/);
 });
 
 test('precision stage 2 leaves local assistant and user-triggered external network intact', () => {

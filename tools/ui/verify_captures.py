@@ -55,6 +55,9 @@ REQUIRED = {
     "21e-tablet-editor.png",
     "22a-home-today-one.png",
     "22b-home-today-three.png",
+    "23a-calendar-today-one.png",
+    "23b-calendar-today-three.png",
+    "23c-calendar-today-three-list.png",
 }
 
 

@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     borderWidth: uiSizes.borderWidth,
     gap: uiSpacing.xs,
   },
-  calendarContainer: { minHeight: 74, gap: uiSpacing.sm, paddingVertical: uiSpacing.sm },
+  calendarContainer: { minHeight: 68, gap: uiSpacing.xs, paddingVertical: uiSpacing.xs },
   accentRail: { width: 3, alignSelf: 'stretch', borderRadius: uiRadii.field },
   timeCol: { width: 62, gap: uiSpacing.xxs },
   time: { ...uiTypography.body, fontWeight: '700', fontVariant: ['tabular-nums'] },

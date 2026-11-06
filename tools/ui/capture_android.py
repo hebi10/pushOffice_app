@@ -493,9 +493,34 @@ try:
             if find("TodayQA1") is None:
                 raise RuntimeError("Populated home did not show its first appointment")
             screenshot("22a-home-today-one", "home with one real local appointment today")
+            tap("일정", bottom=True)
+            for _ in range(4):
+                if find("일정 1건") is not None:
+                    break
+                time.sleep(2)
+            if find("일정 1건") is None:
+                raise RuntimeError("Calendar selected day does not show one real event")
+            screenshot("23a-calendar-today-one", "selected today's calendar with one actual local event")
+            tap("홈", bottom=True)
     if find("3건") is None:
         raise RuntimeError("Populated home did not show three appointments today")
     screenshot("22b-home-today-three", "home with three real local appointments today")
+    tap("일정", bottom=True)
+    for _ in range(4):
+        if find("일정 3건") is not None:
+            break
+        time.sleep(2)
+    if find("일정 3건") is None:
+        raise RuntimeError("Calendar selected day does not show three real events")
+    screenshot("23b-calendar-today-three", "selected today's calendar with three local appointments")
+    adb("shell", "input", "swipe", "360", "1180", "360", "720", "380")
+    time.sleep(2)
+    if find("TodayQA1") is None:
+        adb("shell", "input", "swipe", "360", "1100", "360", "640", "380")
+        time.sleep(2)
+    if find("TodayQA1") is None:
+        raise RuntimeError("Populated calendar agenda rows are not reachable")
+    screenshot("23c-calendar-today-three-list", "three-item calendar agenda after scrolling")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
     WARNINGS.append(f"Populated home fixture: {exc}")
 
