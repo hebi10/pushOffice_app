@@ -51,10 +51,12 @@ export default function CalendarScreen() {
     textMonthFontWeight: '700' as const,
     textDayHeaderFontSize: 13,
     'stylesheet.calendar.main': {
-      week: { marginTop: 3, marginBottom: 3, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
+      week: { marginTop: 1, marginBottom: 1, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
     },
     'stylesheet.calendar.header': {
-      week: { marginTop: 4, marginBottom: 0, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
+      week: { marginTop: 2, marginBottom: 0, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
+      dayTextAtIndex0: { color: colors.danger },
+      dayTextAtIndex6: { color: colors.primary },
     },
   }), [colors]);
 
@@ -85,7 +87,9 @@ export default function CalendarScreen() {
   }, [schedules.data, selected, colors.primary, colors.success, colors.onPrimary, isDark]);
 
   const items = useMemo(() => (
-    (schedules.data ?? []).filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === selected)
+    (schedules.data ?? [])
+      .filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === selected)
+      .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())
   ), [schedules.data, selected]);
   const selectedLabel = dayjs(selected).format('M월 D일 dddd');
   const summary = schedules.isError
@@ -97,11 +101,7 @@ export default function CalendarScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={s.content}
     >
-      <ScreenIntro
-        eyebrow="날짜별 일정"
-        title="일정 · 캘린더"
-        compact
-      />
+      <ScreenIntro title="캘린더" compact />
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
         <Calendar
           key={isDark ? 'dark' : 'light'}
@@ -117,9 +117,11 @@ export default function CalendarScreen() {
           monthFormat="yyyy년 M월"
           theme={calendarTheme}
         />
-        <Text style={[styles.markHint, { color: colors.textSecondary }]}>
-          날짜 아래 점은 일정 개수(최대 3개)를 뜻합니다.
-        </Text>
+        {!schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
+          <Text style={[styles.markHint, { color: colors.textSecondary }]}>
+            날짜 아래 점은 일정 개수(최대 3개)를 뜻합니다.
+          </Text>
+        ) : null}
       </View>
       <View
         style={[styles.selectionSummary, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
@@ -151,7 +153,7 @@ export default function CalendarScreen() {
             />
           ))
         ) : (
-          <EmptyState message="이 날짜에 등록된 일정이 없습니다. 빠른 입력으로 일정을 추가해 보세요." />
+          <EmptyState message="선택한 날짜에 일정이 없습니다." />
         )}
       </AssistantCard>
     </ScrollView>
@@ -164,14 +166,14 @@ const styles = StyleSheet.create({
     borderRadius: uiRadii.card,
     overflow: 'hidden',
     paddingTop: 0,
-    paddingBottom: uiSpacing.xs,
+    paddingBottom: uiSpacing.xxs,
   },
   markHint: { ...uiTypography.caption, paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xxs },
   selectionSummary: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: uiSpacing.sm,
-    minHeight: 50,
+    gap: uiSpacing.xs,
+    minHeight: uiSizes.touchMinHeight,
     borderRadius: uiRadii.field,
     borderWidth: uiSizes.borderWidth,
     paddingHorizontal: uiSpacing.sm,
@@ -179,12 +181,12 @@ const styles = StyleSheet.create({
   },
   selectionTitle: { ...uiTypography.body, flex: 1, minWidth: 0, fontWeight: '700' },
   countBadge: {
-    minWidth: 68,
-    minHeight: 34,
-    paddingHorizontal: uiSpacing.sm,
+    minWidth: 60,
+    minHeight: 30,
+    paddingHorizontal: uiSpacing.xs,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: uiRadii.field,
   },
-  countText: { ...uiTypography.body, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  countText: { ...uiTypography.body, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });
