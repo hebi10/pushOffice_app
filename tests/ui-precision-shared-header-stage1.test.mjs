@@ -46,7 +46,7 @@ test('screen introductions use compact shared typography and artwork spacing', (
   assert.match(intro, /minHeight: uiSizes\.introMinHeight/);
   assert.match(intro, /width: uiSizes\.introArtworkWidth/);
   assert.match(intro, /height: uiSizes\.introArtworkHeight/);
-  assert.match(intro, /artwork && !isDark/);
+  assert.match(intro, /artwork && !compact && !isDark/);
   assert.match(shared, /paddingTop: uiSpacing\.sm/);
   assert.match(shared, /gap: uiSpacing\.sm/);
 });
