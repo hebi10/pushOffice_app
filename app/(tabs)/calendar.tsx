@@ -37,9 +37,30 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(() => ({ year: dayjs(now).year(), month: dayjs(now).month() + 1 }));
   const schedules = useMonthSchedules(month.year, month.month);
   const monthStart = dayjs(new Date(month.year, month.month - 1, 1)).format('YYYY-MM-DD');
+  const calendarTheme = useMemo(() => ({
+    calendarBackground: colors.surface,
+    dayTextColor: colors.text,
+    monthTextColor: colors.text,
+    todayTextColor: colors.primary,
+    arrowColor: colors.primary,
+    textDisabledColor: colors.textTertiary,
+    textSectionTitleColor: colors.textSecondary,
+    selectedDayTextColor: colors.onPrimary,
+    textDayFontSize: 15,
+    textMonthFontSize: 17,
+    textMonthFontWeight: '700' as const,
+    textDayHeaderFontSize: 13,
+    'stylesheet.calendar.main': {
+      week: { marginTop: 3, marginBottom: 3, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
+    },
+    'stylesheet.calendar.header': {
+      week: { marginTop: 4, marginBottom: 0, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
+    },
+  }), [colors]);
 
   const marks = useMemo(() => {
     const counts = new Map<string, number>();
+    const dotColors = [colors.primary, colors.success, isDark ? '#FBBF24' : '#D97706'];
     for (const item of schedules.data ?? []) {
       const date = dayjs(item.startAt.toDate()).format('YYYY-MM-DD');
       counts.set(date, (counts.get(date) ?? 0) + 1);
@@ -49,7 +70,7 @@ export default function CalendarScreen() {
       result[date] = {
         dots: Array.from({ length: Math.min(count, 3) }, (_, index) => ({
           key: 'appointment-' + index,
-          color: colors.primary,
+          color: dotColors[index],
           selectedDotColor: colors.onPrimary,
         })),
       };
@@ -61,7 +82,7 @@ export default function CalendarScreen() {
       selectedTextColor: colors.onPrimary,
     };
     return result;
-  }, [schedules.data, selected, colors.primary, colors.onPrimary]);
+  }, [schedules.data, selected, colors.primary, colors.success, colors.onPrimary, isDark]);
 
   const items = useMemo(() => (
     (schedules.data ?? []).filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === selected)
@@ -79,8 +100,7 @@ export default function CalendarScreen() {
       <ScreenIntro
         eyebrow="날짜별 일정"
         title="일정 · 캘린더"
-        description="날짜를 선택해 일정을 확인하세요."
-        artwork={require('@/assets/images/illustration-calendar.jpg')}
+        compact
       />
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
         <Calendar
@@ -95,36 +115,21 @@ export default function CalendarScreen() {
           onDayPress={date => setSelected(date.dateString)}
           markedDates={marks}
           monthFormat="yyyy년 M월"
-          theme={{
-            calendarBackground: colors.surface,
-            dayTextColor: colors.text,
-            monthTextColor: colors.text,
-            todayTextColor: colors.primary,
-            arrowColor: colors.primary,
-            textDisabledColor: colors.textTertiary,
-            textSectionTitleColor: colors.textSecondary,
-            selectedDayTextColor: colors.onPrimary,
-            textDayFontSize: 15,
-            textMonthFontSize: 17,
-            textMonthFontWeight: '700',
-            textDayHeaderFontSize: 13,
-          }}
+          theme={calendarTheme}
         />
         <Text style={[styles.markHint, { color: colors.textSecondary }]}>
-          날짜 아래 점은 일정 개수이며, 3개 이상은 점 3개로 표시됩니다.
+          날짜 아래 점은 일정 개수(최대 3개)를 뜻합니다.
         </Text>
       </View>
       <View
         style={[styles.selectionSummary, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
+        accessible
         accessibilityLabel={selectedLabel + ', 일정 ' + summary}
       >
-        <Ionicons name="calendar-clear-outline" size={22} color={colors.primary} />
-        <View style={styles.selectionCopy}>
-          <Text style={[styles.selectionTitle, { color: colors.text }]}>{selectedLabel}</Text>
-          <Text style={[styles.selectionDetail, { color: colors.textSecondary }]}>선택한 날짜의 일정</Text>
-        </View>
+        <Ionicons name="calendar-clear-outline" size={20} color={colors.primary} />
+        <Text style={[styles.selectionTitle, { color: colors.text }]}>{selectedLabel}</Text>
         <View style={[styles.countBadge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.countText, { color: colors.primary }]}>{summary}</Text>
+          <Text style={[styles.countText, { color: colors.primary }]}>일정 {summary}</Text>
         </View>
       </View>
       <AssistantButton
@@ -132,7 +137,7 @@ export default function CalendarScreen() {
         icon="add-circle-outline"
         onPress={() => PushOfficeNative.openQuickEntry().catch(e => showError(e, '입력 창을 열 수 없습니다.'))}
       />
-      <AssistantCard title="해당 날짜의 일정" icon="list-outline">
+      <AssistantCard title="해당 날짜의 일정" icon="list-outline" flat>
         {schedules.isLoading ? (
           <Text style={[s.body, { color: colors.textSecondary }]}>일정 목록을 불러오는 중입니다.</Text>
         ) : schedules.isError ? (
@@ -158,30 +163,28 @@ const styles = StyleSheet.create({
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.card,
     overflow: 'hidden',
-    paddingTop: uiSpacing.xs,
-    paddingBottom: uiSpacing.sm,
+    paddingTop: 0,
+    paddingBottom: uiSpacing.xs,
   },
-  markHint: { ...uiTypography.caption, paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xs },
+  markHint: { ...uiTypography.caption, paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xxs },
   selectionSummary: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: uiSpacing.sm,
-    minHeight: 64,
+    minHeight: 50,
     borderRadius: uiRadii.field,
     borderWidth: uiSizes.borderWidth,
-    paddingHorizontal: uiSpacing.md,
-    paddingVertical: uiSpacing.sm,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
   },
-  selectionCopy: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
-  selectionTitle: { ...uiTypography.sectionTitle },
-  selectionDetail: uiTypography.caption,
+  selectionTitle: { ...uiTypography.body, flex: 1, minWidth: 0, fontWeight: '700' },
   countBadge: {
-    minWidth: 56,
-    minHeight: uiSizes.touchMinHeight,
+    minWidth: 68,
+    minHeight: 34,
     paddingHorizontal: uiSpacing.sm,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: uiRadii.field,
   },
-  countText: { ...uiTypography.body, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  countText: { ...uiTypography.body, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });
