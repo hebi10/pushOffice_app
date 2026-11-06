@@ -38,7 +38,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
       onPress={() => { if (schedule.id) router.push(`/schedule/${schedule.id}`); }}
       style={[styles.container, calendar ? styles.calendarContainer : null, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
     >
-      {calendar ? <View style={[styles.accentRail, { backgroundColor: colors.primary }]} /> : null}
+      <View style={[styles.accentRail, { backgroundColor: colors.primary }]} />
       <View style={styles.timeCol}>
         <Text style={[styles.time, { color: colors.primary }]}>{time}</Text>
         {endLabel && sameDayEnd ? (
@@ -85,14 +85,14 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 70,
+    minHeight: 66,
     borderRadius: uiRadii.field,
     paddingHorizontal: uiSpacing.sm,
-    paddingVertical: uiSpacing.sm,
+    paddingVertical: uiSpacing.xs,
     borderWidth: uiSizes.borderWidth,
     gap: uiSpacing.xs,
   },
-  calendarContainer: { minHeight: 74, gap: uiSpacing.sm },
+  calendarContainer: { minHeight: 74, gap: uiSpacing.sm, paddingVertical: uiSpacing.sm },
   accentRail: { width: 3, alignSelf: 'stretch', borderRadius: uiRadii.field },
   timeCol: { width: 62, gap: uiSpacing.xxs },
   time: { ...uiTypography.body, fontWeight: '700', fontVariant: ['tabular-nums'] },
