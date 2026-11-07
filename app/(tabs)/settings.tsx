@@ -108,7 +108,7 @@ export default function SettingsScreen() {
                   accessibilityRole="tab"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={label}
-                  onPress={() => setSection(value)}
+                  onPress={() => { setSaveFeedback(null); setSection(value); }}
                   style={{
                     flex: 1,
                     minHeight: uiSizes.touchMinHeight,
@@ -159,7 +159,7 @@ export default function SettingsScreen() {
                   description="시간 변경"
                   status={String(settings.dailyBriefingTime.hour).padStart(2, '0') + ':' + String(settings.dailyBriefingTime.minute).padStart(2, '0')}
                   expanded={editingTime}
-                  onPress={() => setEditingTime(value => !value)}
+                  onPress={() => { setSaveFeedback(null); setEditingTime(value => !value); }}
                 />
                 {editingTime ? (
                   <View style={{ padding: uiSpacing.sm, gap: uiSpacing.sm, backgroundColor: colors.inputBackground, borderRadius: uiRadii.field }}>
@@ -248,7 +248,7 @@ export default function SettingsScreen() {
                   title="외부 정보 상세 설정"
                   description="도시·키워드·종목"
                   expanded={editingExternal}
-                  onPress={() => setEditingExternal(value => !value)}
+                  onPress={() => { setSaveFeedback(null); setEditingExternal(value => !value); }}
                 />
                 {editingExternal ? (
                   <View style={{ padding: uiSpacing.sm, gap: uiSpacing.sm, backgroundColor: colors.inputBackground, borderRadius: uiRadii.field }}>

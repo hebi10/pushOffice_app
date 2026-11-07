@@ -52,7 +52,7 @@ test('precision stage 3 flattens only the agenda wrapper and keeps agenda cards 
   assert.match(card, /backgroundColor: flat \? colors\.background : colors\.surface/);
   assert.match(calendar, /items\.map\(item =>/);
   assert.match(calendar, /\.sort\(\(a, b\) => a\.startAt\.toMillis\(\) - b\.startAt\.toMillis\(\)\)/);
-  assert.match(item, /calendarContainer: \{ minHeight: 68, gap: uiSpacing\.xs, paddingVertical: uiSpacing\.xs \}/);
+  assert.match(item, /calendarContainer: \{ minHeight: 68, gap: uiSpacing\.xs, paddingVertical: uiSpacing\.sm \}/);
   assert.match(calendar, /variant="calendar"/);
   assert.match(item, /numberOfLines=\{calendar \? 3 : 2\}/);
   assert.match(item, /router\.push\(/);

@@ -188,7 +188,7 @@ try:
     tap("일정 저장", scroll=True)
     screenshot("07d-native-confirmation-invalid", "inline error after attempting to save incomplete schedule")
     try:
-        tap("달력에서 날짜 선택")
+        tap("날짜 선택")
         screenshot("08-native-date-picker", "native calendar picker")
         adb("shell", "input", "keyevent", "4")
         time.sleep(2)
