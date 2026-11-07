@@ -150,16 +150,24 @@ export default function ScheduleDetail() {
         contentContainerStyle={s.content}
         keyboardShouldPersistTaps="handled"
       >
-        <ScreenIntro
-          eyebrow="PUSH OFFICE · 일정"
-          title="일정 상세"
-          description="제목과 날짜, 반복과 알림을 확인하세요."
-        />
-        <AssistantCard title="기본 정보" icon="create-outline" subtitle="일정 제목을 수정할 수 있습니다.">
+        <ScreenIntro title="일정 관리" compact />
+        <View accessibilityRole="summary" style={[styles.scheduleOverview, { backgroundColor: colors.primaryLight }]}>
+          <Text style={[styles.overviewTitle, { color: colors.text }]} numberOfLines={3}>{title || '제목 없는 일정'}</Text>
+          <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>
+            {date ? dayjs(date).format('YYYY년 M월 D일 (ddd)') : '날짜 미지정'}
+            {' · '}{allDay ? '종일' : time}
+            {end ? ` ~ ${end}` : ''}
+          </Text>
+          <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
+            {repeat === 'monthly' ? '매월 반복' : repeat === 'yearly' ? '매년 반복' : '반복 없음'}
+            {' · '}{notification ? '알림 사용' : '알림 끔'}
+          </Text>
+        </View>
+        <AssistantCard title="기본 정보" icon="create-outline">
           {field('제목', title, setTitle)}
         </AssistantCard>
 
-        <AssistantCard title="날짜와 시간" icon="calendar-outline" subtitle="시작 날짜와 선택적인 종료 시각을 관리합니다.">
+        <AssistantCard title="날짜와 시간" icon="calendar-outline">
           <SchedulePickerField
             label="시작 날짜"
             accessibilityLabel="일정 날짜 선택"
@@ -243,7 +251,7 @@ export default function ScheduleDetail() {
           onPress={confirmSave}
         />
 
-        <AssistantCard title="재알림" icon="alarm-outline" subtitle="반복 기준일을 변경하지 않고 한 번 더 알립니다.">
+        <AssistantCard title="재알림" icon="alarm-outline" subtitle="기존 일정은 변경하지 않고 다시 알립니다.">
           <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary onPress={() =>
             PushOfficeNative.snoozeSchedule(id, 10).then(() => showToast('10분 뒤 재알림을 예약했습니다.')).catch(e => showError(e, '예약하지 못했습니다.'))
           } />
@@ -377,6 +385,10 @@ export default function ScheduleDetail() {
 }
 
 const styles = StyleSheet.create({
+  scheduleOverview: { padding: uiSpacing.md, gap: uiSpacing.xs, borderRadius: uiRadii.card },
+  overviewTitle: { ...uiTypography.sectionTitle, fontSize: 20, lineHeight: 28 },
+  overviewTime: { ...uiTypography.body, fontVariant: ['tabular-nums'] },
+  overviewMeta: { ...uiTypography.caption },
   missingScreen: { flex: 1 },
   missingContent: {
     paddingVertical: uiSpacing.xxl,

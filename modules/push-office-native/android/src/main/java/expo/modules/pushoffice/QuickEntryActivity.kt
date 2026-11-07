@@ -479,7 +479,7 @@ class QuickEntryActivity : Activity() {
         setMargins(margin,0,margin,0)
       })
     }
-    pickerButton("달력에서 날짜 선택") {
+    pickerButton("날짜 선택") {
       val initial=runCatching { LocalDate.parse(dateField.text.toString().trim()) }
         .getOrDefault(dateTime?.toLocalDate() ?: LocalDate.now(formZone))
       DatePickerDialog(this@QuickEntryActivity, { _,year,month,day ->
@@ -550,6 +550,16 @@ class QuickEntryActivity : Activity() {
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
     root.addView(error)
+    val clearErrorOnEdit=object: TextWatcher {
+      override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+      override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+        error.text=""
+      }
+      override fun afterTextChanged(s: Editable?) {}
+    }
+    titleField.addTextChangedListener(clearErrorOnEdit)
+    dateField.addTextChangedListener(clearErrorOnEdit)
+    timeField.addTextChangedListener(clearErrorOnEdit)
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
       try {
