@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
     gap: uiSpacing.xs,
     minHeight: 56,
     paddingHorizontal: uiSpacing.xs,
-    paddingVertical: uiSpacing.xs,
+    paddingVertical: uiSpacing.xxs,
   },
   iconBox: {
     width: 34,
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   copy: { flex: 1, minWidth: 0, gap: 2 },
   rowTitle: { ...uiTypography.body, fontWeight: '600' },
-  description: { ...uiTypography.caption, lineHeight: 17, flexShrink: 1 },
+  description: { ...uiTypography.caption, lineHeight: 16, flexShrink: 1 },
   statusBadge: { minHeight: 28, maxWidth: 88, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xxs, borderRadius: uiRadii.field, alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
   status: { ...uiTypography.caption, fontWeight: '700', textAlign: 'center' },
   note: { ...uiTypography.caption, lineHeight: 18, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xs },

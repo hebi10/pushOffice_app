@@ -57,7 +57,7 @@ test('main screens keep their page introductions without duplicating the brand l
   }
   assert.match(home, /eyebrow=\{dayjs\(now\)\.format\('M월 D일 dddd'\)\}/);
   assert.match(calendar, /<ScreenIntro title="캘린더" compact \/>/);
-  assert.match(settings, /eyebrow="환경 설정"/);
+  assert.match(settings, /<ScreenIntro\s+title="설정"\s+compact\s*\/>/);
   assert.doesNotMatch(home, /eyebrow="PUSH OFFICE/);
   assert.doesNotMatch(calendar, /eyebrow="PUSH OFFICE/);
   assert.doesNotMatch(settings, /eyebrow="PUSH OFFICE/);

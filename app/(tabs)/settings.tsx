@@ -29,6 +29,7 @@ export default function SettingsScreen() {
     const [editingTime, setEditingTime] = useState(false);
     const [editingExternal, setEditingExternal] = useState(false);
     const [notice, setNotice] = useState<{ title: string; message: string } | null>(null);
+    const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
     const [hour, setHour] = useState(String(settings.dailyBriefingTime.hour).padStart(2, '0'));
     const [minute, setMinute] = useState(String(settings.dailyBriefingTime.minute).padStart(2, '0'));
     const [city, setCity] = useState(settings.digestCity);
@@ -45,9 +46,10 @@ export default function SettingsScreen() {
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
     const retryImport = async () => { setRecovering(true); try { setLegacy(await retryLegacyRecovery()); } catch (error) { showError(error, '이전 일정 원본을 보존하고 있어요. 다시 시도해 주세요.'); } finally { setRecovering(false); } };
     const save = async (patch: Partial<UserSettings>, success?: string): Promise<boolean> => {
+        setSaveFeedback(null);
         try {
             await saveAssistantSettings(patch);
-            if (success) setNotice({ title: '설정 저장 완료', message: success });
+            if (success) setSaveFeedback(success);
             return true;
         } catch {
             setNotice({ title: '설정 저장 실패', message: '설정을 저장하지 못했습니다. 현재 값을 확인한 뒤 다시 시도해 주세요.' });
@@ -94,10 +96,8 @@ export default function SettingsScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <ScreenIntro
-            eyebrow="환경 설정"
             title="설정"
-            description="일정과 알림을 원하는 방식으로 관리하세요."
-            artwork={require('@/assets/images/illustration-settings.jpg')}
+            compact
           />
           <View accessibilityRole="tablist" style={{ flexDirection: 'row', gap: uiSpacing.xs }}>
             {([['basic', '기본 설정'], ['advanced', '고급 설정']] as const).map(([value, label]) => {
@@ -142,21 +142,21 @@ export default function SettingsScreen() {
                 <SettingsToggleRow
                   icon="notifications-outline"
                   title="전체 일정 알림"
-                  description="등록한 일정의 시작 알림을 받습니다."
+                  description="일정 시작 알림"
                   value={settings.pushEnabled}
                   onValueChange={v => { void save({ pushEnabled: v }); }}
                 />
                 <SettingsToggleRow
                   icon="sunny-outline"
                   title="매일 아침 브리핑"
-                  description="오늘의 일정을 정해진 시간에 요약합니다."
+                  description="설정한 시각에 오늘 일정 안내"
                   value={settings.dailyBriefingEnabled}
                   onValueChange={v => { void save({ dailyBriefingEnabled: v }); }}
                 />
                 <SettingsActionRow
                   icon="time-outline"
                   title="아침 브리핑 알림 시간"
-                  description="시간을 선택해 변경할 수 있습니다."
+                  description="시간 변경"
                   status={String(settings.dailyBriefingTime.hour).padStart(2, '0') + ':' + String(settings.dailyBriefingTime.minute).padStart(2, '0')}
                   expanded={editingTime}
                   onPress={() => setEditingTime(value => !value)}
@@ -177,6 +177,11 @@ export default function SettingsScreen() {
                     }} />
                   </View>
                 ) : null}
+                {saveFeedback && !editingTime ? (
+                  <View accessibilityRole="alert" style={{ backgroundColor: colors.primaryLight, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs }}>
+                    <Text style={{ color: colors.text }}>{saveFeedback}</Text>
+                  </View>
+                ) : null}
                 <SettingsActionRow
                   icon="shield-checkmark-outline"
                   title="알림 권한 확인 및 요청"
@@ -187,7 +192,7 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="settings-outline"
                   title="시스템 앱 설정 열기"
-                  description="알림이 오지 않을 때 시스템 권한을 확인합니다."
+                  description="알림·권한 설정"
                   onPress={() => { void Linking.openSettings().catch(e => showError(e, '앱 설정을 열지 못했습니다.')); }}
                 />
               </SettingsGroup>
@@ -195,9 +200,9 @@ export default function SettingsScreen() {
                 title="빠른 설정과 홈 위젯"
                 icon="grid-outline"
               >
-                <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 일정 입력을 추가합니다." onPress={() => { void addTile(); }} />
-                <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가장 가까운 일정 하나를 표시합니다." onPress={() => { void pin('small'); }} />
-                <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘의 일정 목록을 표시합니다." onPress={() => { void pin('agenda'); }} />
+                <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 추가" onPress={() => { void addTile(); }} />
+                <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가까운 일정 표시" onPress={() => { void pin('small'); }} />
+                <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘 일정 목록 표시" onPress={() => { void pin('agenda'); }} />
                 <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
@@ -241,7 +246,7 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="options-outline"
                   title="외부 정보 상세 설정"
-                  description="날씨 도시, 뉴스 키워드·언어, 주식 종목"
+                  description="도시·키워드·종목"
                   expanded={editingExternal}
                   onPress={() => setEditingExternal(value => !value)}
                 />
@@ -261,13 +266,18 @@ export default function SettingsScreen() {
                     }} />
                   </View>
                 ) : null}
+                {saveFeedback && !editingExternal ? (
+                  <View accessibilityRole="alert" style={{ backgroundColor: colors.primaryLight, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs }}>
+                    <Text style={{ color: colors.text }}>{saveFeedback}</Text>
+                  </View>
+                ) : null}
               </SettingsGroup>
               <SettingsGroup title="이전 일정 가져오기" icon="cloud-download-outline">
                 <SettingsNote>{legacy?.message ?? '이전에 사용하던 Firebase 계정의 일정을 가져올 수 있습니다.'}</SettingsNote>
                 <SettingsActionRow
                   icon="refresh-outline"
                   title="Firebase 일정 가져오기 다시 시도"
-                  description="기존 원본을 삭제하거나 변경하지 않습니다."
+                  description="원본 보존"
                   busy={recovering}
                   onPress={() => { void retryImport(); }}
                 />
@@ -283,13 +293,13 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="document-text-outline"
                   title="개인정보처리방침"
-                  description="데이터 처리와 보관 정책을 확인합니다."
+                  description="데이터 처리·보관 정책"
                   onPress={() => { void Linking.openURL('https://hebi10.github.io/pushOffice_app/privacy/').catch(e => showError(e, '개인정보처리방침을 열 수 없습니다.')); }}
                 />
                 <SettingsActionRow
                   icon="mail-outline"
                   title="지원 문의"
-                  description="메일 앱에서 문의 내용을 작성합니다."
+                  description="메일 앱으로 문의"
                   onPress={() => { void Linking.openURL('mailto:asdlkj0104@gmail.com').catch(e => showError(e, '메일 앱을 열 수 없습니다.')); }}
                 />
               </SettingsGroup>

@@ -158,10 +158,9 @@ screenshot("03-settings", "basic settings")
 tap("아침 브리핑 알림 시간")
 screenshot("03c-settings-time-expanded", "compact settings time editor")
 tap("브리핑 시간 저장", scroll=True)
-if find("설정 저장 완료") is None:
-    raise RuntimeError("Settings save confirmation was not shown")
-screenshot("03d-settings-save-notice", "shared app dialog after saving settings")
-tap("확인")
+if find("브리핑 시간을 저장했습니다.") is None:
+    raise RuntimeError("Inline settings save feedback was not shown")
+screenshot("03d-settings-save-notice", "inline feedback after saving settings")
 tap("고급 설정")
 screenshot("04-settings-advanced", "advanced settings")
 tap("외부 정보 상세 설정", scroll=True)

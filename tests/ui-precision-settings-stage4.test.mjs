@@ -78,6 +78,7 @@ test('precision stage 4 captures basic/advanced settings and actual save notice'
     assert.ok(capture.includes(name), 'Missing capture path: ' + name);
     assert.ok(verify.includes(name + '.png') || name.startsWith('04a-'), 'Required capture verification missing: ' + name);
   }
-  assert.match(capture, /if find\("설정 저장 완료"\) is None:/);
-  assert.match(capture, /tap\("확인"\)/);
+  assert.match(capture, /if find\("브리핑 시간을 저장했습니다\."\) is None:/);
+  assert.match(settings, /accessibilityRole="alert"/);
+  assert.match(settings, /setSaveFeedback\(success\)/);
 });
