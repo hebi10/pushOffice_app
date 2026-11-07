@@ -36,7 +36,7 @@ test('stage 3 reserves independent confirmation footer and requires real error/f
 
 test('stage 5 clears stale native form errors after editing existing fields', () => {
   assert.match(native, /val clearErrorOnEdit=object: TextWatcher/);
-  assert.match(native, /error\\.text=""/);
+  assert.match(native, /error\.text=""/);
   for (const field of ['titleField','dateField','timeField']) {
     assert.ok(native.includes(field + '.addTextChangedListener(clearErrorOnEdit)'));
   }
