@@ -1,0 +1,83 @@
+name: Push Office promote verified internal 16 to closed alpha (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-promote-internal16-alpha-20261108.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  promote:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-promote-internal16-alpha-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
+    steps:
+      - name: Check out approved app source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test Play promotion guards and redaction
+        run: python3 -m unittest discover -v -s .github/ops -p 'test_promote_existing_internal16_closed_alpha_20261108.py'
+      - name: Verify exact Stage36 internal publishing run succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          result=$(gh api "repos/${GH_REPO}/actions/runs/42476364597")
+          expected=01dfd36545baaa20170ec6b5479f974cb95d8608
+          actual=$(jq -r '.head_sha' <<<"$result")
+          state=$(jq -r '.status' <<<"$result")
+          outcome=$(jq -r '.conclusion' <<<"$result")
+          event=$(jq -r '.event' <<<"$result")
+          if [[ "$actual" != "$expected" || "$state" != "completed" || "$outcome" != "success" || "$event" != "push" ]]; then
+            echo "::error::Stage36 internal published version provenance cannot be confirmed."
+            exit 1
+          fi
+          changes=$(gh api "repos/${GH_REPO}/compare/${expected}...${GITHUB_SHA}")
+          if ! jq -e '
+            [.files[]?.filename |
+              select(startswith("app/") or startswith("src/") or startswith("modules/")
+                or startswith("plugins/") or startswith("assets/")
+                or . == "app.json" or . == "package.json" or . == "package-lock.json")
+            ] | length == 0
+          ' <<<"$changes" >/dev/null; then
+            echo "::error::App source changed after the verified internal test build."
+            exit 1
+          fi
+          echo "Verified internal version 16 provenance and unchanged application source."
+      - name: Authenticate existing app-specific Play service account
+        id: play-auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Promote existing signed internal release to closed alpha and verify
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+        run: python3 .github/ops/promote_existing_internal16_closed_alpha_20261108.py
+      - name: Retain sanitized Play promotion diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-closed-alpha-promotion-diagnostic
+          path: ${{ runner.temp }}/push-office-closed-promotion-report.json
+          if-no-files-found: warn
+          retention-days: 14
