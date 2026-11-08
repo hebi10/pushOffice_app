@@ -1,6 +1,12 @@
 name: Push Office Play listing images one-time update (2026-11-08)
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'store-assets/ko-KR/**'
+      - '.github/ops/publish_play_store_images.py'
+      - '.github/workflows/pushoffice-play-images-once-20261108.yml'
   push:
     branches: [main]
     paths:
@@ -15,6 +21,27 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate-assets:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Check all six RGB screenshots and 32-bit icon without Play credentials
+        run: |
+          python3 -m py_compile .github/ops/publish_play_store_images.py
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, '.github/ops')
+          from publish_play_store_images import validated_assets
+          assets = validated_assets()
+          assert len(assets["icon"]) == 1
+          assert len(assets["featureGraphic"]) == 1
+          assert len(assets["phoneScreenshots"]) == 6
+          print("Play graphic preflight: 1 icon, 1 feature graphic, 6 screenshots")
+          PY
+
   publish:
     if: >-
       github.repository == 'hebi10/pushOffice_app' &&
