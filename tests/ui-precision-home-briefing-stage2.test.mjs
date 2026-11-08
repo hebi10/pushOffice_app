@@ -10,8 +10,8 @@ const scheduleRow = source('src/components/ScheduleItem.tsx');
 test('precision stage 2 keeps existing main action and compact briefing/agenda hierarchy', () => {
   const sections = [
     'label="일정 빠르게 추가"',
-    'title="오늘의 브리핑"',
     'title="다음 일정"',
+    'title="오늘의 브리핑"',
     'title="오늘 일정"',
     'title="외부 브리핑"',
   ];
@@ -37,7 +37,8 @@ test('precision stage 2 does not repeat briefing footnote below action button', 
 });
 
 test('precision stage 2 highlights actual next schedule and keeps every daily entry accessible', () => {
-  assert.match(home, /styles\.nextAccent/);
+  assert.doesNotMatch(home, /styles\.nextAccent/);
+  assert.match(home, /backgroundColor: colors\.inputBackground, borderColor: colors\.inputBorder/);
   assert.match(home, /router\.push\(`\/schedule\/\$\{next\.id\}`\)/);
   assert.match(home, /nextEndAt\.getTime\(\) > nextAt\.getTime\(\)/);
   assert.match(home, /todayItems\.map\(/);

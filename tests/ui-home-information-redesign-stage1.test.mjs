@@ -57,7 +57,8 @@ test('HOME-04 keeps real end time, repetition, detail navigation and data integr
   assert.match(home, /nextEndAt\.getTime\(\) > nextAt\.getTime\(\)/);
   assert.match(home, /next\.repeatType === 'monthly'/);
   assert.match(home, /next\.repeatType === 'yearly'/);
-  assert.match(home, /styles\.nextAccent/);
+  assert.doesNotMatch(home, /styles\.nextAccent/);
+  assert.match(home, /backgroundColor: colors\.inputBackground, borderColor: colors\.inputBorder/);
   assert.match(home, /router\.push\(/);
   assert.match(home, /<ScheduleItem/);
   assert.doesNotMatch(home, /<AssistantCard title="할 일"/);
