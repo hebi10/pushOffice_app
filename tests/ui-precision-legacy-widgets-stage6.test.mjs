@@ -116,7 +116,7 @@ test('precision stage 6 audits existing launcher, adaptive, splash and header im
   ];
   assert.ok(images.every(p => p.startsWith('./assets/images/push-office-')));
   for (const p of images) assert.ok(existsSync(new URL('../' + p, import.meta.url)), 'Missing asset ' + p);
-  assert.match(read('src/components/ui/AppBrandHeader.tsx'), /assets\/images\/push-office-icon\.png/);
+  assert.match(read('src/components/ui/AppBrandHeader.tsx'), /assets\/images\/push-office-mark\.png/);
   assert.match(read('src/components/ui/AppBrandHeader.tsx'), /PushOffice/);
 });
 

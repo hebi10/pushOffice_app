@@ -22,7 +22,8 @@ test('precision stage 5 enlarges bounded chooser artwork and primary/secondary c
   assert.match(chooser, /quick_entry_text_accessibility/);
   assert.match(chooser, /quick_entry_voice_accessibility/);
   assert.match(chooser, /quick_entry_close/);
-  assert.match(chooser, /if \(!isDark\) root\.addView\(ImageView\(this\)/);
+  assert.match(chooser, /root\.addView\(ImageView\(this\)/);
+  assert.match(chooser, /R\.drawable\.quick_entry_mono/);
 });
 
 test('precision stage 5 keeps editor centered, shorter and main confirmation last', () => {
