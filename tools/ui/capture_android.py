@@ -91,6 +91,17 @@ def assert_dark_surface(name: str, x: int, y: int) -> None:
     print(f"Verified real dark-mode surface in {name}: RGB {rgb}")
 
 
+def assert_native_mono_surface(name: str, x: int, y: int) -> None:
+    rgb = pixel_rgb(OUT / f"{name}.png", x, y)
+    expected = (28, 31, 34)
+    if any(abs(a - b) > 2 for a, b in zip(rgb, expected)):
+        raise RuntimeError(
+            f"{name}: native dark surface did not match Mono Office #1C1F22 "
+            f"at ({x},{y}); got RGB {rgb}"
+        )
+    print(f"Verified native Mono Office dark surface in {name}: RGB {rgb}")
+
+
 def find(label: str, bottom: bool = False, class_name: str | None = None) -> tuple[int, int] | None:
     try:
         adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
@@ -280,9 +291,11 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) 
 tap("일정 빠르게 추가")
 screenshot("11-quick-entry-dark", "branded native chooser with explicit dark app theme")
 assert_dark_surface("11-quick-entry-dark", 100, 1000)
+assert_native_mono_surface("11-quick-entry-dark", 100, 1000)
 tap("텍스트로 일정 입력")
 screenshot("12-native-editor-dark", "native editor with explicit dark app theme")
 assert_dark_surface("12-native-editor-dark", 100, 500)
+assert_native_mono_surface("12-native-editor-dark", 100, 500)
 
 (OUT / "capture-manifest.json").write_text(
     json.dumps(
