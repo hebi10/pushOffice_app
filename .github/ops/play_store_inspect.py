@@ -18,9 +18,10 @@ class PlayError(Exception):
 
 
 def call(method, suffix, token, body=None):
-    if suffix not in {"", "/listings", "/listings/" + LANG} and not any(
-        suffix.endswith("/listings/" + LANG + "/" + t) for t in IMAGE_TYPES
-    ) and not re.fullmatch(r"/[A-Za-z0-9_-]+", suffix):
+    if suffix != "" and not re.fullmatch(
+        r"/[A-Za-z0-9_-]+(?:/listings(?:/ko-KR(?:/(?:icon|featureGraphic|phoneScreenshots))?)?)?",
+        suffix,
+    ):
         raise PlayError("Unexpected Play API resource.")
     uri = ROOT + suffix
     req = Request(uri, method=method, headers={
