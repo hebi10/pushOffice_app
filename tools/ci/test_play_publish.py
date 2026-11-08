@@ -405,12 +405,16 @@ class PlayTests(unittest.TestCase):
         self.assertEqual(sum(url == path for _, url, _ in self.server.calls), 1)
         self.assertEqual(self.server.deleted, ['e1'])
 
-    def test_validate_failure_prevents_commit(self):
-        self.server.failures[('POST', EDITS + '/e1:validate')] = HTTPError('', 400, 'private', {}, None)
-        with self.assertRaises(play.ReleaseError):
-            self.publish()
-        self.assertFalse(any(':commit?' in path for _, path, _ in self.server.calls))
-        self.assertEqual(self.server.deleted, ['e1'])
+    def test_publish_uses_commit_builtin_validation_without_standalone_validate(self):
+        # The app's scoped Play account can commit listing changes but standalone validate
+        # was denied by Google Play. A successful bundle commit must not call validate.
+        self.server.failures[('POST', EDITS + '/e1:validate')] = HTTPError('', 403, 'private', {}, None)
+        report = self.publish()
+        self.assertEqual(report['status'], 'committed')
+        self.assertEqual(report['stage'], 'complete')
+        self.assertTrue(report['track_verified'])
+        self.assertFalse(any(path.endswith(':validate') for _, path, _ in self.server.calls))
+        self.assertEqual(sum(':commit?' in path for _, path, _ in self.server.calls), 1)
 
     def test_uncertain_commit_is_not_retried_or_claimed_as_accepted(self):
         path = EDITS + '/e1:commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW'
