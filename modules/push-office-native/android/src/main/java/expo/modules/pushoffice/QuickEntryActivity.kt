@@ -169,8 +169,8 @@ class QuickEntryActivity : Activity() {
       setOnClickListener { finish() }
     },LinearLayout.LayoutParams(dp(48),dp(48)))
     root.addView(heading)
-    if (!isDark) root.addView(ImageView(this).apply {
-      setImageResource(R.drawable.quick_entry_illustration)
+    root.addView(ImageView(this).apply {
+      setImageResource(R.drawable.quick_entry_mono)
       scaleType=ImageView.ScaleType.FIT_CENTER
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
     },LinearLayout.LayoutParams(dp(140),dp(106)).apply {

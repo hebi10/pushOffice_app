@@ -116,7 +116,8 @@ export default function HomeScreen() {
           eyebrow={dayjs(now).format('M월 D일 dddd')}
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
           description="중요한 일정부터 하나씩 살펴보세요."
-          graphicIcon="calendar-outline"
+          artwork={require("@/assets/images/illustration-home-mono.png")}
+          monochromeArtwork
           featured
         />
 

@@ -14,7 +14,8 @@ const verify = read('tools/ui/verify_captures.py');
 test('HOME-01 uses actual date, greeting and a home-only hero layout', () => {
   assert.ok(home.includes("eyebrow={dayjs(now).format('M월 D일 dddd')}"));
   assert.match(home, /description="중요한 일정부터 하나씩 살펴보세요\."/);
-  assert.match(home, /graphicIcon="calendar-outline"/);
+  assert.match(home, /illustration-home-mono\\.png/);
+  assert.match(home, /monochromeArtwork/);
   assert.match(home, /featured\s*\/>/);
   assert.match(intro, /featured = false/);
   assert.match(intro, /featured && styles\.featuredContainer/);

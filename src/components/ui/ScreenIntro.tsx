@@ -4,12 +4,13 @@ import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-n
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
-export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon, compact = false, featured = false }: {
+export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon, monochromeArtwork = false, compact = false, featured = false }: {
   eyebrow?: string;
   title: string;
   description?: string;
   artwork?: ImageSourcePropType;
   graphicIcon?: React.ComponentProps<typeof Ionicons>['name'];
+  monochromeArtwork?: boolean;
   compact?: boolean;
   featured?: boolean;
 }) {
@@ -25,6 +26,13 @@ export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon,
         <View style={[styles.flatGraphic, featured && styles.featuredGraphic]} accessible={false}>
           <Ionicons name={graphicIcon} size={featured ? 48 : 32} color={colors.primary} />
         </View>
+      ) : artwork && !compact && monochromeArtwork ? (
+        <Image
+          source={artwork}
+          style={[styles.artwork, featured && styles.featuredArtwork, { tintColor: colors.primary }]}
+          resizeMode="contain"
+          accessible={false}
+        />
       ) : artwork && !compact && !isDark ? (
         <Image source={artwork} style={[styles.artwork, featured && styles.featuredArtwork]} resizeMode={featured ? "contain" : "cover"} accessible={false} />
       ) : null}
