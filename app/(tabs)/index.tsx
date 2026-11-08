@@ -10,7 +10,7 @@ import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } f
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { dayjs } from '@/src/lib/time';
 import { useAppSelector } from '@/src/store/store';
-import { PushOfficeNative } from '@/modules/push-office-native';
+import { PushOfficeNative, type NotificationSuggestion } from '@/modules/push-office-native';
 import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
@@ -25,6 +25,18 @@ export default function HomeScreen() {
     const schedules = useSchedules();
     const external = useGenerateDigest();
     const [ai, setAi] = useState({ status: 'unavailable', message: '기기 지원 상태를 확인하고 있습니다.' });
+    const [notificationSuggestions, setNotificationSuggestions] = useState<NotificationSuggestion[]>([]);
+    const refreshSuggestions = useCallback(() => {
+      void PushOfficeNative.getNotificationSuggestions().then(setNotificationSuggestions).catch(() => setNotificationSuggestions([]));
+    }, []);
+    const declineSuggestion = async (id: string) => {
+      try { await PushOfficeNative.dismissNotificationSuggestion(id); refreshSuggestions(); }
+      catch (error) { showError(error, '일정 후보를 거절하지 못했습니다.'); }
+    };
+    const reviewSuggestion = async (id: string) => {
+      try { await PushOfficeNative.openNotificationSuggestion(id); }
+      catch (error) { showError(error, '일정 후보를 열지 못했습니다.'); refreshSuggestions(); }
+    };
     const [refined, setRefined] = useState('');
     const [busy, setBusy] = useState(false);
     const request = useRef(new ForegroundRequest()).current;
@@ -32,6 +44,7 @@ export default function HomeScreen() {
         let statusRevision = 0;
         const refresh = () => {
             request.setActive(AppState.currentState === 'active');
+            if (AppState.currentState === 'active') refreshSuggestions();
             setRefined(''); setBusy(false);
             const revision = ++statusRevision;
             if (AppState.currentState !== 'active') return;
@@ -41,7 +54,7 @@ export default function HomeScreen() {
         refresh();
         const sub = AppState.addEventListener('change', refresh);
         return () => { statusRevision++; request.setActive(false); sub.remove(); };
-    }, [request]));
+    }, [request, refreshSuggestions]));
     const occurrences = useMemo(() => {
         const date = new Date(now);
         const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -124,6 +137,34 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {notificationSuggestions.length > 0 ? (
+          <AssistantCard title="확인할 일정 추천" icon="calendar-outline" subtitle="다른 앱 알림에서 분석한 일정입니다. 확인한 후에만 저장됩니다." compact>
+            {notificationSuggestions.slice(0, 3).map(item => (
+              <View key={item.id} style={{ borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
+                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{item.title}</Text>
+                <Text style={[s.caption, { color: colors.textSecondary }]}>
+                  {dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
+                </Text>
+                <Text numberOfLines={2} style={[s.caption, { color: colors.textSecondary }]}>{item.excerpt}</Text>
+                <View style={{ gap: uiSpacing.xs }}>
+                  <AssistantButton label="확인 후 일정 추가" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
+                  <AssistantButton label="거절" icon="close-outline" secondary onPress={() => { void declineSuggestion(item.id); }} />
+                </View>
+              </View>
+            ))}
+            {notificationSuggestions.length > 3 ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`일정 추천 ${notificationSuggestions.length}건 모두 확인`}
+                onPress={() => router.push('/(tabs)/settings')}
+                style={{ minHeight: uiSizes.touchMinHeight, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Text style={[s.caption, { color: colors.primary }]}>나머지 {notificationSuggestions.length - 3}건 설정에서 확인</Text>
+              </TouchableOpacity>
+            ) : null}
+          </AssistantCard>
+        ) : null}
 
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
