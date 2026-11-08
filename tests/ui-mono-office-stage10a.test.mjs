@@ -6,8 +6,12 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8'
 
 function getPalette(name) {
   const source = read('src/lib/theme.ts');
-  const body = source.match(new RegExp(`export const ${name}: AppColors = \\\\{([\\\\s\\\\S]*?)\\\\n\\\\};`))?.[1];
-  assert.ok(body, `Missing ${name} semantic palette`);
+  const prefix = `export const ${name}: AppColors = {`;
+  const start = source.indexOf(prefix);
+  assert.ok(start >= 0, `Missing ${name} semantic palette`);
+  const end = source.indexOf('\n};', start);
+  assert.ok(end > start, `Unterminated ${name} semantic palette`);
+  const body = source.slice(start + prefix.length, end);
   return Object.fromEntries(Array.from(
     body.matchAll(/(\w+): '(#[0-9A-Fa-f]{6})'/g),
     ([, key, value]) => [key, value],
