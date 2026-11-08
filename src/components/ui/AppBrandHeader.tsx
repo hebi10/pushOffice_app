@@ -34,7 +34,7 @@ export function NotificationSettingsAction() {
       activeOpacity={0.8}
       style={styles.action}
     >
-      <Ionicons name="notifications-outline" size={22} color={colors.text} />
+      <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

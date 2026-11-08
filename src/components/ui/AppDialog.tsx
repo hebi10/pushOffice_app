@@ -45,11 +45,11 @@ export function AppDialog({
           style={[styles.panel, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
         >
           <View style={styles.heading}>
-            <View style={[styles.iconWrap, { backgroundColor: destructive ? colors.inputBackground : colors.primaryLight }]}>
+            <View style={[styles.iconWrap, { backgroundColor: colors.inputBackground }]}>
               <Ionicons
                 name={destructive ? 'trash-outline' : 'information-circle-outline'}
                 size={22}
-                color={actionColor}
+                color={destructive ? colors.danger : colors.textSecondary}
               />
             </View>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -63,7 +63,7 @@ export function AppDialog({
                 accessibilityRole="button"
                 accessibilityLabel={cancelLabel}
                 onPress={onDismiss}
-                style={[styles.action, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+                style={[styles.action, { backgroundColor: colors.surface, borderColor: colors.inputBorder }]}
               >
                 <Text style={[styles.label, { color: colors.text }]}>{cancelLabel}</Text>
               </Pressable>
@@ -86,7 +86,7 @@ export function AppDialog({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(15,23,42,0.58)',
+    backgroundColor: 'rgba(0,0,0,0.58)',
     justifyContent: 'center',
     padding: uiSpacing.lg,
   },
@@ -122,5 +122,5 @@ const styles = StyleSheet.create({
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
   },
-  label: { ...uiTypography.button, textAlign: 'center' },
+  label: { ...uiTypography.button, textAlign: 'center', flexShrink: 1 },
 });

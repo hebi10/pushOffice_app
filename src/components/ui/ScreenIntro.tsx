@@ -18,7 +18,7 @@ export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon,
   return (
     <View style={[styles.container, compact && styles.compactContainer, featured && styles.featuredContainer]}>
       <View style={styles.copy}>
-        {eyebrow ? <Text style={[styles.eyebrow, { color: colors.primary }]}>{eyebrow}</Text> : null}
+        {eyebrow ? <Text style={[styles.eyebrow, { color: colors.textSecondary }]}>{eyebrow}</Text> : null}
         <Text style={[styles.title, compact && styles.compactTitle, featured && styles.featuredTitle, { color: colors.text }]}>{title}</Text>
         {description ? <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text> : null}
       </View>
@@ -53,5 +53,5 @@ const styles = StyleSheet.create({
   eyebrow: { ...uiTypography.caption, fontWeight: '700' },
   title: { ...uiTypography.screenTitle, letterSpacing: -0.4 },
   description: { ...uiTypography.body, fontSize: 13, lineHeight: 19 },
-  artwork: { width: uiSizes.introArtworkWidth, height: uiSizes.introArtworkHeight, borderRadius: uiRadii.button },
+  artwork: { width: uiSizes.introArtworkWidth, height: uiSizes.introArtworkHeight, borderRadius: uiRadii.field },
 });
