@@ -3,6 +3,7 @@ package expo.modules.pushoffice
 import android.app.StatusBarManager
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.drawable.Icon
 import expo.modules.kotlin.Promise
@@ -16,7 +17,7 @@ class PushOfficeNativeModule : Module() {
   private val listener: () -> Unit = { sendEvent("schedulesChanged", emptyMap<String, Any>()) }
   override fun definition() = ModuleDefinition {
     Name("PushOfficeNative")
-    Events("schedulesChanged")
+    Events("schedulesChanged", "aiDownloadProgress")
     OnCreate { ScheduleStore.addListener(listener) }
     OnDestroy { ScheduleStore.removeListener(listener) }
     AsyncFunction("openQuickEntry") { promise: Promise ->
@@ -36,6 +37,17 @@ class PushOfficeNativeModule : Module() {
           promise.resolve(null)
         } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
       }
+    }
+    AsyncFunction("getQuickTileEnabled") {
+      context.packageManager.getComponentEnabledSetting(ComponentName(context, ScheduleTileService::class.java)) !=
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    }
+    AsyncFunction("setQuickTileEnabled") { enabled: Boolean ->
+      val component = ComponentName(context, ScheduleTileService::class.java)
+      context.packageManager.setComponentEnabledSetting(component,
+        if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+        PackageManager.DONT_KILL_APP)
+      enabled
     }
     AsyncFunction("requestAddTile") { promise: Promise ->
       val activity=appContext.currentActivity
@@ -69,6 +81,10 @@ class PushOfficeNativeModule : Module() {
       }
     }
     AsyncFunction("getAiStatus") Coroutine { -> NanoClient.status() }
+    AsyncFunction("downloadAiModel") Coroutine { ->
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 설정 화면에서 다운로드를 실행해 주세요." }
+      NanoClient.download { update -> sendEvent("aiDownloadProgress", update) }
+    }
     AsyncFunction("generateBriefing") Coroutine { prompt: String ->
       require(appContext.currentActivity?.hasWindowFocus()==true) { "AI 요약은 앱 화면이 열려 있을 때 사용할 수 있습니다." }
       NanoClient.briefing(prompt)

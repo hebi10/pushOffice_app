@@ -12,7 +12,7 @@ import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
 import { requestNotificationPermission } from '@/src/features/notifications/permission';
 import { reminderCapabilities } from '@/src/features/notifications/useNativeAssistant';
-import { PushOfficeNative, type ReminderCapabilities } from '@/modules/push-office-native';
+import { PushOfficeNative, type AiStatus, type AiDownloadProgress, type ReminderCapabilities } from '@/modules/push-office-native';
 import { showError } from '@/src/components/ui/toast';
 import { getLegacyCloudState } from '@/src/features/storage/storageMode';
 import { retryLegacyRecovery } from '@/src/features/storage/legacyRecovery';
@@ -24,7 +24,10 @@ export default function SettingsScreen() {
     const [cap, setCap] = useState<ReminderCapabilities | null>(null);
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
     const [recovering, setRecovering] = useState(false);
-    const [ai, setAi] = useState('기기 지원 상태를 확인하고 있습니다.');
+    const [ai, setAi] = useState<AiStatus>({ status: 'error', message: '기기 지원 상태를 확인하고 있습니다.' });
+    const [aiDownloading, setAiDownloading] = useState(false);
+    const [aiProgress, setAiProgress] = useState<AiDownloadProgress | null>(null);
+    const [tileEnabled, setTileEnabled] = useState(true);
     const [section, setSection] = useState<'basic' | 'advanced'>('basic');
     const [editingTime, setEditingTime] = useState(false);
     const [editingExternal, setEditingExternal] = useState(false);
@@ -41,9 +44,30 @@ export default function SettingsScreen() {
     useEffect(() => setKeywords(settings.newsKeywords.join(', ')), [settings.newsKeywords]);
     useEffect(() => setTickers(settings.stockTickers.join(', ')), [settings.stockTickers]);
     useEffect(() => setLanguage(settings.newsLanguage), [settings.newsLanguage]);
-    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); PushOfficeNative.getAiStatus().then(x => setAi(x.message)).catch(() => setAi('로컬 AI 지원 Android 빌드가 필요합니다.')); }, []);
+    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); PushOfficeNative.getAiStatus().then(setAi).catch(() => setAi({ status: 'error', message: '로컬 AI 지원 Android 빌드가 필요합니다.' })); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); }, []);
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
+    useEffect(() => {
+        const listener = PushOfficeNative.addListener('aiDownloadProgress', setAiProgress);
+        return () => listener.remove();
+    }, []);
+    const downloadAi = async () => {
+      setAiDownloading(true);
+      setAiProgress(null);
+      try {
+        const result = await PushOfficeNative.downloadAiModel();
+        setAi(result);
+        if (result.status === 'error') setNotice({ title: '기기 AI 다운로드', message: result.message });
+      } catch (error) { showError(error, 'AI 모델 다운로드를 실행할 수 없습니다.'); }
+      finally { setAiDownloading(false); }
+    };
+    const toggleTile = async (enabled: boolean) => {
+      try {
+        await PushOfficeNative.setQuickTileEnabled(enabled);
+        setTileEnabled(enabled);
+        if (enabled) setNotice({ title: '빠른 설정', message: '기능을 켰습니다. 아래 타일 추가에서 시스템 빠른 설정에 배치해 주세요.' });
+      } catch (error) { showError(error, '빠른 설정 사용 여부를 변경하지 못했습니다.'); }
+    };
     const retryImport = async () => { setRecovering(true); try { setLegacy(await retryLegacyRecovery()); } catch (error) { showError(error, '이전 일정 원본을 보존하고 있어요. 다시 시도해 주세요.'); } finally { setRecovering(false); } };
     const save = async (patch: Partial<UserSettings>, success?: string): Promise<boolean> => {
         setSaveFeedback(null);
@@ -200,7 +224,8 @@ export default function SettingsScreen() {
                 title="빠른 설정과 홈 위젯"
                 icon="grid-outline"
               >
-                <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 추가" onPress={() => { void addTile(); }} />
+                <SettingsToggleRow icon="grid-outline" title="빠른 설정 사용" description="끄면 시스템 타일을 사용할 수 없습니다. 다시 켠 뒤 재추가가 필요할 수 있습니다." value={tileEnabled} onValueChange={v => { void toggleTile(v); }} />
+                <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 직접 배치" status={!tileEnabled ? '꺼짐' : undefined} onPress={() => { if (tileEnabled) void addTile(); else setNotice({ title: '빠른 설정', message: '먼저 빠른 설정 사용을 켜 주세요.' }); }} />
                 <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가까운 일정 표시" onPress={() => { void pin('small'); }} />
                 <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘 일정 목록 표시" onPress={() => { void pin('agenda'); }} />
                 <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
@@ -209,8 +234,14 @@ export default function SettingsScreen() {
                 <SettingsStatusRow
                   icon="sparkles-outline"
                   title="Gemini Nano"
-                  description={ai}
+                  description={ai.message}
                 />
+                {ai.status === 'downloadable' ? (
+                  <SettingsActionRow icon="cloud-download-outline" title="기기 AI 모델 다운로드" description="기기가 지원하는 Gemini Nano를 직접 내려받습니다. Wi-Fi 사용을 권장합니다." busy={aiDownloading} onPress={() => { void downloadAi(); }} />
+                ) : null}
+                {aiDownloading || aiProgress ? (
+                  <SettingsNote>{aiDownloading ? '다운로드 처리 중 · ' : ''}{aiProgress?.status === 'progress' && aiProgress.totalBytes > 0 ? `${Math.min(100, Math.round(aiProgress.bytesDownloaded / aiProgress.totalBytes * 100))}%` : aiProgress?.status === 'completed' ? '다운로드 완료' : aiProgress?.status === 'failed' ? '다운로드 실패' : '진행 상태 확인 중'}</SettingsNote>
+                ) : null}
                 <SettingsActionRow
                   icon="mic-outline"
                   title="텍스트 · 음성 입력 열기"

@@ -34,16 +34,27 @@ export interface AiStatus {
   status: 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'error';
   message: string;
 }
-export type PushOfficeNativeEvents = { schedulesChanged: () => void };
+export interface AiDownloadProgress {
+  status: 'started' | 'progress' | 'completed' | 'failed';
+  bytesDownloaded: number;
+  totalBytes: number;
+}
+export type PushOfficeNativeEvents = {
+  schedulesChanged: () => void;
+  aiDownloadProgress: (update: AiDownloadProgress) => void;
+};
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
   /** Opens the existing voice editor without starting microphone capture. */
   openVoiceQuickEntry(): Promise<void>;
   /** Actual system tile-add callback: added, already_added, not_added, error_<code>, unsupported_manual. */
   requestAddTile(): Promise<string>;
+  getQuickTileEnabled(): Promise<boolean>;
+  setQuickTileEnabled(enabled: boolean): Promise<boolean>;
   /** Request accepted by launcher; true does not mean the user placed the widget. */
   requestPinWidget(kind: 'small' | 'agenda'): Promise<boolean>;
   getAiStatus(): Promise<AiStatus>;
+  downloadAiModel(): Promise<AiStatus>;
   generateBriefing(prompt: string): Promise<string>;
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
@@ -69,8 +80,11 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
   openVoiceQuickEntry: unavailable,
   requestAddTile: unavailable,
+  getQuickTileEnabled: async () => false,
+  setQuickTileEnabled: unavailable,
   requestPinWidget: unavailable,
   getAiStatus: async () => ({ status: 'unavailable', message: '기기 AI는 지원되는 Android 기기에서 사용할 수 있습니다.' }),
+  downloadAiModel: unavailable,
   generateBriefing: unavailable,
   refreshWidgets: unavailable,
   setUiTheme: unavailable,
