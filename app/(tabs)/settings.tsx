@@ -12,7 +12,7 @@ import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
 import { requestNotificationPermission } from '@/src/features/notifications/permission';
 import { reminderCapabilities } from '@/src/features/notifications/useNativeAssistant';
-import { PushOfficeNative, type AiStatus, type AiDownloadProgress, type ReminderCapabilities } from '@/modules/push-office-native';
+import { PushOfficeNative, type AiStatus, type AiDownloadProgress, type ReminderCapabilities, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
 import { showError } from '@/src/components/ui/toast';
 import { getLegacyCloudState } from '@/src/features/storage/storageMode';
 import { retryLegacyRecovery } from '@/src/features/storage/legacyRecovery';
@@ -28,6 +28,9 @@ export default function SettingsScreen() {
     const [aiDownloading, setAiDownloading] = useState(false);
     const [aiProgress, setAiProgress] = useState<AiDownloadProgress | null>(null);
     const [tileEnabled, setTileEnabled] = useState(true);
+    const [notificationStatus, setNotificationStatus] = useState<NotificationSuggestionStatus | null>(null);
+    const [suggestions, setSuggestions] = useState<NotificationSuggestion[]>([]);
+    const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
     const [section, setSection] = useState<'basic' | 'advanced'>('basic');
     const [editingTime, setEditingTime] = useState(false);
     const [editingExternal, setEditingExternal] = useState(false);
@@ -44,9 +47,13 @@ export default function SettingsScreen() {
     useEffect(() => setKeywords(settings.newsKeywords.join(', ')), [settings.newsKeywords]);
     useEffect(() => setTickers(settings.stockTickers.join(', ')), [settings.stockTickers]);
     useEffect(() => setLanguage(settings.newsLanguage), [settings.newsLanguage]);
-    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); PushOfficeNative.getAiStatus().then(setAi).catch(() => setAi({ status: 'error', message: '로컬 AI 지원 Android 빌드가 필요합니다.' })); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); }, []);
+    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); PushOfficeNative.getAiStatus().then(setAi).catch(() => setAi({ status: 'error', message: '로컬 AI 지원 Android 빌드가 필요합니다.' })); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, []);
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
+    useEffect(() => {
+      const sub = PushOfficeNative.addListener('schedulesChanged', refresh);
+      return () => sub.remove();
+    }, [refresh]);
     useEffect(() => {
         const listener = PushOfficeNative.addListener('aiDownloadProgress', setAiProgress);
         return () => listener.remove();
@@ -105,6 +112,27 @@ export default function SettingsScreen() {
     catch (e) {
         showError(e, '타일 추가 요청을 열 수 없습니다.');
     } };
+    const toggleCapture = async (enabled: boolean) => {
+      if (enabled && !notificationStatus?.accessGranted) {
+        setNotice({
+          title: '별도 알림 접근 권한 필요',
+          message: 'Android 알림 접근은 일반 알림 권한과 다르며, 허용하면 다른 앱의 알림 내용도 읽을 수 있습니다. 먼저 아래 시스템 권한 화면에서 Push Office를 허용한 뒤 기능을 켜 주세요.',
+        });
+        return;
+      }
+      try {
+        await PushOfficeNative.setNotificationCaptureEnabled(enabled);
+        refresh();
+      } catch (error) { showError(error, '알림 분석 설정을 저장하지 못했습니다.'); }
+    };
+    const reviewSuggestion = async (id: string) => {
+      try { await PushOfficeNative.openNotificationSuggestion(id); }
+      catch (error) { showError(error, '일정 후보를 열지 못했습니다.'); refresh(); }
+    };
+    const dismissSuggestion = async (id: string) => {
+      try { await PushOfficeNative.dismissNotificationSuggestion(id); refresh(); }
+      catch (error) { showError(error, '일정 후보를 삭제하지 못했습니다.'); }
+    };
     const pin = async (kind: 'small' | 'agenda') => { try {
         const accepted = await PushOfficeNative.requestPinWidget(kind);
         setNotice({ title: '홈 화면 위젯', message: accepted ? '런처에 추가 요청을 전달했습니다. 표시된 확인 창에서 추가를 완료해 주세요.' : '이 런처는 위젯 추가 요청을 지원하지 않습니다. 홈 화면을 길게 누른 뒤 위젯에서 Push Office를 선택해 주세요.' });
@@ -229,6 +257,50 @@ export default function SettingsScreen() {
                 <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가까운 일정 표시" onPress={() => { void pin('small'); }} />
                 <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘 일정 목록 표시" onPress={() => { void pin('agenda'); }} />
                 <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
+              </SettingsGroup>
+              <SettingsGroup title="알림에서 일정 추천" icon="calendar-outline" description="사용자가 승인한 일정만 저장합니다.">
+                <SettingsToggleRow
+                  icon="sparkles-outline"
+                  title="백그라운드 일정 후보 분석"
+                  description="알림을 받았을 때만 기기에서 분석합니다. 기본값은 꺼짐입니다."
+                  value={notificationStatus?.enabled ?? false}
+                  disabled={!notificationStatus}
+                  onValueChange={v => { void toggleCapture(v); }}
+                />
+                <SettingsActionRow
+                  icon="shield-checkmark-outline"
+                  title="다른 앱 알림 접근 권한"
+                  description="이 권한은 다른 앱 알림 내용을 볼 수 있는 민감한 권한입니다."
+                  status={notificationStatus?.accessGranted ? '허용됨' : '허용 필요'}
+                  onPress={() => { void PushOfficeNative.openNotificationAccessSettings().catch(e => showError(e, '권한 설정 화면을 열지 못했습니다.')); }}
+                />
+                <SettingsActionRow
+                  icon="calendar-outline"
+                  title="추천 일정 후보"
+                  description="알림에서 추출한 일정의 원문과 시각을 확인합니다."
+                  status={notificationStatus ? `${suggestions.length}건` : '확인 중'}
+                  expanded={suggestionsExpanded}
+                  onPress={() => { refresh(); setSuggestionsExpanded(value => !value); }}
+                />
+                {suggestionsExpanded ? (
+                  <View style={{ gap: uiSpacing.sm, padding: uiSpacing.sm }}>
+                    {suggestions.length === 0 ? <SettingsNote>검토할 일정 후보가 없습니다. 알림 접근 허용과 분석 사용 여부를 확인해 주세요.</SettingsNote> : null}
+                    {suggestions.map(item => (
+                      <View key={item.id} style={{ backgroundColor: colors.inputBackground, borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, borderRadius: uiRadii.field, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
+                        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{item.title}</Text>
+                        <Text style={{ color: colors.textSecondary }}>예정 시각: {new Date(item.startAt).toLocaleString('ko-KR')}</Text>
+                        <Text style={{ color: colors.textSecondary }}>{item.sourceApp} · {item.analysis === 'on_device_ai' ? '기기 AI 분석' : '기본 규칙 분석'}</Text>
+                        <Text style={{ color: colors.text }}>{item.excerpt}</Text>
+                        <View style={{ gap: uiSpacing.xs }}>
+                          <AssistantButton label="검토 후 저장" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
+                          <AssistantButton label="거절 · 삭제" icon="trash-outline" secondary onPress={() => { void dismissSuggestion(item.id); }} />
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+                <SettingsNote>기기 내 처리만 사용하며 외부 AI 서버에 알림 내용을 보내지 않습니다. 분석 가능한 날짜·시간이 있는 알림만 후보로 보관합니다. 후보는 최대 24건·48시간이며, 기능을 끄면 후보를 삭제합니다. 모든 알림을 정확히 분석한다고 보장할 수는 없습니다.</SettingsNote>
+                <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
                 <SettingsStatusRow

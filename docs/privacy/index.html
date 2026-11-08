@@ -33,7 +33,7 @@
 <main id="main">
   <header>
     <h1>Push Office 개인정보처리방침</h1>
-    <p class="meta">시행일: 2026년 11월 3일 · 최종 수정일: 2026년 11월 3일<br>대상 앱: Push Office · Android 패키지: <code>com.hebi96.pushOffice_app</code></p>
+    <p class="meta">시행일: 2026년 11월 3일 · 최종 수정일: 2026년 11월 8일<br>대상 앱: Push Office · Android 패키지: <code>com.hebi96.pushOffice_app</code></p>
     <p>이 방침의 운영 주체는 GitHub 계정 <strong>hebi10의 Push Office 운영자</strong>(이하 “운영자”)입니다. 지원 및 개인정보 문의는 <a href="mailto:asdlkj0104@gmail.com">asdlkj0104@gmail.com</a>으로 보낼 수 있습니다.</p>
     <p class="intro">Push Office는 새 계정이나 로그인 없이 기기에 일정을 저장합니다. 음성 입력과 기기 AI는 시스템 서비스를 사용하며, Google ML Kit는 별도의 식별자·진단 정보를 처리합니다. 날씨·뉴스·주식의 외부 브리핑은 사용자가 직접 요청하는 선택 기능입니다.</p>
   </header>
@@ -63,13 +63,23 @@
       <li>지연 시간 등 성능 지표, API 설정, 입력·출력의 크기, 기능 버전과 설정된 언어</li>
       <li>기능 초기화·모델 다운로드·리소스 해제 등의 이벤트와 오류 코드</li>
     </ul>
+    <p>지원 기기에서 사용자가 설정의 다운로드 버튼을 누르면 Android AICore를 통해 Gemini Nano 모델 자산 다운로드를 요청합니다. 앱이 모델 파일을 직접 호스팅하거나 외부 AI 서버로 알림 본문을 전송하지 않습니다. 다운로드·이용 가능 여부는 Android 및 AICore 지원 상태에 따라 달라집니다.</p>
     <p>입력·출력의 크기는 실제 일정 내용이나 생성된 문장 자체와 구별됩니다. 앱은 홈과 설정 화면에서 기기 AI의 준비 상태를 자동 확인하며, 이 SDK 경로의 진단 처리를 끄는 앱 내 설정은 제공하지 않습니다. Google은 이 정보를 API의 성능 확인, 유지·개선과 오용 방지 등에 사용한다고 설명합니다.</p>
     <p>Google은 공개된 ML Kit 진단 정보의 전송에 HTTPS를 사용하고 ML Kit가 해당 정보를 제삼자에게 전달하지 않는다고 설명합니다. Google이 처리하는 정보의 보관과 관리에는 Google의 관련 정책이 적용됩니다. 운영자는 Google의 진단 정보에 대해 확인되지 않은 일률적인 보관 기간이나 삭제 완료 시점을 약속하지 않습니다.</p>
     <p>참고: <a href="https://developers.google.com/ml-kit/android-data-disclosure">ML Kit 데이터 공개 안내</a>, <a href="https://developers.google.com/ml-kit/terms">ML Kit 약관 및 개인정보 설명</a>, <a href="https://policies.google.com/privacy">Google 개인정보처리방침</a>.</p>
   </section>
 
+  <section aria-labelledby="notification-suggestions">
+    <h2 id="notification-suggestions">4. 선택적 다른 앱 알림 접근 및 일정 후보 추천</h2>
+    <p>이 기능은 기본값이 꺼짐입니다. 사용자가 Android 시스템의 별도 알림 접근 권한을 부여하고 앱에서 ‘백그라운드 일정 후보 분석’을 직접 켠 경우에만 수집을 시작합니다. 시스템 권한만 허용했다고 자동으로 일정 분석을 시작하지 않습니다.</p>
+    <p>알림 접근 권한을 부여하면 Android는 다른 앱의 알림 제목·본문 등 민감한 알림 내용에 접근할 수 있도록 허용합니다. Push Office는 이 중 날짜·시간을 포함한 일정 관련 내용만 기기에서 선별하며, 인증번호·금융 등 일부 민감한 문구는 규칙으로 제외합니다. 다만 모든 민감 알림을 완벽히 식별하거나 제외할 수 있다고 보장하지 않습니다.</p>
+    <p>필터를 통과한 알림은 기기에서 Gemini Nano를 사용할 수 있으면 기기 AI로 해석하고, 그렇지 않거나 해석이 실패하면 로컬 규칙 파서로 확인합니다. 결과로 일정 후보 제목, 예정 시각, 알림 발생 앱 이름, 원문 일부 및 분석 방식이 기기 내부 앱 전용 저장소에 저장됩니다. 일정 후보는 최대 24건이며 수집 후 48시간이 지나면 목록을 조회하거나 저장할 때 제거합니다. 이미 처리한 알림을 중복 추천하지 않도록 내용에 기반한 비가역 식별값도 최근 최대 200건까지 앱에 보관합니다.</p>
+    <p>사용자는 추천 후보를 열어 제목·날짜·시간을 수정하고 명시적으로 저장하거나 거절·삭제할 수 있습니다. 승인 전에는 일정 데이터베이스나 알람에 자동으로 추가하지 않습니다. 기능을 끄면 보관 중인 일정 후보와 중복 방지 기록을 즉시 삭제합니다. 기존에 승인해 저장한 일정은 별도의 일정 삭제를 하기 전까지 유지됩니다. Android 알림 접근 권한은 기기 설정에서 별도로 철회할 수 있습니다.</p>
+    <p>새 알림 수신 시에만 필요한 만큼 백그라운드 작업을 시도하며, 상시 실행되는 서비스나 원격 업로드를 사용하지 않습니다. 운영체제의 절전, 앱 강제 종료, 기기 AI 지원 여부에 따라 백그라운드 수집 또는 분석이 지연·실패할 수 있습니다.</p>
+  </section>
+
   <section aria-labelledby="external">
-    <h2 id="external">4. 선택적 외부 브리핑과 서버 처리</h2>
+    <h2 id="external">5. 선택적 외부 브리핑과 서버 처리</h2>
     <p>날씨·뉴스·주식 항목은 새 설치에서 모두 꺼져 있습니다. 외부 서비스 주소가 앱에 구성되어 있고, 사용자가 항목을 설정한 뒤 ‘외부 브리핑 불러오기’를 누르면 해당 서비스로 요청합니다. 주소가 구성되지 않거나 연결되지 않으면 외부 브리핑을 사용할 수 없습니다.</p>
     <div class="table-wrap">
       <table>
@@ -88,15 +98,16 @@
   </section>
 
   <section aria-labelledby="legacy">
-    <h2 id="legacy">5. 이전 Firebase 계정과 기록 가져오기</h2>
+    <h2 id="legacy">6. 이전 Firebase 계정과 기록 가져오기</h2>
     <p>이전 버전에서 Firebase를 사용한 상태가 남아 있거나 사용자가 가져오기를 재시도하면, 앱은 구성된 Firebase 서비스와 기존 로그인 상태를 확인할 수 있습니다. 기존 계정이 확인되면 해당 계정 식별자·인증 상태를 이용해 일정과 설정을 읽어 기기로 가져옵니다. 이전 복구 대기 상태가 있는 경우 앱 시작 후 자동으로 시도할 수도 있습니다.</p>
     <p>이 과정에서는 Firebase Authentication과 Firestore가 인증·조회에 필요한 계정 식별자, 통신·기기 관련 정보를 처리할 수 있습니다. 새 사용자 화면은 새 Firebase 계정을 만들지 않습니다. 가져오기는 원격 기록을 읽는 작업이며 원격 원본을 수정하거나 삭제하지 않습니다.</p>
     <p>로컬 일정이나 앱을 삭제해도 이전 Firebase 계정과 서버 기록은 자동 삭제되지 않습니다. 이전 기록의 보관·삭제에 관한 문의는 지원 이메일로 보내 주세요. 기기에만 있는 데이터와 서버에 있는 이전 기록은 구별하여 확인해야 합니다. 참고: <a href="https://firebase.google.com/support/privacy">Firebase 개인정보 및 보안 설명</a>.</p>
   </section>
 
   <section aria-labelledby="permissions">
-    <h2 id="permissions">6. 권한, 알림과 광고</h2>
+    <h2 id="permissions">7. 권한, 알림과 광고</h2>
     <ul>
+      <li><strong>다른 앱 알림 접근:</strong> 사용자가 별도 승인한 경우에만 기기의 알림 내용을 읽고 일정 후보를 만듭니다. 앱 내 분석 토글은 기본적으로 꺼져 있으며 언제든 끌 수 있습니다.</li>
       <li><strong>마이크:</strong> 사용자가 시작한 음성 입력에 사용하며, 기기 설정에서 권한을 취소할 수 있습니다.</li>
       <li><strong>알림:</strong> 일정·재알림·아침 일정 브리핑을 표시합니다. 앱 설정에서 기능을 끄거나 기기 설정에서 권한을 취소할 수 있습니다.</li>
       <li><strong>알람·재부팅 수신:</strong> 예약 시간의 알림과 재부팅·시간대 변경 후 예약 갱신에 사용합니다. 정확한 알람을 사용할 수 없으면 일반 알람으로 예약되어 전달이 늦어질 수 있습니다.</li>
@@ -106,7 +117,7 @@
   </section>
 
   <section aria-labelledby="retention">
-    <h2 id="retention">7. 보관과 삭제</h2>
+    <h2 id="retention">8. 보관과 삭제</h2>
     <ul>
       <li><strong>현재 로컬 일정:</strong> 앱의 일정 상세 화면에서 일정과 관련 알림을 삭제할 수 있습니다.</li>
       <li><strong>설정·브리핑·이전 버전의 로컬 원본:</strong> 개별 일정을 지워도 별도로 남을 수 있습니다. 앱 삭제 또는 Android 앱 저장공간의 데이터 삭제로 기기에 보관된 앱 데이터를 제거할 수 있습니다.</li>
@@ -117,7 +128,7 @@
   </section>
 
   <section aria-labelledby="contact">
-    <h2 id="contact">8. 문의와 방침 변경</h2>
+    <h2 id="contact">9. 문의와 방침 변경</h2>
     <p>지원 이메일로 문의할 경우 보내는 이메일 주소, 문의 내용과 첨부자료는 운영자에게 전달되어 문의 확인과 답변에 사용됩니다. 실제 문의에 필요하지 않은 계정 비밀번호나 민감한 정보는 보내지 않아도 됩니다.</p>
     <p>운영 주체: <strong>GitHub hebi10의 Push Office 운영자</strong><br>지원·개인정보 문의: <a href="mailto:asdlkj0104@gmail.com">asdlkj0104@gmail.com</a></p>
     <p>앱의 기능이나 정보 처리 방식이 바뀌면 이 페이지의 방침과 최종 수정일을 갱신합니다.</p>
