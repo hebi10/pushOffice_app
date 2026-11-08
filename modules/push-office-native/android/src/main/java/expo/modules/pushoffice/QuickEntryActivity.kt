@@ -171,6 +171,7 @@ class QuickEntryActivity : Activity() {
     root.addView(heading)
     root.addView(ImageView(this).apply {
       setImageResource(R.drawable.quick_entry_mono)
+      setColorFilter(if(isDark) Color.rgb(231,233,236) else Color.rgb(35,38,43))
       scaleType=ImageView.ScaleType.FIT_CENTER
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
     },LinearLayout.LayoutParams(dp(140),dp(106)).apply {

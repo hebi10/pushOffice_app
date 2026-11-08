@@ -22,3 +22,6 @@
 ## 안전 경계
 - `main` 병합 및 Play 내부·비공개 배포 금지. 10-C~10-F 통합 후 사용자 승인/검증에 따라 최종 반영합니다.
 - 기존 `tools/export_brand_assets.py`는 과거 Play 그래픽 익스포트용이므로 실행 시 새 로고 PNG를 덮어쓸 수 있습니다. Mono 최종 스토어 그래픽 갱신 전까지 실행하지 않습니다.
+
+### 사용자 지정 테마 검증 보강
+Android drawable-night만 이용할 경우 시스템 모드와 앱에서 직접 설정한 테마가 다를 때 색상이 어긋날 수 있습니다. `QuickEntryActivity`는 `isDark`를 기준으로 PNG를 직접 틴트(`#23262B` / `#E7E9EC`)합니다. 리소스 폴더의 day/night PNG와 별개로 사용자 테마 선택 시 대비가 유지됩니다.
