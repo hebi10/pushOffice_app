@@ -119,6 +119,11 @@ export default function ScheduleDetail() {
     />
   );
 
+  const overviewEndDate = end.trim() ? dayjs(end.replace(' ', 'T')) : null;
+  const overviewEnd = overviewEndDate?.isValid()
+    ? overviewEndDate.format(allDay ? 'YYYY년 M월 D일 (ddd)' : 'YYYY년 M월 D일 (ddd) HH:mm')
+    : end;
+
   if (!detail.data) {
     return (
       <View style={[s.content, styles.missingScreen, { backgroundColor: colors.background }]}>
@@ -151,13 +156,15 @@ export default function ScheduleDetail() {
         keyboardShouldPersistTaps="handled"
       >
         <ScreenIntro title="일정 관리" compact />
-        <View accessibilityRole="summary" style={[styles.scheduleOverview, { backgroundColor: colors.primaryLight }]}>
+        <View accessibilityRole="summary" style={[styles.scheduleOverview, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
           <Text style={[styles.overviewTitle, { color: colors.text }]} numberOfLines={3}>{title || '제목 없는 일정'}</Text>
           <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>
             {date ? dayjs(date).format('YYYY년 M월 D일 (ddd)') : '날짜 미지정'}
             {' · '}{allDay ? '종일' : time}
-            {end ? ` ~ ${end}` : ''}
           </Text>
+          {end ? (
+            <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>종료 {overviewEnd}</Text>
+          ) : null}
           <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
             {repeat === 'monthly' ? '매월 반복' : repeat === 'yearly' ? '매년 반복' : '반복 없음'}
             {' · '}{notification ? '알림 사용' : '알림 끔'}
@@ -191,7 +198,7 @@ export default function ScheduleDetail() {
               <SchedulePickerField
                 label="종료 날짜"
                 accessibilityLabel="종료 날짜 선택"
-                value={end ? end.split(' ')[0] : '날짜 선택'}
+                value={end ? dayjs(end.split(' ')[0]).format('YYYY년 M월 D일') : '날짜 선택'}
                 icon="calendar-outline"
                 onPress={() => openDatePicker('end')}
               />
@@ -319,7 +326,7 @@ export default function ScheduleDetail() {
               maxLength={2}
               value={hour}
               onChangeText={setHour}
-              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
+              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
             />
           </View>
           <Text style={[styles.timeSeparator, { color: colors.textSecondary }]}>:</Text>
@@ -331,7 +338,7 @@ export default function ScheduleDetail() {
               maxLength={2}
               value={minute}
               onChangeText={setMinute}
-              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.background }]}
+              style={[s.input, styles.timeInput, { color: colors.text, borderColor: colors.inputBorder, backgroundColor: colors.inputBackground }]}
             />
           </View>
         </View>
@@ -385,10 +392,10 @@ export default function ScheduleDetail() {
 }
 
 const styles = StyleSheet.create({
-  scheduleOverview: { padding: uiSpacing.md, gap: uiSpacing.xs, borderRadius: uiRadii.card },
+  scheduleOverview: { padding: uiSpacing.md, gap: uiSpacing.xs, borderRadius: uiRadii.card, borderWidth: uiSizes.borderWidth },
   overviewTitle: { ...uiTypography.sectionTitle, fontSize: 20, lineHeight: 28 },
   overviewTime: { ...uiTypography.body, fontVariant: ['tabular-nums'] },
-  overviewMeta: { ...uiTypography.caption },
+  overviewMeta: { ...uiTypography.caption, paddingTop: uiSpacing.xxs },
   missingScreen: { flex: 1 },
   missingContent: {
     paddingVertical: uiSpacing.xxl,
