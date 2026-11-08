@@ -5,4 +5,13 @@
   <color name="po_widget_on_primary">#FFFFFF</color>
   <color name="po_widget_border">#DDE1E5</color>
   <color name="po_widget_action_surface">#ECEEF1</color>
+  <color name="po_native_primary">#23262B</color>
+  <color name="po_native_on_primary">#FFFFFF</color>
+  <color name="po_native_surface">#FFFFFF</color>
+  <color name="po_native_text">#1C1E21</color>
+  <color name="po_native_secondary">#5D6269</color>
+  <color name="po_native_field">#ECEEF1</color>
+  <color name="po_native_input_border">#818891</color>
+  <color name="po_native_danger">#B42318</color>
+  <color name="po_widget_secondary">#5D6269</color>
 </resources>

@@ -33,7 +33,7 @@
             android:includeFontPadding="false"
             android:maxLines="1"
             android:text="PushOffice"
-            android:textColor="@color/po_widget_accent"
+            android:textColor="@color/po_widget_secondary"
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
