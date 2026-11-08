@@ -1,0 +1,33 @@
+name: Push Office closed testing one-time request (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-closed-once-20261108.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  request-closed-testing:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-closed-once-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Request existing Play release workflow for closed testing only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method POST \
+            "repos/${GH_REPO}/actions/workflows/android-release.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[mode]=deploy' \
+            -f 'inputs[target]=closed' \
+            -f 'inputs[closed_track]=alpha'
