@@ -43,11 +43,15 @@ test('light/dark primary, destructive and helper text remain legible', () => {
   }
 });
 
-test('brand accent is distinct from accessible primary action color', () => {
+test('brand blue is separate from the high-contrast neutral primary action', () => {
   const light = getPalette('lightColors');
-  assert.equal(light.brandAccent, '#4B94DC');
-  assert.equal(light.primary, '#2563EB');
-  assert.ok(contrast(light.brandAccent, '#FFFFFF') < 4.5);
+  const dark = getPalette('darkColors');
+  assert.equal(light.brandAccent, '#2563EB');
+  assert.equal(light.primary, '#23262B');
+  assert.equal(dark.brandAccent, '#93C5FD');
+  assert.equal(dark.primary, '#E7E9EC');
+  assert.ok(contrast(light.brandAccent, light.surface) >= 4.5);
+  assert.ok(contrast(dark.brandAccent, dark.surface) >= 4.5);
 });
 
 test('shared components use the same spacing, control and typography tokens', () => {
