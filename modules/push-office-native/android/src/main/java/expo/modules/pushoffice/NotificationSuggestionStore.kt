@@ -100,6 +100,19 @@ object NotificationSuggestionStore {
     if (existing.none { it.id == id }) false
     else { write(context, existing.filterNot { it.id == id }); true }
   }
+  /** User-initiated foreground ML Kit refinement; stale/disabled candidates are not resurrected. */
+  fun refine(context: Context, id: String, title: String, startAt: Long): NotificationSuggestion = synchronized(lock) {
+    require(enabled(context) && accessGranted(context)) { "알림 분석 기능과 접근 권한을 확인해 주세요." }
+    val now = System.currentTimeMillis()
+    require(title.isNotBlank() && startAt > now && startAt <= now + 366L * 24 * 60 * 60 * 1000) { "일정 제목과 미래 날짜를 확인해 주세요." }
+    val current = retained(context)
+    val existing = current.firstOrNull { it.id == id } ?: throw IllegalStateException("일정 후보가 삭제되었거나 만료됐습니다.")
+    require(current.none { it.id != id && it.title == title && it.startAt == startAt }) { "이미 같은 일정 후보가 있습니다." }
+    require(ScheduleStore(context).use { db -> db.all().none { it.title == title && it.startAt == startAt } }) { "이미 저장된 일정입니다." }
+    val updated = existing.copy(title = title.take(120), startAt = startAt, analysis = "on_device_ai")
+    write(context, current.map { if (it.id == id) updated else it })
+    updated
+  }
   fun add(context: Context, suggestion: NotificationSuggestion): Boolean = synchronized(lock) {
     if (!enabled(context) || !accessGranted(context)) return@synchronized false
     val now = System.currentTimeMillis()

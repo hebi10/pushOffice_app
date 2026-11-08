@@ -69,6 +69,18 @@ class PushOfficeNativeModule : Module() {
       }
     }
     AsyncFunction("getNotificationSuggestions") { NotificationSuggestionStore.all(context).map(NotificationSuggestion::toMap) }
+    AsyncFunction("refineNotificationSuggestion") Coroutine { id: String ->
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "기기 AI 분석은 앱 화면에서 사용해 주세요." }
+      require(NotificationSuggestionStore.enabled(context) && NotificationSuggestionStore.accessGranted(context)) { "알림 분석 권한이 없습니다." }
+      val original = NotificationSuggestionStore.get(context, id)
+        ?: throw IllegalStateException("일정 후보가 삭제되었거나 만료됐습니다.")
+      val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
+      val timestamp = java.time.Instant.ofEpochMilli(original.receivedAt).atZone(zone)
+      val parsed = NanoClient.parse(original.excerpt, timestamp)
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 화면이 닫혀 AI 결과를 저장하지 않았습니다." }
+      NotificationSuggestionStore.refine(context, id, parsed.title, parsed.start?.toInstant()?.toEpochMilli()
+        ?: throw IllegalArgumentException("AI 분석 날짜가 올바르지 않습니다.")).toMap()
+    }
     AsyncFunction("dismissNotificationSuggestion") { id: String ->
       NotificationSuggestionStore.dismiss(context, id)
     }

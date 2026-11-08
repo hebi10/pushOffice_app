@@ -29,6 +29,8 @@ export default function SettingsScreen() {
     const [aiProgress, setAiProgress] = useState<AiDownloadProgress | null>(null);
     const [tileEnabled, setTileEnabled] = useState(true);
     const [notificationStatus, setNotificationStatus] = useState<NotificationSuggestionStatus | null>(null);
+    const [notificationDisclosure, setNotificationDisclosure] = useState<'enable' | 'access' | null>(null);
+    const [refiningSuggestionId, setRefiningSuggestionId] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<NotificationSuggestion[]>([]);
     const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
     const [section, setSection] = useState<'basic' | 'advanced'>('basic');
@@ -113,17 +115,32 @@ export default function SettingsScreen() {
         showError(e, '타일 추가 요청을 열 수 없습니다.');
     } };
     const toggleCapture = async (enabled: boolean) => {
-      if (enabled && !notificationStatus?.accessGranted) {
-        setNotice({
-          title: '별도 알림 접근 권한 필요',
-          message: 'Android 알림 접근은 일반 알림 권한과 다르며, 허용하면 다른 앱의 알림 내용도 읽을 수 있습니다. 먼저 아래 시스템 권한 화면에서 Push Office를 허용한 뒤 기능을 켜 주세요.',
-        });
+      if (enabled) {
+        setNotificationDisclosure(notificationStatus?.accessGranted ? 'enable' : 'access');
         return;
       }
       try {
-        await PushOfficeNative.setNotificationCaptureEnabled(enabled);
+        await PushOfficeNative.setNotificationCaptureEnabled(false);
         refresh();
       } catch (error) { showError(error, '알림 분석 설정을 저장하지 못했습니다.'); }
+    };
+    const confirmDisclosure = () => {
+      const intent = notificationDisclosure;
+      setNotificationDisclosure(null);
+      if (intent === 'access') {
+        void PushOfficeNative.openNotificationAccessSettings().catch(e => showError(e, '알림 접근 설정을 열지 못했습니다.'));
+      } else if (intent === 'enable') {
+        void PushOfficeNative.setNotificationCaptureEnabled(true).then(refresh)
+          .catch(e => showError(e, '알림 분석 사용 여부를 저장하지 못했습니다.'));
+      }
+    };
+    const refineSuggestion = async (id: string) => {
+      setRefiningSuggestionId(id);
+      try {
+        await PushOfficeNative.refineNotificationSuggestion(id);
+        refresh();
+      } catch (error) { showError(error, '기기 AI 분석에 실패했습니다. 기존 규칙 분석 결과는 유지됩니다.'); }
+      finally { setRefiningSuggestionId(null); }
     };
     const reviewSuggestion = async (id: string) => {
       try { await PushOfficeNative.openNotificationSuggestion(id); }
@@ -272,7 +289,7 @@ export default function SettingsScreen() {
                   title="다른 앱 알림 접근 권한"
                   description="이 권한은 다른 앱 알림 내용을 볼 수 있는 민감한 권한입니다."
                   status={notificationStatus?.accessGranted ? '허용됨' : '허용 필요'}
-                  onPress={() => { void PushOfficeNative.openNotificationAccessSettings().catch(e => showError(e, '권한 설정 화면을 열지 못했습니다.')); }}
+                  onPress={() => { setNotificationDisclosure('access'); }}
                 />
                 <SettingsActionRow
                   icon="calendar-outline"
@@ -292,6 +309,9 @@ export default function SettingsScreen() {
                         <Text style={{ color: colors.textSecondary }}>{item.sourceApp} · {item.analysis === 'on_device_ai' ? '기기 AI 분석' : '기본 규칙 분석'}</Text>
                         <Text style={{ color: colors.text }}>{item.excerpt}</Text>
                         <View style={{ gap: uiSpacing.xs }}>
+                          {item.analysis === 'local_rules' && ai.status === 'available' ? (
+                            <AssistantButton label="기기 AI로 다시 분석" icon="sparkles-outline" secondary busy={refiningSuggestionId === item.id} onPress={() => { void refineSuggestion(item.id); }} />
+                          ) : null}
                           <AssistantButton label="검토 후 저장" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
                           <AssistantButton label="거절 · 삭제" icon="trash-outline" secondary onPress={() => { void dismissSuggestion(item.id); }} />
                         </View>
@@ -299,7 +319,7 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                 ) : null}
-                <SettingsNote>기기 내 처리만 사용하며 외부 AI 서버에 알림 내용을 보내지 않습니다. 분석 가능한 날짜·시간이 있는 알림만 후보로 보관합니다. 후보는 최대 24건·48시간이며, 기능을 끄면 후보를 삭제합니다. 모든 알림을 정확히 분석한다고 보장할 수는 없습니다.</SettingsNote>
+                <SettingsNote>새 알림은 백그라운드에서 로컬 규칙으로 선별합니다. 기기 AI를 지원하면 앱을 연 상태에서 후보별로 AI 재분석할 수 있습니다. 알림 원문은 AI 서버로 전송하지 않습니다. 분석 가능한 날짜·시간이 있는 알림만 후보로 보관합니다. 후보는 최대 24건·48시간이며, 기능을 끄면 후보를 삭제합니다. 모든 알림을 정확히 분석한다고 보장할 수는 없습니다.</SettingsNote>
                 <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
@@ -409,6 +429,15 @@ export default function SettingsScreen() {
             </>
           )}
         </ScrollView>
+        <AppDialog
+          visible={notificationDisclosure !== null}
+          title="다른 앱 알림 접근 및 일정 분석 동의"
+          message={"Push Office가 다른 앱의 알림 제목과 본문을 읽습니다. 인증번호·금융 알림처럼 민감한 내용도 권한 범위에 포함될 수 있습니다.\n\n일정 날짜와 시간이 있는 알림을 기기 내에서만 선별하고, 후보 제목·시각·앱 이름·원문 일부를 최대 24건, 48시간 동안 보관합니다. 사용자가 승인하기 전에는 일정으로 저장하지 않습니다.\n\n앱 외부 서버로 알림 본문을 전송하지 않습니다. 기기 AI는 앱을 연 상태에서 별도 분석을 요청할 때만 사용하며, ML Kit는 별도 진단 정보를 처리할 수 있습니다.\n\n기능은 선택 사항이며 언제든 해제할 수 있습니다. 기능을 끄면 후보 기록을 삭제하고, Android 알림 접근 권한은 시스템 설정에서 철회할 수 있습니다.\n\n계속 진행하시겠습니까?"}
+          confirmLabel={notificationDisclosure === 'access' ? '내용 확인 및 권한 설정' : '동의하고 기능 켜기'}
+          cancelLabel="동의하지 않음"
+          onDismiss={() => setNotificationDisclosure(null)}
+          onConfirm={confirmDisclosure}
+        />
         <AppDialog
           visible={notice !== null}
           title={notice?.title ?? ''}

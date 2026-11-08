@@ -9,7 +9,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId
@@ -41,13 +40,9 @@ class ScheduleNotificationListener : NotificationListenerService() {
       try {
         if (!NotificationSuggestionStore.enabled(context) || !NotificationSuggestionStore.accessGranted(context)) return@launch
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneId.systemDefault())
-        val ai = withTimeoutOrNull(6500L) {
-          try {
-            if (NanoClient.status()["status"] == "available") NanoClient.parse(source, now) else null
-          } catch (e: CancellationException) { throw e }
-          catch (_: Exception) { null }
-        }
-        val parsed = ai ?: ScheduleParser.parse(source, now)
+        // ML Kit GenAI can reject background inference (BACKGROUND_USE_BLOCKED).
+        // Background only performs deterministic local parsing; AI refinement happens on user action in foreground.
+        val parsed = ScheduleParser.parse(source, now)
         val start = parsed.start ?: return@launch
         if (parsed.error != null || parsed.shiftMinutes != null || parsed.title.isBlank()) return@launch
         val label = try {
@@ -57,7 +52,7 @@ class ScheduleNotificationListener : NotificationListenerService() {
           id = id, sourceApp = label.take(60), packageName = sourcePackage,
           excerpt = source.take(300), title = parsed.title.trim().take(120),
           startAt = start.toInstant().toEpochMilli(), receivedAt = System.currentTimeMillis(),
-          analysis = if (ai != null) "on_device_ai" else "local_rules"
+          analysis = "local_rules"
         ))
       } catch (e: CancellationException) { throw e }
       catch (_: Exception) { /* A malformed notification must never crash the listener. */ }

@@ -64,6 +64,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
   openNotificationAccessSettings(): Promise<void>;
   getNotificationSuggestions(): Promise<NotificationSuggestion[]>;
+  refineNotificationSuggestion(id: string): Promise<NotificationSuggestion>;
   dismissNotificationSuggestion(id: string): Promise<boolean>;
   openNotificationSuggestion(id: string): Promise<void>;
   /** Opens the existing voice editor without starting microphone capture. */
@@ -103,6 +104,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   setNotificationCaptureEnabled: unavailable,
   openNotificationAccessSettings: unavailable,
   getNotificationSuggestions: async () => [],
+  refineNotificationSuggestion: unavailable,
   dismissNotificationSuggestion: unavailable,
   openNotificationSuggestion: unavailable,
   openVoiceQuickEntry: unavailable,
