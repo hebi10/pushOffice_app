@@ -1,0 +1,63 @@
+name: Push Office Stage36 closed testing one-time request (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-closed-stage36-once-20261108.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  request-closed-alpha:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-closed-stage36-once-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    steps:
+      - name: Require successful Stage36 internal Play publication
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          expected_sha=01dfd36545baaa20170ec6b5479f974cb95d8608
+          internal_run=42476364597
+          for attempt in $(seq 1 240); do
+            response=$(gh api "repos/${GH_REPO}/actions/runs/${internal_run}")
+            actual_sha=$(jq -r '.head_sha' <<<"$response")
+            event=$(jq -r '.event' <<<"$response")
+            status=$(jq -r '.status' <<<"$response")
+            conclusion=$(jq -r '.conclusion // ""' <<<"$response")
+            if [[ "$actual_sha" != "$expected_sha" || "$event" != "push" ]]; then
+              echo "::error::Source mismatch in internal release; refusing closed deployment."
+              exit 1
+            fi
+            if [[ "$status" == "completed" ]]; then
+              if [[ "$conclusion" != "success" ]]; then
+                echo "::error::Internal Play release did not succeed; closed deployment blocked."
+                exit 1
+              fi
+              echo "Exact Stage36 internal Play publication succeeded."
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "::error::Timed out before internal Play release completion; closed deployment not requested."
+          exit 1
+      - name: Request the existing release workflow for closed alpha only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method POST \
+            "repos/${GH_REPO}/actions/workflows/android-release.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[mode]=deploy' \
+            -f 'inputs[target]=closed' \
+            -f 'inputs[closed_track]=alpha'
