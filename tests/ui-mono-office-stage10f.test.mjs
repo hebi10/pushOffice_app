@@ -40,7 +40,7 @@ test('10-F screenshot suite covers real dark native surfaces and 57-screen respo
     '23b-calendar-today-three', '23c-calendar-today-three-list',
   ]) assert.ok(verify.includes('"' + name + '.png"'), name);
   assert.match(verify, /widget_providers_registered/);
-  assert.match(verify, /if warnings:/);
+  assert.match(verify, /elif warnings:/);
 });
 
 test('10-F native widget integration includes both widget sizes, 0-3 events, resize, font and intent checks', () => {
