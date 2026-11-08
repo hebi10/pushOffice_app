@@ -31,7 +31,7 @@ test('10-B brandmark uses semantic tint and accessible preserved labels', () => 
 
 test('10-B native quick entry illustration is available in both system themes', () => {
   assert.match(native, /R\.drawable\.quick_entry_mono/);
-  assert.match(native, /setColorFilter\(if\(isDark\) Color\.rgb\(231,233,236\) else Color\.rgb\(35,38,43\)\)/);
+  assert.match(native, /setColorFilter\(actionColor\)/);
   assert.doesNotMatch(native, /if \(!isDark\) root\.addView\(ImageView/);
   assert.match(native, /View\.IMPORTANT_FOR_ACCESSIBILITY_NO/);
 });

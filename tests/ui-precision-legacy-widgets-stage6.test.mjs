@@ -64,7 +64,7 @@ test('precision stage 6 uses one shared brand and clear widget action hierarchy'
     assert.match(widget, /android:layout_height="48dp"/);
   }
   assert.match(action, /@color\/po_widget_accent/);
-  assert.match(action, /android:radius="10dp"/);
+  assert.match(action, /android:radius="8dp"/);
 });
 
 test('precision stage 6 widget primary button has adequate contrast in both themes', () => {
