@@ -1,0 +1,47 @@
+name: Push Office Play Store listing audit (one-time 2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/play-store-audit-once-20261108.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  audit:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, '[push-office-store-audit-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out current store source
+        uses: actions/checkout@v4
+      - name: Authenticate Google Play read-only audit
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Read listing text and image slots without publishing
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python3 tools/ci/play_store_audit.py
+      - name: Preserve listing inspection result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-store-audit-20261108
+          path: ${{ runner.temp }}/push-office-store-audit.json
+          if-no-files-found: warn
+          retention-days: 14
