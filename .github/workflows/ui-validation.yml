@@ -53,28 +53,17 @@ jobs:
           java-version: '17'
       - run: npm ci
       - run: npx --no-install expo prebuild --platform android --clean --no-install
-      - name: Extend short Gradle wrapper network timeout for CI
-        run: |
-          wrapper=android/gradle/wrapper/gradle-wrapper.properties
-          test -f "$wrapper"
-          if ! grep -Fq 'gradle-8.14.3-bin.zip' "$wrapper"; then
-            echo 'Unexpected Gradle distribution; refusing to replace it.' >&2
-            exit 1
-          fi
-          sed -i 's#services.gradle.org/distributions/#downloads.gradle.org/distributions/#' "$wrapper"
-          if grep -q '^networkTimeout=' "$wrapper"; then
-            sed -i 's/^networkTimeout=.*/networkTimeout=120000/' "$wrapper"
-          else
-            printf '\nnetworkTimeout=120000\n' >> "$wrapper"
-          fi
-          if ! grep -q '^distributionSha256Sum=' "$wrapper"; then
-            printf 'distributionSha256Sum=bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531\n' >> "$wrapper"
-          fi
-          grep -Fq 'distributionSha256Sum=bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531' "$wrapper"
+      - name: Restore checksum-verified Gradle distribution cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - name: Bootstrap Gradle 8.14.3 from verified mirrors
+        run: bash .github/ci/bootstrap-gradle.sh
       - name: Test and compile Android module
         working-directory: android
         run: |
-          ./gradlew :push-office-native:testDebugUnitTest :app:assembleDebug \
+          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :push-office-native:testDebugUnitTest :app:assembleDebug \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
