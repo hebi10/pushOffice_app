@@ -69,8 +69,8 @@ test('precision stage 6 uses one shared brand and clear widget action hierarchy'
 
 test('precision stage 6 widget primary button has adequate contrast in both themes', () => {
   const colors = [
-    { mode: 'values', background: '#2563EB', text: '#FFFFFF' },
-    { mode: 'values-night', background: '#5B9FE6', text: '#121212' },
+    { mode: 'values', background: '#23262B', text: '#FFFFFF' },
+    { mode: 'values-night', background: '#E7E9EC', text: '#111315' },
   ];
   const linear = v => {
     const c = v / 255;

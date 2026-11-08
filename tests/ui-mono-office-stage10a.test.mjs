@@ -100,3 +100,22 @@ test('10-A keeps existing theme switching and all layout measurements intact', (
   assert.match(layout, /controlMinHeight: 50/);
   assert.match(layout, /touchMinHeight: 48/);
 });
+
+test('10-A keeps native widget day/night color-only resources aligned to RN semantic roles', () => {
+  const mapping = {
+    po_widget_surface: 'surface',
+    po_widget_text: 'text',
+    po_widget_accent: 'primary',
+    po_widget_on_primary: 'onPrimary',
+    po_widget_border: 'surfaceBorder',
+    po_widget_action_surface: 'inputBackground',
+  };
+  for (const [folder, colors] of [['values', light], ['values-night', dark]]) {
+    const xml = read('modules/push-office-native/android/src/main/res/' + folder + '/colors.xml');
+    for (const [nativeName, role] of Object.entries(mapping)) {
+      const match = xml.match(new RegExp('<color name="' + nativeName + '">(#[0-9A-Fa-f]{6})</color>'));
+      assert.ok(match, 'Missing widget token: ' + nativeName);
+      assert.equal(match[1], colors[role], folder + ' ' + nativeName + '/' + role);
+    }
+  }
+});
