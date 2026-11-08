@@ -58,7 +58,7 @@ jobs:
           arch: x86_64
           target: default
           profile: pixel_2
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -timezone Asia/Seoul
           disable-animations: true
           script: bash tools/ui/install_and_capture.sh
       - name: Verify all required UI captures and reject warnings

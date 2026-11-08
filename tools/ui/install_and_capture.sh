@@ -26,3 +26,4 @@ if ! adb install -r "$APK"; then
 fi
 
 python3 tools/ui/capture_android.py
+python3 tools/ui/capture_store_sources.py

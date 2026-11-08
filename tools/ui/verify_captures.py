@@ -153,12 +153,49 @@ def verify() -> None:
         if not all(matrix.get("widget_providers_registered", {}).get(key) is True for key in ("small", "agenda")):
             errors.append("both installed Android widget providers were not verified")
 
+    store_root = ROOT / "store-source"
+    store_required = {
+        "01-home-briefing.png",
+        "02-calendar-agenda.png",
+        "03-entry-chooser.png",
+        "04-save-confirmation.png",
+        "05-schedule-detail.png",
+        "06-settings.png",
+        "07-dark-home.png",
+    }
+    store_manifest = store_root / "store-source-manifest.json"
+    if not store_manifest.is_file():
+        errors.append("store-source manifest missing")
+    else:
+        store = json.loads(store_manifest.read_text(encoding="utf-8"))
+        if store.get("kind") != "unaltered-device-capture":
+            errors.append("store-source must contain unaltered device screenshots")
+        if store.get("timezone") != "Asia/Seoul" or store.get("utc_offset") != "+0900":
+            errors.append("store-source timezone must be Asia/Seoul (+0900)")
+        if store.get("screen_size") != [1080, 1920]:
+            errors.append("store-source viewport must be 1080x1920")
+        names = [item.get("file") for item in store.get("screens", []) if isinstance(item, dict)]
+        if set(names) != store_required or len(names) != len(store_required):
+            errors.append("store-source complete seven-screen manifest missing or duplicated")
+        if store.get("sample_events") != ["Team meeting", "Design review", "Workout"]:
+            errors.append("store-source natural appointment fixture missing")
+        for name in store_required:
+            path = store_root / name
+            if not path.is_file():
+                errors.append(f"store source PNG missing: {name}")
+            else:
+                try:
+                    if png_size(path) != (1080, 1920):
+                        errors.append(f"store source PNG has wrong size: {name}")
+                except (OSError, ValueError):
+                    errors.append(f"store source PNG invalid: {name}")
+
     if errors:
         print("Push Office UI capture verification failed:")
         for item in errors:
             print(f"- {item}")
         raise SystemExit(1)
-    print(f"Push Office UI capture verification passed: {len(filenames)} screenshots, 0 warnings")
+    print(f"Push Office UI capture verification passed: {len(filenames)} QA screenshots + 7 Play Store sources, 0 warnings")
 
 
 if __name__ == "__main__":
