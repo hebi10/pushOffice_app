@@ -61,6 +61,7 @@ internal object ScheduleWidgetViews {
         rowHeight = measuredRowHeight()
       }
     }
+    if (context.resources.configuration.fontScale >= 1.5f && height <= 160) showHeader = false
     if (availableHeight - padding * 2 - headingView.measuredHeight - actionHeight - gap < rowHeight) showHeader = false
     if (availableHeight - padding * 2 - actionHeight - gap < rowHeight) padding = dp(context, 4)
     if (availableHeight - padding * 2 - actionHeight - gap < rowHeight) padding = minimumPadding

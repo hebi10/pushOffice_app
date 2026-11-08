@@ -61,3 +61,10 @@ test('10-F release gate does not publish from a design PR', () => {
   assert.doesNotMatch(workflow, /edits\.commit|publish-to-play|upload-aab|play-store/);
   assert.match(workflow, /permissions:\s+contents: read/);
 });
+
+test('10-F compact native dialogs and 200 percent widget text prioritize touch targets', () => {
+  assert.doesNotMatch(native, /coerceAtMost\(dp\(440\)\)/);
+  assert.equal((native.match(/coerceAtMost\(dp\(400\)\)/g) || []).length, 3);
+  assert.match(widgets, /fontScale >= 1\.5f && height <= 160/);
+  assert.match(widgets, /if \(availableHeight - padding \* 2 - actionHeight - gap < rowHeight\) padding = minimumPadding/);
+});

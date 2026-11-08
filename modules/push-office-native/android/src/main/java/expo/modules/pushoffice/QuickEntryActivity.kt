@@ -107,7 +107,7 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text=title; textSize=22f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(6),0,dp(4)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(440)),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(400)),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun chooser() {
     confirmationFooter=null
@@ -255,7 +255,7 @@ class QuickEntryActivity : Activity() {
     choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
     choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
     window.setGravity(Gravity.BOTTOM)
-    window.setLayout(availableWidth.coerceAtMost(dp(440)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(availableWidth.coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun sectionLabel(title: String, detail: String?=null) {
     root.addView(TextView(this).apply {
@@ -779,7 +779,7 @@ class QuickEntryActivity : Activity() {
     dialog.show()
     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     dialog.window?.setLayout(
-      (resources.displayMetrics.widthPixels-dp(32)).coerceAtMost(dp(440)),
+      (resources.displayMetrics.widthPixels-dp(32)).coerceAtMost(dp(400)),
       WindowManager.LayoutParams.WRAP_CONTENT
     )
   }
