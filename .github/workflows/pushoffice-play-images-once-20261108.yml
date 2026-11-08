@@ -1,0 +1,58 @@
+name: Push Office Play listing images one-time update (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-play-images-once-20261108.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: push-office-play-listing-images
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[push-office-store-images-once-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out approved listing assets
+        uses: actions/checkout@v4
+
+      - name: Install minimal imaging prerequisite
+        run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+
+      - name: Authenticate existing Google Play Publisher identity
+        uses: google-github-actions/auth@v3
+        id: auth
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+
+      - name: Replace only verified Korean Play image slots
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python3 .github/ops/publish_play_store_images.py
+
+      - name: Preserve publication verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-play-listing-image-publication
+          path: ${{ runner.temp }}/push-office-play-store-publication.json
+          retention-days: 30
+          if-no-files-found: warn
