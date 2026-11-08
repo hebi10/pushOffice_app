@@ -34,16 +34,49 @@ export interface AiStatus {
   status: 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'error';
   message: string;
 }
-export type PushOfficeNativeEvents = { schedulesChanged: () => void };
+export interface NotificationSuggestion {
+  id: string;
+  sourceApp: string;
+  packageName: string;
+  excerpt: string;
+  title: string;
+  startAt: number;
+  receivedAt: number;
+  analysis: 'on_device_ai' | 'local_rules';
+}
+export interface NotificationSuggestionStatus {
+  enabled: boolean;
+  accessGranted: boolean;
+  pendingCount: number;
+}
+export interface AiDownloadProgress {
+  status: 'started' | 'progress' | 'completed' | 'failed';
+  bytesDownloaded: number;
+  totalBytes: number;
+}
+export type PushOfficeNativeEvents = {
+  schedulesChanged: () => void;
+  aiDownloadProgress: (update: AiDownloadProgress) => void;
+};
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
+  getNotificationSuggestionStatus(): Promise<NotificationSuggestionStatus>;
+  setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
+  openNotificationAccessSettings(): Promise<void>;
+  getNotificationSuggestions(): Promise<NotificationSuggestion[]>;
+  refineNotificationSuggestion(id: string): Promise<NotificationSuggestion>;
+  dismissNotificationSuggestion(id: string): Promise<boolean>;
+  openNotificationSuggestion(id: string): Promise<void>;
   /** Opens the existing voice editor without starting microphone capture. */
   openVoiceQuickEntry(): Promise<void>;
   /** Actual system tile-add callback: added, already_added, not_added, error_<code>, unsupported_manual. */
   requestAddTile(): Promise<string>;
+  getQuickTileEnabled(): Promise<boolean>;
+  setQuickTileEnabled(enabled: boolean): Promise<boolean>;
   /** Request accepted by launcher; true does not mean the user placed the widget. */
   requestPinWidget(kind: 'small' | 'agenda'): Promise<boolean>;
   getAiStatus(): Promise<AiStatus>;
+  downloadAiModel(): Promise<AiStatus>;
   generateBriefing(prompt: string): Promise<string>;
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
@@ -67,10 +100,20 @@ const unavailable = async (): Promise<never> => {
 /** Import-safe fallback; never silently claims a save or alarm was successful. */
 export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
+  getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
+  setNotificationCaptureEnabled: unavailable,
+  openNotificationAccessSettings: unavailable,
+  getNotificationSuggestions: async () => [],
+  refineNotificationSuggestion: unavailable,
+  dismissNotificationSuggestion: unavailable,
+  openNotificationSuggestion: unavailable,
   openVoiceQuickEntry: unavailable,
   requestAddTile: unavailable,
+  getQuickTileEnabled: async () => false,
+  setQuickTileEnabled: unavailable,
   requestPinWidget: unavailable,
   getAiStatus: async () => ({ status: 'unavailable', message: '기기 AI는 지원되는 Android 기기에서 사용할 수 있습니다.' }),
+  downloadAiModel: unavailable,
   generateBriefing: unavailable,
   refreshWidgets: unavailable,
   setUiTheme: unavailable,

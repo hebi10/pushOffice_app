@@ -266,8 +266,10 @@ def publish(client, target, *, source_commit, app_config=Path('app.json'), close
                                            app_config=app_config, source_commit=source_commit)
     report.update(version_code=code, version_name=proof['manifest']['version_name'],
                   source_commit=proof['source_commit'], bundle_sha256=proof['sha256'])
+    report['stage'] = 'create_edit'
     edit = client.create_edit()
     try:
+        report['stage'] = 'inventory'
         selected, used = inventory(client, edit, target, closed_track, report)
         require(code > max(used, default=0),
                 'Bundle versionCode must exceed every current Play APK, bundle and track version; rebuild after an external upload.')
@@ -275,14 +277,19 @@ def publish(client, target, *, source_commit, app_config=Path('app.json'), close
                     or release['status'] == 'draft' and not release['version_codes']
                     for release in selected['releases']),
                 'The target has a nonempty draft, halted or in-progress release; resolve it in Play Console.')
+        report['stage'] = 'upload_bundle'
         uploaded = client.request('POST', '/upload' + edit + '/bundles?uploadType=media', payload)
         require(version_code(uploaded.get('versionCode')) == code and uploaded.get('sha256') == proof['sha256'],
                 'The uploaded bundle version or SHA-256 differs from the verified artifact.')
         track = report['api_track']
         release = {'name': proof['manifest']['version_name'], 'versionCodes': [str(code)], 'status': 'completed',
                    'releaseNotes': [{'language': 'ko-KR', 'text': text}]}
+        report['stage'] = 'update_track'
         client.request('PUT', edit + '/tracks/' + quote(track, safe=''), {'track': track, 'releases': [release]})
-        client.request('POST', edit + ':validate')
+        # The standalone edits.validate request is optional and returned 403 for listing updates
+        # under this app's narrowly scoped Play account. edits.commit validates and applies
+        # the edit itself. Preserve ERROR_IF_IN_REVIEW; never cancel an existing review.
+        report['stage'] = 'commit'
         try:
             client.request('POST', edit + ':commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW')
         except ApiError as error:
@@ -293,6 +300,7 @@ def publish(client, target, *, source_commit, app_config=Path('app.json'), close
             raise
         edit = None
         report.update(status='committed_unverified', api_accepted=True)
+        report['stage'] = 'verify_track'
         verification_edit = client.create_edit()
         try:
             actual = client.request('GET', verification_edit + '/tracks/' + quote(track, safe=''))
@@ -301,7 +309,7 @@ def publish(client, target, *, source_commit, app_config=Path('app.json'), close
                     and releases[0].get('status') == 'completed'
                     and releases[0].get('versionCodes') == [str(code)],
                     'Commit was accepted, but fresh track verification failed. Check Play Console; approval and tester availability are not confirmed.')
-            report.update(status='committed', track_verified=True)
+            report.update(status='committed', stage='complete', track_verified=True)
         finally:
             report['verification_edit_deleted'] = client.delete_edit(verification_edit)
             if not report['verification_edit_deleted']:

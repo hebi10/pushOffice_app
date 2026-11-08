@@ -63,7 +63,20 @@ class QuickEntryActivity : Activity() {
     super.onCreate(state)
     window.setBackgroundDrawableResource(android.R.color.transparent)
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
-    when(intent.getStringExtra("entryMode")) { "text" -> editor(false); "voice" -> editor(true); else -> chooser() }
+    when(intent.getStringExtra("entryMode")) {
+      "text" -> editor(false)
+      "voice" -> editor(true)
+      "notificationSuggestion" -> {
+        val suggestion = intent.getStringExtra("suggestionId")?.let { NotificationSuggestionStore.get(this, it) }
+        if (suggestion == null) chooser()
+        else {
+          val date = Instant.ofEpochMilli(suggestion.startAt).atZone(zone)
+          form(suggestion.title, date, "none", suggestion.excerpt, null,
+            "알림 출처: ${suggestion.sourceApp}\n내용: ${suggestion.excerpt}\n분석 결과를 수정하거나 확인한 뒤 직접 저장해 주세요.")
+        }
+      }
+      else -> chooser()
+    }
   }
   private fun page(title: String, subtitle: String) {
     exitEditor()
@@ -573,7 +586,14 @@ class QuickEntryActivity : Activity() {
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
         ScheduleSerial.withLock {
           if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
+          val suggestionId = intent.getStringExtra("suggestionId")
+          if (suggestionId != null) {
+            require(NotificationSuggestionStore.get(this, suggestionId) != null) { "일정 후보가 만료됐습니다. 다시 확인해 주세요." }
+            val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
+            require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
+          }
           ScheduleRuntime.save(this,draft)
+          if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
         }
         Toast.makeText(this,"일정을 저장했습니다.",Toast.LENGTH_SHORT).show(); finish()
       } catch(e: Exception) { error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") } ?: "날짜와 시간을 YYYY-MM-DD, HH:mm 형식으로 확인해 주세요." }

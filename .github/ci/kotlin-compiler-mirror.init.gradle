@@ -1,0 +1,18 @@
+// CI-only fallback for Kotlin compiler artifacts when Maven Central redirects to unavailable GitHub Releases.
+// Regular sources remain configured. This mirror is restricted to the Kotlin compiler group.
+def kotlinMirror = 'https://maven.aliyun.com/repository/central'
+
+def addKotlinMirror = { handler ->
+    if (handler.findByName('PushOfficeKotlinMirror') == null) {
+        handler.maven {
+            name = 'PushOfficeKotlinMirror'
+            url = uri(kotlinMirror)
+            content { includeGroup('org.jetbrains.kotlin') }
+        }
+    }
+}
+
+gradle.allprojects { project ->
+    addKotlinMirror(project.buildscript.repositories)
+    addKotlinMirror(project.repositories)
+}

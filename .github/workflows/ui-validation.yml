@@ -53,10 +53,25 @@ jobs:
           java-version: '17'
       - run: npm ci
       - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Restore checksum-verified Gradle distribution cache
+        id: gradle-zip-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - name: Bootstrap Gradle 8.14.3 from verified mirrors
+        run: bash .github/ci/bootstrap-gradle.sh
+      - name: Save verified Gradle distribution even when Kotlin compilation later fails
+        if: steps.gradle-zip-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
       - name: Test and compile Android module
         working-directory: android
         run: |
-          ./gradlew :push-office-native:testDebugUnitTest :app:assembleDebug \
+          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :push-office-native:testDebugUnitTest :app:assembleDebug \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \

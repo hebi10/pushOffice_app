@@ -10,7 +10,8 @@ import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } f
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { dayjs } from '@/src/lib/time';
 import { useAppSelector } from '@/src/store/store';
-import { PushOfficeNative } from '@/modules/push-office-native';
+import { PushOfficeNative, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
+import { AppDialog } from '@/src/components/ui/AppDialog';
 import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
@@ -25,6 +26,21 @@ export default function HomeScreen() {
     const schedules = useSchedules();
     const external = useGenerateDigest();
     const [ai, setAi] = useState({ status: 'unavailable', message: '기기 지원 상태를 확인하고 있습니다.' });
+    const [notificationSuggestions, setNotificationSuggestions] = useState<NotificationSuggestion[]>([]);
+    const [notificationFeature, setNotificationFeature] = useState<NotificationSuggestionStatus | null>(null);
+    const [showNotificationDisclosure, setShowNotificationDisclosure] = useState(false);
+    const refreshSuggestions = useCallback(() => {
+      void PushOfficeNative.getNotificationSuggestions().then(setNotificationSuggestions).catch(() => setNotificationSuggestions([]));
+      void PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationFeature).catch(() => setNotificationFeature(null));
+    }, []);
+    const declineSuggestion = async (id: string) => {
+      try { await PushOfficeNative.dismissNotificationSuggestion(id); refreshSuggestions(); }
+      catch (error) { showError(error, '일정 후보를 거절하지 못했습니다.'); }
+    };
+    const reviewSuggestion = async (id: string) => {
+      try { await PushOfficeNative.openNotificationSuggestion(id); }
+      catch (error) { showError(error, '일정 후보를 열지 못했습니다.'); refreshSuggestions(); }
+    };
     const [refined, setRefined] = useState('');
     const [busy, setBusy] = useState(false);
     const request = useRef(new ForegroundRequest()).current;
@@ -32,6 +48,7 @@ export default function HomeScreen() {
         let statusRevision = 0;
         const refresh = () => {
             request.setActive(AppState.currentState === 'active');
+            if (AppState.currentState === 'active') refreshSuggestions();
             setRefined(''); setBusy(false);
             const revision = ++statusRevision;
             if (AppState.currentState !== 'active') return;
@@ -41,7 +58,7 @@ export default function HomeScreen() {
         refresh();
         const sub = AppState.addEventListener('change', refresh);
         return () => { statusRevision++; request.setActive(false); sub.remove(); };
-    }, [request]));
+    }, [request, refreshSuggestions]));
     const occurrences = useMemo(() => {
         const date = new Date(now);
         const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -89,6 +106,7 @@ export default function HomeScreen() {
                 ? `첫 일정 ${firstToday.isAllDay ? '종일' : dayjs(firstToday.startAt.toDate()).format('HH:mm')} · ${firstToday.title}`
                 : '오늘은 예정된 일정이 없어요.';
     return (
+      <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={s.content}
@@ -124,6 +142,48 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {notificationFeature && !notificationFeature.enabled ? (
+          <AssistantCard title="알림에서 일정 추천" icon="notifications-outline" compact>
+            <Text style={[s.caption, { color: colors.textSecondary }]}>
+              사용자가 허용한 경우에만 다른 앱의 알림에서 일정 후보를 제안합니다. 권한을 허용하면 민감한 알림 내용에도 접근할 수 있으며, 저장 전 반드시 확인합니다.
+            </Text>
+            <AssistantButton
+              label="알림 분석 안내 및 이용 설정"
+              icon="shield-checkmark-outline"
+              secondary
+              onPress={() => setShowNotificationDisclosure(true)}
+            />
+          </AssistantCard>
+        ) : null}
+
+        {notificationSuggestions.length > 0 ? (
+          <AssistantCard title="확인할 일정 추천" icon="calendar-outline" subtitle="다른 앱 알림에서 분석한 일정입니다. 확인한 후에만 저장됩니다." compact>
+            {notificationSuggestions.slice(0, 3).map(item => (
+              <View key={item.id} style={{ borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
+                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{item.title}</Text>
+                <Text style={[s.caption, { color: colors.textSecondary }]}>
+                  {dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
+                </Text>
+                <Text numberOfLines={2} style={[s.caption, { color: colors.textSecondary }]}>{item.excerpt}</Text>
+                <View style={{ gap: uiSpacing.xs }}>
+                  <AssistantButton label="확인 후 일정 추가" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
+                  <AssistantButton label="거절" icon="close-outline" secondary onPress={() => { void declineSuggestion(item.id); }} />
+                </View>
+              </View>
+            ))}
+            {notificationSuggestions.length > 3 ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`일정 추천 ${notificationSuggestions.length}건 모두 확인`}
+                onPress={() => router.push('/(tabs)/settings')}
+                style={{ minHeight: uiSizes.touchMinHeight, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Text style={[s.caption, { color: colors.primary }]}>나머지 {notificationSuggestions.length - 3}건 설정에서 확인</Text>
+              </TouchableOpacity>
+            ) : null}
+          </AssistantCard>
+        ) : null}
 
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
@@ -261,6 +321,20 @@ export default function HomeScreen() {
           {external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
         </View>
       </ScrollView>
+      <AppDialog
+        visible={showNotificationDisclosure}
+        title="다른 앱 알림 접근 안내"
+        message={"Push Office가 다른 앱의 알림 제목과 본문을 읽을 수 있도록 Android 알림 접근 권한이 필요합니다. 인증번호 등 민감한 정보도 이 권한의 범위에 포함됩니다.\n\n일정과 관련된 알림을 기기 안에서만 추려 후보 제목·시각·앱 이름·원문 일부를 최대 24건, 48시간 동안 저장합니다. 사용자가 검토 후 승인한 일정만 등록합니다. 알림 원문은 외부 AI 서버로 보내지 않습니다. ML Kit는 별도로 식별자·진단 정보를 처리할 수 있습니다.\n\n권한과 기능 활성화는 선택 사항입니다. 앱 설정에서 기능을 끄면 후보 기록이 삭제되며 Android 권한도 시스템 설정에서 철회할 수 있습니다.\n\n이 내용을 이해하고 기능 설정을 계속하시겠습니까?"}
+        confirmLabel={notificationFeature?.accessGranted ? '기능 설정으로 이동' : '확인 후 시스템 권한 설정'}
+        cancelLabel="취소"
+        onDismiss={() => setShowNotificationDisclosure(false)}
+        onConfirm={() => {
+          setShowNotificationDisclosure(false);
+          if (notificationFeature?.accessGranted) router.push('/(tabs)/settings');
+          else void PushOfficeNative.openNotificationAccessSettings().catch(e => showError(e, '알림 접근 설정을 열지 못했습니다.'));
+        }}
+      />
+      </>
     );
 
 }

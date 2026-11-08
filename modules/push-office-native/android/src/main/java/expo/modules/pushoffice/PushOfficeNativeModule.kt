@@ -1,8 +1,10 @@
 package expo.modules.pushoffice
 
 import android.app.StatusBarManager
+import android.provider.Settings
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.Intent
 import android.graphics.drawable.Icon
 import expo.modules.kotlin.Promise
@@ -16,7 +18,7 @@ class PushOfficeNativeModule : Module() {
   private val listener: () -> Unit = { sendEvent("schedulesChanged", emptyMap<String, Any>()) }
   override fun definition() = ModuleDefinition {
     Name("PushOfficeNative")
-    Events("schedulesChanged")
+    Events("schedulesChanged", "aiDownloadProgress")
     OnCreate { ScheduleStore.addListener(listener) }
     OnDestroy { ScheduleStore.removeListener(listener) }
     AsyncFunction("openQuickEntry") { promise: Promise ->
@@ -36,6 +38,74 @@ class PushOfficeNativeModule : Module() {
           promise.resolve(null)
         } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
       }
+    }
+    AsyncFunction("getNotificationSuggestionStatus") {
+      mapOf(
+        "enabled" to NotificationSuggestionStore.enabled(context),
+        "accessGranted" to NotificationSuggestionStore.accessGranted(context),
+        "pendingCount" to NotificationSuggestionStore.all(context).size
+      )
+    }
+    AsyncFunction("setNotificationCaptureEnabled") { enabled: Boolean ->
+      NotificationSuggestionStore.setEnabled(context, enabled)
+      enabled
+    }
+    AsyncFunction("openNotificationAccessSettings") { promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) promise.reject("NO_ACTIVITY", "앱 설정에서 권한 화면을 열어 주세요.", null)
+      else activity.runOnUiThread {
+        try {
+          val component = ComponentName(activity, ScheduleNotificationListener::class.java)
+          val intent = if (Build.VERSION.SDK_INT >= 30)
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+              .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+          else Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+          try { activity.startActivity(intent) }
+          catch (_: android.content.ActivityNotFoundException) {
+            activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+          }
+          promise.resolve(null)
+        } catch (error: Exception) { promise.reject("OPEN_NOTIFICATION_ACCESS", error.message, error) }
+      }
+    }
+    AsyncFunction("getNotificationSuggestions") { NotificationSuggestionStore.all(context).map(NotificationSuggestion::toMap) }
+    AsyncFunction("refineNotificationSuggestion") Coroutine { id: String ->
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "기기 AI 분석은 앱 화면에서 사용해 주세요." }
+      require(NotificationSuggestionStore.enabled(context) && NotificationSuggestionStore.accessGranted(context)) { "알림 분석 권한이 없습니다." }
+      val original = NotificationSuggestionStore.get(context, id)
+        ?: throw IllegalStateException("일정 후보가 삭제되었거나 만료됐습니다.")
+      val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
+      val timestamp = java.time.Instant.ofEpochMilli(original.receivedAt).atZone(zone)
+      val parsed = NanoClient.parse(original.excerpt, timestamp)
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 화면이 닫혀 AI 결과를 저장하지 않았습니다." }
+      NotificationSuggestionStore.refine(context, id, parsed.title, parsed.start?.toInstant()?.toEpochMilli()
+        ?: throw IllegalArgumentException("AI 분석 날짜가 올바르지 않습니다.")).toMap()
+    }
+    AsyncFunction("dismissNotificationSuggestion") { id: String ->
+      NotificationSuggestionStore.dismiss(context, id)
+    }
+    AsyncFunction("openNotificationSuggestion") { id: String, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) promise.reject("NO_ACTIVITY", "앱 화면에서 일정 후보를 열어 주세요.", null)
+      else activity.runOnUiThread {
+        try {
+          require(NotificationSuggestionStore.get(context, id) != null) { "일정 후보가 만료됐습니다." }
+          activity.startActivity(Intent(activity, QuickEntryActivity::class.java)
+            .putExtra("entryMode", "notificationSuggestion").putExtra("suggestionId", id))
+          promise.resolve(null)
+        } catch (error: Exception) { promise.reject("OPEN_SUGGESTION", error.message, error) }
+      }
+    }
+    AsyncFunction("getQuickTileEnabled") {
+      context.packageManager.getComponentEnabledSetting(ComponentName(context, ScheduleTileService::class.java)) !=
+        PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    }
+    AsyncFunction("setQuickTileEnabled") { enabled: Boolean ->
+      val component = ComponentName(context, ScheduleTileService::class.java)
+      context.packageManager.setComponentEnabledSetting(component,
+        if (enabled) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+        PackageManager.DONT_KILL_APP)
+      enabled
     }
     AsyncFunction("requestAddTile") { promise: Promise ->
       val activity=appContext.currentActivity
@@ -69,6 +139,10 @@ class PushOfficeNativeModule : Module() {
       }
     }
     AsyncFunction("getAiStatus") Coroutine { -> NanoClient.status() }
+    AsyncFunction("downloadAiModel") Coroutine { ->
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 설정 화면에서 다운로드를 실행해 주세요." }
+      NanoClient.download { update -> sendEvent("aiDownloadProgress", update) }
+    }
     AsyncFunction("generateBriefing") Coroutine { prompt: String ->
       require(appContext.currentActivity?.hasWindowFocus()==true) { "AI 요약은 앱 화면이 열려 있을 때 사용할 수 있습니다." }
       NanoClient.briefing(prompt)

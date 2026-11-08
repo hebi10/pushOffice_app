@@ -152,11 +152,31 @@ jobs:
         if: steps.request.outputs.mode != 'check'
         run: npx --no-install expo prebuild --platform android --clean --no-install
 
+      - name: Restore checksum-verified Gradle distribution cache
+        if: steps.request.outputs.mode != 'check'
+        id: gradle-zip-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+
+      - name: Bootstrap Gradle 8.14.3 from verified mirrors
+        if: steps.request.outputs.mode != 'check'
+        run: bash .github/ci/bootstrap-gradle.sh
+
+      - name: Cache verified Gradle distribution for later release builds
+        if: steps.request.outputs.mode != 'check' && steps.gradle-zip-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+
       - name: Build release APK and AAB
         if: steps.request.outputs.mode != 'check'
         working-directory: android
         run: |
-          ./gradlew :app:assembleRelease :app:bundleRelease \
+          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleRelease :app:bundleRelease \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
