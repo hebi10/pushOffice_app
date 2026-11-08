@@ -1,0 +1,68 @@
+name: Push Office closed alpha preflight (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-closed-alpha-preflight-20261108.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  readiness:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      contains(github.event.head_commit.message, '[pushoffice-closed-alpha-preflight-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify publicly served privacy disclosure
+        run: |
+          set -euo pipefail
+          curl -fLsS --retry 3 --connect-timeout 12 --max-time 50 \
+            'https://hebi10.github.io/pushOffice_app/privacy/' \
+            -o "$RUNNER_TEMP/pushoffice-privacy-public.html"
+          python3 - "$RUNNER_TEMP/pushoffice-privacy-public.html" <<'PY'
+          from pathlib import Path
+          import sys
+          raw = Path(sys.argv[1]).read_text(encoding='utf-8')
+          for token in (
+              'Push Office 개인정보처리방침',
+              '2026년 11월 8일',
+              '선택적 다른 앱 알림 접근 및 일정 후보 추천',
+              '기능을 끄면 보관 중인 일정 후보',
+          ):
+              if token not in raw:
+                  raise SystemExit('Published privacy policy is missing a required disclosure.')
+          print('Published Push Office privacy disclosure verified.')
+          PY
+      - uses: google-github-actions/auth@v3
+        id: play-auth
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Check existing closed alpha track without publishing
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
+        run: |
+          python3 tools/ci/play_publish.py preflight \
+            --target closed --closed-track alpha \
+            --report "$RUNNER_TEMP/pushoffice-alpha-readiness.json"
+      - name: Preserve preflight audit
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-closed-alpha-preflight-20261108
+          path: ${{ runner.temp }}/pushoffice-alpha-readiness.json
+          if-no-files-found: warn
+          retention-days: 14
