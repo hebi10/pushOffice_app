@@ -6,11 +6,11 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const home = read('app/(tabs)/index.tsx');
 const row = read('src/components/ScheduleItem.tsx');
 
-test('PO-UI-02 keeps quick entry before briefing, next event, agenda and external info', () => {
+test('PO-UI-02 keeps quick entry then next event ahead of briefing and agenda', () => {
   const indices = [
     home.indexOf('label="일정 빠르게 추가"'),
-    home.indexOf('title="오늘의 브리핑"'),
     home.indexOf('title="다음 일정"'),
+    home.indexOf('title="오늘의 브리핑"'),
     home.indexOf('title="오늘 일정"'),
     home.indexOf('title="외부 브리핑"'),
   ];

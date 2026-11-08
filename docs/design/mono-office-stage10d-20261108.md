@@ -15,7 +15,7 @@
 ## 변경 파일과 검증
 
 - 화면: `app/(tabs)/index.tsx`, `calendar.tsx`, `settings.tsx`, `app/schedule/[id].tsx`.
-- 기존 이전 단계 테스트 2개가 가정하던 장식 레일 및 정보 순서 기대값을 실제 10-D 기획에 맞게 변경했습니다.
+- 기존 이전 단계 테스트 3개가 가정하던 장식 레일 및 정보 순서 기대값을 실제 10-D 기획에 맞게 변경했습니다.
 - 신규 `tests/ui-mono-office-stage10d.test.mjs`는 화면 순서, 캘린더 접근성, 설정의 상태·저장, 일정 상세의 저장/삭제 기능 경로를 확인합니다.
 - GitHub Actions에서 Node 테스트, 타입 검사, ESLint, Expo Android 번들, Kotlin 단위/Debug APK, Android 캡처를 별도로 검증합니다. 실행 중인 CI를 성공으로 간주하지 않습니다.
 - Android의 앱 권한·AI·데이터 처리 코드는 변경하지 않았으며 새로운 기능·라이브러리·폰트·애니메이션은 추가하지 않았습니다.
