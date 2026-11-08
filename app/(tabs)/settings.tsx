@@ -183,8 +183,8 @@ export default function SettingsScreen() {
                     minHeight: uiSizes.touchMinHeight,
                     borderRadius: uiRadii.field,
                     borderWidth: uiSizes.borderWidth,
-                    borderColor: active ? colors.primary : colors.inputBorder,
-                    backgroundColor: active ? colors.primary : colors.surface,
+                    borderColor: active ? colors.inputBorder : colors.surfaceBorder,
+                    backgroundColor: active ? colors.primaryLight : colors.surface,
                     justifyContent: 'center',
                     alignItems: 'center',
                     flexDirection: 'row',
@@ -195,9 +195,9 @@ export default function SettingsScreen() {
                   <Ionicons
                     name={value === 'basic' ? 'settings-outline' : 'options-outline'}
                     size={18}
-                    color={active ? colors.onPrimary : colors.textSecondary}
+                    color={active ? colors.primary : colors.textSecondary}
                   />
-                  <Text style={{ color: active ? colors.onPrimary : colors.text, fontWeight: '700', fontSize: 14, flexShrink: 1 }}>{label}</Text>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, flexShrink: 1 }}>{label}</Text>
                 </TouchableOpacity>
               );
             })}
@@ -231,7 +231,7 @@ export default function SettingsScreen() {
                   onPress={() => { setSaveFeedback(null); setEditingTime(value => !value); }}
                 />
                 {editingTime ? (
-                  <View style={{ padding: uiSpacing.sm, gap: uiSpacing.sm, backgroundColor: colors.inputBackground, borderRadius: uiRadii.field }}>
+                  <View style={{ paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm, gap: uiSpacing.sm }}>
                     <View style={{ flexDirection: 'row', gap: uiSpacing.sm }}>
                       <View style={{ flex: 1, minWidth: 0 }}>{input('시 (0–23)', hour, setHour, 'number-pad')}</View>
                       <View style={{ flex: 1, minWidth: 0 }}>{input('분 (0–59)', minute, setMinute, 'number-pad')}</View>
@@ -247,8 +247,9 @@ export default function SettingsScreen() {
                   </View>
                 ) : null}
                 {saveFeedback && !editingTime ? (
-                  <View accessibilityRole="alert" style={{ backgroundColor: colors.primaryLight, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs }}>
-                    <Text style={{ color: colors.text }}>{saveFeedback}</Text>
+                  <View accessibilityRole="alert" style={{ backgroundColor: colors.inputBackground, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs, flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs }}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color={colors.textSecondary} />
+                    <Text style={{ color: colors.text, flex: 1 }}>{saveFeedback}</Text>
                   </View>
                 ) : null}
                 <SettingsActionRow
@@ -374,7 +375,7 @@ export default function SettingsScreen() {
                   onPress={() => { setSaveFeedback(null); setEditingExternal(value => !value); }}
                 />
                 {editingExternal ? (
-                  <View style={{ padding: uiSpacing.sm, gap: uiSpacing.sm, backgroundColor: colors.inputBackground, borderRadius: uiRadii.field }}>
+                  <View style={{ paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm, gap: uiSpacing.sm }}>
                     {input('날씨 도시', city, setCity)}
                     {input('뉴스 키워드 (쉼표 구분)', keywords, setKeywords)}
                     {input('뉴스 언어', language, setLanguage)}
@@ -390,8 +391,9 @@ export default function SettingsScreen() {
                   </View>
                 ) : null}
                 {saveFeedback && !editingExternal ? (
-                  <View accessibilityRole="alert" style={{ backgroundColor: colors.primaryLight, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs }}>
-                    <Text style={{ color: colors.text }}>{saveFeedback}</Text>
+                  <View accessibilityRole="alert" style={{ backgroundColor: colors.inputBackground, paddingHorizontal: uiSpacing.sm, paddingVertical: uiSpacing.xs, flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs }}>
+                    <Ionicons name="checkmark-circle-outline" size={18} color={colors.textSecondary} />
+                    <Text style={{ color: colors.text, flex: 1 }}>{saveFeedback}</Text>
                   </View>
                 ) : null}
               </SettingsGroup>
