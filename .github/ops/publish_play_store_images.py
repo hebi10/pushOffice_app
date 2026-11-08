@@ -125,6 +125,7 @@ def run():
               "changed_fields": list(TYPES), "text_preserved": False,
               "track_preserved": True, "image_counts_before": {},
               "image_counts_after": {}, "api_accepted": False, "verified": False}
+    report["stage"] = "asset_preflight"
     out = Path(os.environ.get("RUNNER_TEMP", ".")) / "push-office-play-store-publication.json"
     edit = None
     verified_edit = None
@@ -132,7 +133,9 @@ def run():
     try:
         files = validated_assets()
         play = Play(os.environ.get("PLAY_ACCESS_TOKEN", ""))
+        report["stage"] = "create_edit"
         edit = play.new_edit()
+        report["stage"] = "check_existing_listing"
         before = play.request("GET", f"{edit}/listings/{LANGUAGE}")
         if before.get("title") != CURRENT_TITLE:
             raise ListingError("Listing title changed since approval; refusing to overwrite images.")
@@ -144,8 +147,11 @@ def run():
             report["image_counts_before"][kind] = len(old)
             if not (len(old) == 1 if kind != "phoneScreenshots" else len(old) == 6):
                 raise ListingError(f"Existing {kind} count changed since audit; refusing destructive replacement.")
+        uploaded_ids = {}
         for kind in TYPES:
+            report["stage"] = f"upload_{kind}"
             play.request("DELETE", f"{edit}/listings/{LANGUAGE}/{kind}")
+            uploaded_ids[kind] = []
             for blob in files[kind]:
                 response = play.request(
                     "POST",
@@ -155,15 +161,22 @@ def run():
                 image = response.get("image", response)
                 if not isinstance(image, dict) or not image.get("id"):
                     raise ListingError(f"Google Play did not confirm upload of {kind}.")
+                uploaded_ids[kind].append(str(image["id"]))
             current = image_list(play, edit, kind)
             if len(current) != len(files[kind]):
                 raise ListingError(f"Expected {len(files[kind])} images for {kind}, got {len(current)}.")
+            if [str(item.get("id")) for item in current] != uploaded_ids[kind]:
+                raise ListingError(f"Uploaded image order or identifiers differ for {kind}.")
             report["image_counts_after"][kind] = len(current)
         after = play.request("GET", f"{edit}/listings/{LANGUAGE}")
         for key in ("title", "shortDescription", "fullDescription", "video"):
             if after.get(key) != before.get(key):
                 raise ListingError("A previously saved listing text field changed; refusing to commit.")
-        play.request("POST", edit + ":validate")
+        # Google Play edits.commit validates before applying changes. The separate
+        # edits.validate call is optional and returned 403 after image uploads,
+        # even though this account can manage the listing images. Retain the
+        # review-safe commit guard and independently verify the saved images.
+        report["stage"] = "commit"
         try:
             play.request("POST", edit + ":commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW")
             edit = None
@@ -174,6 +187,7 @@ def run():
             raise
         report["api_accepted"] = True
         report["status"] = "committed_unverified"
+        report["stage"] = "verify_saved_listing"
         verified_edit = play.new_edit()
         actual = play.request("GET", f"{verified_edit}/listings/{LANGUAGE}")
         for key in ("title", "shortDescription", "fullDescription", "video"):
@@ -181,9 +195,9 @@ def run():
                 raise ListingError("Store listing text changed during confirmation.")
         for kind in TYPES:
             found = image_list(play, verified_edit, kind)
-            if len(found) != len(files[kind]):
+            if len(found) != len(files[kind]) or [str(item.get("id")) for item in found] != uploaded_ids[kind]:
                 raise ListingError(f"Fresh Play listing verification failed for {kind}.")
-        report.update(status="committed", verified=True)
+        report.update(status="committed", verified=True, stage="complete")
     except ListingError as exc:
         if report["status"] == "started":
             report["status"] = "failed"
