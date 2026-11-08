@@ -310,14 +310,43 @@ try:
     time.sleep(10)
     tap("일정", bottom=True)
     screenshot("02c-calendar-compact", "monthly calendar on compact portrait screen")
-    tap("홈", bottom=True)
     try:
+        # The isolated fixture is scheduled for tomorrow, not the selected current day.
+        # Open it via the calendar rather than relying on the compact home card scroll position.
+        fixture_day = date.fromisoformat(tomorrow)
+        current_day = date.fromisoformat(adb("shell", "date", "+%Y-%m-%d").decode().strip())
+        if (fixture_day.year, fixture_day.month) != (current_day.year, current_day.month):
+            # The next-month arrow is on the right side of the visible calendar heading.
+            adb("shell", "input", "tap", "547", "330")
+            time.sleep(3)
+        # Refresh the accessibility tree after selecting the displayed month.
+        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
+        root = ET.fromstring(adb("exec-out", "cat", "/sdcard/ui.xml").decode("utf-8", errors="replace"))
+        day_positions = []
+        for node in root.iter("node"):
+            if node.get("text") != str(fixture_day.day):
+                continue
+            bounds = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.get("bounds", ""))
+            if not bounds:
+                continue
+            x1, y1, x2, y2 = map(int, bounds.groups())
+            if y1 < 180 or y2 > 850 or x2 <= x1 or y2 <= y1:
+                continue
+            day_positions.append(((x1 + x2) // 2, (y1 + y2) // 2))
+        if len(day_positions) != 1:
+            raise RuntimeError(f"Cannot identify a unique fixture calendar day: {tomorrow}")
+        x, y = day_positions[0]
+        adb("shell", "input", "tap", str(x), str(y))
+        time.sleep(4)
         tap("UITest", scroll=True)
+        if find("기본 정보") is None:
+            raise RuntimeError("Compact fixture action did not open the actual schedule detail")
         screenshot("17a-schedule-detail-compact", "schedule detail on compact portrait screen")
         adb("shell", "input", "keyevent", "4")
         time.sleep(3)
-    except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+    except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError, ValueError) as exc:
         WARNINGS.append(f"Compact schedule detail capture: {exc}")
+    tap("홈", bottom=True)
     tap("일정 빠르게 추가")
     screenshot("15-compact-chooser", "bottom-sheet chooser on compact portrait screen")
     tap("텍스트로 일정 입력")
