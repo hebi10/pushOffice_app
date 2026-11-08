@@ -50,14 +50,7 @@ jobs:
           profile: pixel_2
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            cd android
-            ./gradlew :push-office-native:connectedDebugAndroidTest \
-              --no-daemon --max-workers=2 \
-              '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
-              -Pkotlin.compiler.execution.strategy=in-process \
-              -PreactNativeArchitectures=x86_64 \
-              -Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.ScheduleWidgetViewsTest
+          script: bash tools/ui/run_widget_android_test.sh
       - name: Keep widget instrumentation reports
         if: always()
         uses: actions/upload-artifact@v4
