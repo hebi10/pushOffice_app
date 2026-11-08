@@ -1,0 +1,21 @@
+{
+  "language": "ko-KR",
+  "title": "Push Office - 일정과 브리핑",
+  "shortDescription": "일정을 빠르게 기록하고, 달력·오늘의 브리핑·알림으로 하루를 관리하세요.",
+  "fullDescription": "Push Office는 하루의 일정을 간편하게 기록하고 확인할 수 있는 Android 일정 관리 앱입니다.\n\n■ 빠른 일정 입력\n• 텍스트로 일정을 입력하고 저장 전에 제목·날짜·시간을 확인합니다.\n• 지원되는 기기에서는 음성 입력을 선택해 일정을 작성할 수 있습니다.\n\n■ 달력과 오늘의 브리핑\n• 월간 달력에서 날짜별 일정을 확인합니다.\n• 홈에서 오늘의 일정과 다음 일정을 빠르게 확인합니다.\n• 기기에 저장된 일정을 바탕으로 오늘의 브리핑을 확인합니다.\n\n■ 알림과 일정 관리\n• 일정 시작 알림과 매월·매년 반복을 설정합니다.\n• 아침 브리핑 알림 시간을 선택합니다.\n• 일정 상세에서 날짜·시간 수정, 재알림, 삭제를 관리합니다.\n\n■ 편리한 사용\n• Android 홈 화면 위젯 2종과 빠른 설정 타일을 지원합니다.\n• 시스템·라이트·다크 테마를 선택할 수 있습니다.\n• 일정 데이터는 기본적으로 기기에 저장됩니다.\n\n※ 음성 인식과 기기 내 AI 기능은 Android 버전, 기기 지원 상태 및 권한에 따라 이용 가능 여부가 달라질 수 있습니다.\n※ 위젯 배치 방식과 일부 알림 동작은 기기 설정에 따라 달라질 수 있습니다.",
+  "icon": "store-assets/ko-KR/app-icon.png",
+  "featureGraphic": "store-assets/ko-KR/feature-graphic.png",
+  "phoneScreenshots": [
+    "store-assets/ko-KR/screenshots-candidate-20261108/01-home-briefing.png",
+    "store-assets/ko-KR/screenshots-candidate-20261108/02-calendar.png",
+    "store-assets/ko-KR/screenshots-candidate-20261108/03-quick-entry.png",
+    "store-assets/ko-KR/screenshots-candidate-20261108/04-save-confirmation.png",
+    "store-assets/ko-KR/screenshots-candidate-20261108/05-schedule-detail.png",
+    "store-assets/ko-KR/screenshots-candidate-20261108/06-notification-settings.png"
+  ],
+  "reviewNotes": [
+    "Images derived from actual Android app captures with generated marketing background.",
+    "Images 1,2,4,5 contain QA sample identifiers or UTC timezone. Replace with natural fixture screenshots before Play publication.",
+    "Google Play icon and feature graphic remain original brand assets; verify Play current listing before modifying."
+  ]
+}
