@@ -31,6 +31,7 @@ jobs:
       - name: Check all six RGB screenshots and 32-bit icon without Play credentials
         run: |
           python3 -m py_compile .github/ops/publish_play_store_images.py
+          python3 -m unittest discover -s .github/ops -p 'test_publish_play_store_images.py'
           python3 - <<'PY'
           import sys
           sys.path.insert(0, '.github/ops')
@@ -47,7 +48,7 @@ jobs:
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
-      contains(github.event.head_commit.message, '[push-office-store-images-once-20261108]')
+      contains(github.event.head_commit.message, '[push-office-store-images-fix-once-20261108]')
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -56,6 +57,9 @@ jobs:
 
       - name: Install minimal imaging prerequisite
         run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+
+      - name: Verify guarded listing transaction without Play credentials
+        run: python3 -m unittest discover -s .github/ops -p 'test_publish_play_store_images.py'
 
       - name: Authenticate existing Google Play Publisher identity
         uses: google-github-actions/auth@v3
