@@ -43,11 +43,20 @@ jobs:
         run: |
           wrapper=android/gradle/wrapper/gradle-wrapper.properties
           test -f "$wrapper"
+          if ! grep -Fq 'gradle-8.14.3-bin.zip' "$wrapper"; then
+            echo 'Unexpected Gradle distribution; refusing to replace it.' >&2
+            exit 1
+          fi
+          sed -i 's#services.gradle.org/distributions/#downloads.gradle.org/distributions/#' "$wrapper"
           if grep -q '^networkTimeout=' "$wrapper"; then
             sed -i 's/^networkTimeout=.*/networkTimeout=120000/' "$wrapper"
           else
             printf '\nnetworkTimeout=120000\n' >> "$wrapper"
           fi
+          if ! grep -q '^distributionSha256Sum=' "$wrapper"; then
+            printf 'distributionSha256Sum=bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531\n' >> "$wrapper"
+          fi
+          grep -Fq 'distributionSha256Sum=bd71102213493060956ec229d946beee57158dbd89d0e62b91bca0fa2c5f3531' "$wrapper"
       - name: Build emulator-installable app with bundled JS
         working-directory: android
         run: |
