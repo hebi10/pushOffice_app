@@ -14,8 +14,12 @@
     "store-assets/ko-KR/screenshots-candidate-20261108/06-notification-settings.png"
   ],
   "reviewNotes": [
-    "Images derived from actual Android app captures with generated marketing background.",
-    "Images 1,2,4,5 contain QA sample identifiers or UTC timezone. Replace with natural fixture screenshots before Play publication.",
-    "Google Play icon and feature graphic remain original brand assets; verify Play current listing before modifying."
-  ]
+    "Six 1080x1920 RGB images are derived from real Android 29 screenshots using natural sample events.",
+    "Screenshot source: PR #30, Actions run #42438071965, Asia/Seoul (+0900), seven 1080x1920 captures verified.",
+    "Marketing composition uses generated visual framing; in-app UI area replaced with actual emulator captures.",
+    "Actual Play Console listing/image state must be audited before committing changes, preserving existing locales and review state.",
+    "Google Play high-resolution icon and feature graphic are canonical brand assets in store-assets/ko-KR."
+  ],
+  "sourceCaptureRun": "https://github.com/hebi10/pushOffice_app/actions/runs/42438071965",
+  "driveFolder": "https://drive.google.com/drive/folders/1lp0wl4JvXB4Yp3wsrwNXitaSMfrcg5G7"
 }
