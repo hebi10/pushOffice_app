@@ -14,11 +14,12 @@ const verify = read('tools/ui/verify_captures.py');
 test('HOME-01 uses actual date, greeting and a home-only hero layout', () => {
   assert.ok(home.includes("eyebrow={dayjs(now).format('M월 D일 dddd')}"));
   assert.match(home, /description="중요한 일정부터 하나씩 살펴보세요\."/);
-  assert.match(home, /illustration-home\.jpg/);
+  assert.match(home, /graphicIcon="calendar-outline"/);
   assert.match(home, /featured\s*\/>/);
   assert.match(intro, /featured = false/);
   assert.match(intro, /featured && styles\.featuredContainer/);
   assert.match(intro, /featured && styles\.featuredArtwork/);
+  assert.match(intro, /featured && styles\.featuredGraphic/);
   assert.match(intro, /artwork && !compact && !isDark/);
 });
 
