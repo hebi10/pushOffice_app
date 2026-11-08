@@ -53,6 +53,15 @@ jobs:
           java-version: '17'
       - run: npm ci
       - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Extend short Gradle wrapper network timeout for CI
+        run: |
+          wrapper=android/gradle/wrapper/gradle-wrapper.properties
+          test -f "$wrapper"
+          if grep -q '^networkTimeout=' "$wrapper"; then
+            sed -i 's/^networkTimeout=.*/networkTimeout=120000/' "$wrapper"
+          else
+            printf '\nnetworkTimeout=120000\n' >> "$wrapper"
+          fi
       - name: Test and compile Android module
         working-directory: android
         run: |
