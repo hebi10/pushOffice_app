@@ -47,12 +47,14 @@ class QuickEntryActivity : Activity() {
     "light" -> false
     else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
   }
-  private val blue: Int get() = if(isDark) Color.rgb(96,165,250) else Color.rgb(37,99,235)
-  private val surface: Int get() = if(isDark) Color.rgb(30,41,59) else Color.WHITE
-  private val foregroundColor: Int get() = if(isDark) Color.rgb(241,245,249) else Color.rgb(31,41,55)
-  private val secondary: Int get() = if(isDark) Color.rgb(203,213,225) else Color.rgb(75,85,99)
-  private val fieldBackground: Int get() = if(isDark) Color.rgb(51,65,85) else Color.rgb(248,250,252)
-  private val inputBorder: Int get() = if(isDark) Color.rgb(100,116,139) else Color.rgb(203,213,225)
+  private val actionColor: Int get() = if(isDark) Color.rgb(231,233,236) else Color.rgb(35,38,43)
+  private val onPrimary: Int get() = if(isDark) Color.rgb(17,19,21) else Color.WHITE
+  private val surface: Int get() = if(isDark) Color.rgb(28,31,34) else Color.WHITE
+  private val foregroundColor: Int get() = if(isDark) Color.rgb(245,246,247) else Color.rgb(28,30,33)
+  private val secondary: Int get() = if(isDark) Color.rgb(177,182,189) else Color.rgb(93,98,105)
+  private val fieldBackground: Int get() = if(isDark) Color.rgb(41,45,49) else Color.rgb(236,238,241)
+  private val inputBorder: Int get() = if(isDark) Color.rgb(119,127,136) else Color.rgb(129,136,145)
+  private val dangerColor: Int get() = if(isDark) Color.rgb(255,120,120) else Color.rgb(180,35,24)
   private val zone get()=ScheduleZone.fallback(ReminderSettings.load(this).timezone,ZoneId.systemDefault())
   private fun eventZone(record: ScheduleRecord)=record.anchorZone?.let(ZoneId::of) ?: zone
   override fun onCreate(state: Bundle?) {
@@ -81,7 +83,7 @@ class QuickEntryActivity : Activity() {
   private fun page(title: String, subtitle: String) {
     exitEditor()
     confirmationFooter=null
-    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() } }
+    root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() } }
     val limit=(resources.displayMetrics.heightPixels-dp(160)).coerceAtLeast(dp(180))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -92,7 +94,7 @@ class QuickEntryActivity : Activity() {
     }.apply { addView(root); isFillViewport=false }
     val frame=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
-      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(20).toFloat() }
+      background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() }
     }
     frame.addView(scroll,LinearLayout.LayoutParams(-1,-2))
     confirmationFooter=LinearLayout(this).apply {
@@ -101,7 +103,7 @@ class QuickEntryActivity : Activity() {
       visibility=View.GONE
     }.also { frame.addView(it,LinearLayout.LayoutParams(-1,-2)) }
     setContentView(frame)
-    root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(blue); textSize=11f; setTypeface(null,Typeface.BOLD) })
+    root.addView(TextView(this).apply { text="PUSH OFFICE"; setTextColor(actionColor); textSize=11f; setTypeface(null,Typeface.BOLD) })
     root.addView(TextView(this).apply { text=title; textSize=22f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(6),0,dp(4)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
@@ -124,7 +126,7 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(20),dp(12),dp(20),dp(22))
       background=GradientDrawable().apply {
         setColor(surface)
-        val r=dp(20).toFloat()
+        val r=dp(10).toFloat()
         cornerRadii=floatArrayOf(r,r,r,r,0f,0f,0f,0f)
       }
     }
@@ -153,7 +155,7 @@ class QuickEntryActivity : Activity() {
     heading.addView(TextView(this).apply {
       text=getString(R.string.tile_label)
       textSize=12f
-      setTextColor(blue)
+      setTextColor(actionColor)
       setTypeface(null,Typeface.BOLD)
     },LinearLayout.LayoutParams(0,-2,1f))
     heading.addView(TextView(this).apply {
@@ -171,7 +173,7 @@ class QuickEntryActivity : Activity() {
     root.addView(heading)
     root.addView(ImageView(this).apply {
       setImageResource(R.drawable.quick_entry_mono)
-      setColorFilter(if(isDark) Color.rgb(231,233,236) else Color.rgb(35,38,43))
+      setColorFilter(actionColor)
       scaleType=ImageView.ScaleType.FIT_CENTER
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
     },LinearLayout.LayoutParams(dp(140),dp(106)).apply {
@@ -194,15 +196,15 @@ class QuickEntryActivity : Activity() {
       setPadding(0,0,0,dp(12))
     })
     fun choice(title: Int, detail: Int, description: Int, iconRes: Int, primary: Boolean, action: ()->Unit) {
-      val textColor=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor
+      val textColor=if(primary) (onPrimary) else foregroundColor
       val row=LinearLayout(this).apply {
         orientation=LinearLayout.HORIZONTAL
         gravity=Gravity.CENTER_VERTICAL
         setPadding(dp(14),dp(12),dp(14),dp(12))
         minimumHeight=dp(72)
         background=GradientDrawable().apply {
-          setColor(if(primary) blue else fieldBackground)
-          cornerRadius=dp(12).toFloat()
+          setColor(if(primary) actionColor else fieldBackground)
+          cornerRadius=dp(8).toFloat()
           if(!primary) setStroke(dp(1),inputBorder)
         }
         val attributes=obtainStyledAttributes(intArrayOf(android.R.attr.selectableItemBackground))
@@ -297,7 +299,7 @@ class QuickEntryActivity : Activity() {
       gravity=Gravity.CENTER_VERTICAL
       background=GradientDrawable().apply {
         setColor(fieldBackground)
-        cornerRadius=dp(10).toFloat()
+        cornerRadius=dp(6).toFloat()
       }
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
@@ -340,6 +342,13 @@ class QuickEntryActivity : Activity() {
       isAllCaps=false
       contentDescription=text
       minimumHeight=dp(48)
+      setTextColor(foregroundColor)
+      stateListAnimator=null
+      background=GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius=dp(8).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
       setOnClickListener {
         optionalTools.visibility=if(optionalTools.visibility==View.VISIBLE) View.GONE else View.VISIBLE
         text=if(optionalTools.visibility==View.VISIBLE) "음성·AI 도구 접기" else "음성·AI 도구 펼치기"
@@ -385,7 +394,7 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(12),dp(9),dp(12),dp(9))
       background=GradientDrawable().apply {
         setColor(fieldBackground)
-        cornerRadius=dp(12).toFloat()
+        cornerRadius=dp(6).toFloat()
       }
     }
     note.addView(TextView(this).apply {
@@ -407,7 +416,7 @@ class QuickEntryActivity : Activity() {
         orientation=LinearLayout.VERTICAL
         setPadding(dp(14),dp(12),dp(14),dp(12))
         background=GradientDrawable().apply {
-          setColor(fieldBackground); cornerRadius=dp(12).toFloat()
+          setColor(fieldBackground); cornerRadius=dp(6).toFloat()
           setStroke(dp(1),inputBorder)
         }
       }
@@ -438,7 +447,7 @@ class QuickEntryActivity : Activity() {
         text=updatedValue
         textSize=17f
         setTypeface(null,Typeface.BOLD)
-        setTextColor(blue)
+        setTextColor(actionColor)
       })
       root.addView(summary,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(12) })
     }
@@ -477,14 +486,14 @@ class QuickEntryActivity : Activity() {
         contentDescription=label
         textSize=14f
         setTypeface(null,Typeface.BOLD)
-        setTextColor(blue)
+        setTextColor(actionColor)
         gravity=Gravity.CENTER
         minimumHeight=dp(48)
         isClickable=true
         isFocusable=true
         background=GradientDrawable().apply {
           setColor(surface)
-          cornerRadius=dp(10).toFloat()
+          cornerRadius=dp(8).toFloat()
           setStroke(dp(1),inputBorder)
         }
         setOnClickListener { action() }
@@ -513,8 +522,8 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(10),dp(8),dp(10),dp(10))
       background=GradientDrawable().apply {
         setColor(surface)
-        cornerRadius=dp(12).toFloat()
-        setStroke(dp(1),inputBorder)
+        cornerRadius=dp(8).toFloat()
+          setStroke(dp(1),inputBorder)
       }
     }
     repeatCard.addView(TextView(this).apply {
@@ -551,14 +560,14 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(10),0,dp(10),0)
       background=GradientDrawable().apply {
         setColor(fieldBackground)
-        cornerRadius=dp(10).toFloat()
+        cornerRadius=dp(6).toFloat()
         setStroke(dp(1),inputBorder)
       }
     }
     repeatCard.addView(spinner,LinearLayout.LayoutParams(-1,-2))
     root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(6) })
     val error=TextView(this).apply {
-      setTextColor(if(isDark) Color.rgb(248,113,113) else Color.rgb(185,28,28))
+      setTextColor(dangerColor)
       textSize=13f
       setPadding(dp(2),dp(8),dp(2),0)
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
@@ -606,8 +615,8 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(if(compact) 10 else 12),dp(if(compact) 8 else 10),dp(if(compact) 10 else 12),dp(if(compact) 9 else 12))
       background=GradientDrawable().apply {
         setColor(surface)
-        cornerRadius=dp(12).toFloat()
-        setStroke(dp(1),inputBorder)
+        cornerRadius=dp(8).toFloat()
+          setStroke(dp(1),inputBorder)
       }
     }
     card.addView(TextView(this).apply {
@@ -630,7 +639,7 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(12),dp(10),dp(12),dp(10))
       background=GradientDrawable().apply {
         setColor(fieldBackground)
-        cornerRadius=dp(10).toFloat()
+        cornerRadius=dp(6).toFloat()
         setStroke(dp(1),inputBorder)
       }
       card.addView(this,LinearLayout.LayoutParams(-1,-2))
@@ -639,7 +648,7 @@ class QuickEntryActivity : Activity() {
   }
   private fun button(label: String, description: String=label, action: ()->Unit) {
     val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
-    val color=if(primary) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else blue
+    val color=if(primary) (onPrimary) else actionColor
     val target=if(label=="일정 저장" || label=="변경 내용 저장") confirmationFooter ?: root else root
     if(target !== root) target.visibility=View.VISIBLE
     target.addView(Button(this).apply {
@@ -651,9 +660,9 @@ class QuickEntryActivity : Activity() {
       setTextColor(color)
       stateListAnimator=null
       background=GradientDrawable().apply {
-        setColor(if(primary) blue else surface)
-        cornerRadius=dp(12).toFloat()
-        setStroke(dp(1),if(primary) blue else inputBorder)
+        setColor(if(primary) actionColor else surface)
+        cornerRadius=dp(8).toFloat()
+        setStroke(dp(1),if(primary) actionColor else inputBorder)
       }
       minHeight=dp(50)
       setSingleLine(false)
@@ -676,14 +685,14 @@ class QuickEntryActivity : Activity() {
         textSize=14f
         isAllCaps=false
         setSingleLine(false)
-        setTextColor(blue)
+        setTextColor(actionColor)
         setTypeface(null,Typeface.BOLD)
         stateListAnimator=null
         setPadding(dp(8),dp(8),dp(8),dp(8))
         minHeight=dp(50)
         background=GradientDrawable().apply {
           setColor(surface)
-          cornerRadius=dp(10).toFloat()
+          cornerRadius=dp(8).toFloat()
           setStroke(dp(1),inputBorder)
         }
         setOnClickListener { action() }
@@ -708,7 +717,7 @@ class QuickEntryActivity : Activity() {
       setPadding(dp(20),dp(20),dp(20),dp(16))
       background=GradientDrawable().apply {
         setColor(surface)
-        cornerRadius=dp(16).toFloat()
+        cornerRadius=dp(10).toFloat()
       }
     }
     container.addView(TextView(this).apply {
@@ -740,15 +749,15 @@ class QuickEntryActivity : Activity() {
         contentDescription=entry.first
         textSize=15f
         setTypeface(null,if(emphasized) Typeface.BOLD else Typeface.NORMAL)
-        setTextColor(if(emphasized) (if(isDark) Color.rgb(15,23,42) else Color.WHITE) else foregroundColor)
+        setTextColor(if(emphasized) (onPrimary) else foregroundColor)
         gravity=Gravity.CENTER_VERTICAL
         minimumHeight=dp(52)
         setPadding(dp(14),dp(12),dp(14),dp(12))
         isClickable=true
         isFocusable=true
         background=GradientDrawable().apply {
-          setColor(if(emphasized) blue else fieldBackground)
-          cornerRadius=dp(10).toFloat()
+          setColor(if(emphasized) actionColor else fieldBackground)
+          cornerRadius=dp(8).toFloat()
           if(!emphasized) setStroke(dp(1),inputBorder)
         }
         setOnClickListener { dialog.dismiss(); entry.second() }
@@ -759,7 +768,7 @@ class QuickEntryActivity : Activity() {
       contentDescription=cancelLabel
       textSize=14f
       setTypeface(null,Typeface.BOLD)
-      setTextColor(blue)
+      setTextColor(actionColor)
       gravity=Gravity.CENTER
       minimumHeight=dp(48)
       isClickable=true
