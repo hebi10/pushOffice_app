@@ -12,11 +12,6 @@ def addKotlinMirror = { handler ->
     }
 }
 
-gradle.beforeSettings { settings ->
-    addKotlinMirror(settings.pluginManagement.repositories)
-    addKotlinMirror(settings.dependencyResolutionManagement.repositories)
-}
-
 gradle.allprojects { project ->
     addKotlinMirror(project.buildscript.repositories)
     addKotlinMirror(project.repositories)
