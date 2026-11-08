@@ -1,6 +1,7 @@
 package expo.modules.pushoffice
 
 import android.app.StatusBarManager
+import android.provider.Settings
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.pm.PackageManager
@@ -36,6 +37,51 @@ class PushOfficeNativeModule : Module() {
           activity.startActivity(Intent(activity,QuickEntryActivity::class.java).putExtra("entryMode","voice"))
           promise.resolve(null)
         } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
+      }
+    }
+    AsyncFunction("getNotificationSuggestionStatus") {
+      mapOf(
+        "enabled" to NotificationSuggestionStore.enabled(context),
+        "accessGranted" to NotificationSuggestionStore.accessGranted(context),
+        "pendingCount" to NotificationSuggestionStore.all(context).size
+      )
+    }
+    AsyncFunction("setNotificationCaptureEnabled") { enabled: Boolean ->
+      NotificationSuggestionStore.setEnabled(context, enabled)
+      enabled
+    }
+    AsyncFunction("openNotificationAccessSettings") { promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) promise.reject("NO_ACTIVITY", "앱 설정에서 권한 화면을 열어 주세요.", null)
+      else activity.runOnUiThread {
+        try {
+          val component = ComponentName(activity, ScheduleNotificationListener::class.java)
+          val intent = if (Build.VERSION.SDK_INT >= 30)
+            Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS)
+              .putExtra(Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME, component.flattenToString())
+          else Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+          try { activity.startActivity(intent) }
+          catch (_: android.content.ActivityNotFoundException) {
+            activity.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+          }
+          promise.resolve(null)
+        } catch (error: Exception) { promise.reject("OPEN_NOTIFICATION_ACCESS", error.message, error) }
+      }
+    }
+    AsyncFunction("getNotificationSuggestions") { NotificationSuggestionStore.all(context).map(NotificationSuggestion::toMap) }
+    AsyncFunction("dismissNotificationSuggestion") { id: String ->
+      NotificationSuggestionStore.dismiss(context, id)
+    }
+    AsyncFunction("openNotificationSuggestion") { id: String, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) promise.reject("NO_ACTIVITY", "앱 화면에서 일정 후보를 열어 주세요.", null)
+      else activity.runOnUiThread {
+        try {
+          require(NotificationSuggestionStore.get(context, id) != null) { "일정 후보가 만료됐습니다." }
+          activity.startActivity(Intent(activity, QuickEntryActivity::class.java)
+            .putExtra("entryMode", "notificationSuggestion").putExtra("suggestionId", id))
+          promise.resolve(null)
+        } catch (error: Exception) { promise.reject("OPEN_SUGGESTION", error.message, error) }
       }
     }
     AsyncFunction("getQuickTileEnabled") {

@@ -34,6 +34,21 @@ export interface AiStatus {
   status: 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'error';
   message: string;
 }
+export interface NotificationSuggestion {
+  id: string;
+  sourceApp: string;
+  packageName: string;
+  excerpt: string;
+  title: string;
+  startAt: number;
+  receivedAt: number;
+  analysis: 'on_device_ai' | 'local_rules';
+}
+export interface NotificationSuggestionStatus {
+  enabled: boolean;
+  accessGranted: boolean;
+  pendingCount: number;
+}
 export interface AiDownloadProgress {
   status: 'started' | 'progress' | 'completed' | 'failed';
   bytesDownloaded: number;
@@ -45,6 +60,12 @@ export type PushOfficeNativeEvents = {
 };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
+  getNotificationSuggestionStatus(): Promise<NotificationSuggestionStatus>;
+  setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
+  openNotificationAccessSettings(): Promise<void>;
+  getNotificationSuggestions(): Promise<NotificationSuggestion[]>;
+  dismissNotificationSuggestion(id: string): Promise<boolean>;
+  openNotificationSuggestion(id: string): Promise<void>;
   /** Opens the existing voice editor without starting microphone capture. */
   openVoiceQuickEntry(): Promise<void>;
   /** Actual system tile-add callback: added, already_added, not_added, error_<code>, unsupported_manual. */
@@ -78,6 +99,12 @@ const unavailable = async (): Promise<never> => {
 /** Import-safe fallback; never silently claims a save or alarm was successful. */
 export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
+  getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
+  setNotificationCaptureEnabled: unavailable,
+  openNotificationAccessSettings: unavailable,
+  getNotificationSuggestions: async () => [],
+  dismissNotificationSuggestion: unavailable,
+  openNotificationSuggestion: unavailable,
   openVoiceQuickEntry: unavailable,
   requestAddTile: unavailable,
   getQuickTileEnabled: async () => false,

@@ -17,4 +17,5 @@
   <string name="quick_entry_voice_detail">시작 버튼을 눌러 녹음</string>
   <string name="quick_entry_voice_accessibility">음성 입력 화면 열기. 녹음은 시작 버튼을 눌러야 시작됩니다.</string>
   <string name="quick_entry_close">닫기</string>
+    <string name="notification_listener_label">Push Office 일정 후보 추천</string>
 </resources>

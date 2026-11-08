@@ -4,6 +4,7 @@ import com.google.mlkit.genai.common.DownloadStatus
 import com.google.mlkit.genai.common.FeatureStatus
 import com.google.mlkit.genai.prompt.Generation
 import com.google.mlkit.genai.prompt.GenerativeModel
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.CancellationException
 import org.json.JSONObject
 import java.time.ZonedDateTime
