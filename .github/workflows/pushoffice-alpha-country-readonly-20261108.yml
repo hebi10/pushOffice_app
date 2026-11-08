@@ -1,0 +1,73 @@
+name: Push Office closed alpha country availability audit (2026-11-08)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-alpha-country-readonly-20261108.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  audit:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-alpha-country-readonly-20261108]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate existing app-specific Play service account
+        id: auth
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Inspect country availability (read-only; delete temporary edit)
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          from pathlib import Path
+          sys.path.insert(0, '.github/ops')
+          from promote_existing_internal16_closed_alpha_20261108 import API, Client, api_edit
+          client = Client(os.environ['PLAY_ACCESS_TOKEN'])
+          edit = None
+          report = {'package': 'com.hebi96.pushOffice_app', 'read_only': True}
+          try:
+              edit = api_edit(client.request('POST', API, {}))
+              for track in ('alpha', 'production'):
+                  availability = client.request('GET', edit + '/countryAvailability/' + track)
+                  report[track] = {
+                      'syncWithProduction': availability.get('syncWithProduction', False),
+                      'countries': [item.get('countryCode') for item in availability.get('countries', [])
+                                    if isinstance(item, dict)],
+                      'restOfWorld': availability.get('restOfWorld', False),
+                  }
+              print('Closed alpha country configuration:', json.dumps(report['alpha'], sort_keys=True))
+              print('Production country configuration:', json.dumps(report['production'], sort_keys=True))
+          finally:
+              if edit:
+                  client.request('DELETE', edit)
+              Path(os.environ['RUNNER_TEMP'], 'push-office-country-audit.json').write_text(
+                  json.dumps(report, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Preserve country availability evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-closed-alpha-country-audit
+          path: ${{ runner.temp }}/push-office-country-audit.json
+          if-no-files-found: warn
+          retention-days: 14
