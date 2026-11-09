@@ -54,6 +54,8 @@ class AiModelAndroidRealInferenceTest {
     var verified = false
     var rawSuccess = false
     var calendarPassed = false
+    var briefingPassed: Boolean? = null
+    val scheduleCountBefore = ScheduleStore(context).use { it.all().size }
     try {
       val startedWaiting = SystemClock.elapsedRealtime()
       while ((!file.isFile || file.length() != expectedBytes) &&
@@ -79,18 +81,39 @@ class AiModelAndroidRealInferenceTest {
       require(rawSuccess) { "Native LiteRT-LM returned an empty response." }
       report.put("actualAndroidCpuInferenceMs", SystemClock.elapsedRealtime() - started)
       report.put("rawResponsePreview", raw.take(180))
-      val benchmark = withTimeout(300_000L) { AiModelRunner.benchmark(context, id, sample, now) }
+      var scheduleRaw = ""
+      val benchmark = withTimeout(300_000L) {
+        AiModelRunner.benchmark(context, id, sample, now) { raw -> scheduleRaw = raw }
+      }
+      // Only fixed synthetic QA input is used. Never log real users' messages.
+      report.put("sampleScheduleRawPreview", scheduleRaw.take(600))
       calendarPassed = benchmark["success"] == true &&
         benchmark["startAt"] == 1794895200000L && benchmark["repeatType"] == "none"
       report.put("koreanScheduleMs", benchmark["durationMs"])
       report.put("koreanScheduleTitle", benchmark["title"] ?: JSONObject.NULL)
       if (!calendarPassed) report.put("calendarFailure", benchmark["message"] ?: "Wrong local date or recurrence")
+      val policyAccepted = NotificationSuggestionPolicy.candidate("치과 예약", sample) != null
+      val policyDeniedSecret = NotificationSuggestionPolicy.candidate("인증번호", "인증번호 123456. " + sample) == null
+      report.put("notificationCandidatePolicyPassed", policyAccepted && policyDeniedSecret)
+      require(policyAccepted && policyDeniedSecret) { "Notification candidate policy regression." }
+      if (id == "qwen35-08") {
+        val startedBriefing = SystemClock.elapsedRealtime()
+        val result = withTimeout(150_000L) {
+          AiModelRunner.briefing(context, id, "일정 1건: 2026년 11월 17일 오후 3시 치과 예약. 이 일정만 간단히 요약해 주세요.")
+        }
+        briefingPassed = result.contains("치과")
+        report.put("briefingMs", SystemClock.elapsedRealtime() - startedBriefing)
+        report.put("briefingPreview", result.take(180))
+      }
     } catch (error: Throwable) {
       report.put("errorType", error.javaClass.simpleName)
       report.put("error", (error.message ?: "Unknown Android inference failure").take(300))
     } finally {
       report.put("sha256VerifiedOnAndroid", verified)
       report.put("actualCpuTextGenerated", rawSuccess)
+      report.put("noScheduleSavedByTest",
+        ScheduleStore(context).use { it.all().size } == scheduleCountBefore)
+      if (briefingPassed != null) report.put("localBriefingPassed", briefingPassed)
       report.put("koreanSchedulePassed", calendarPassed)
       report.put("inferenceVerdict", if (rawSuccess) "executed" else "failed")
       File(requireNotNull(context.getExternalFilesDir(null)),
@@ -100,5 +123,7 @@ class AiModelAndroidRealInferenceTest {
     }
     assertTrue("Real Android LiteRT-LM model SHA-256 verification failed: " + report, verified)
     assertTrue("Real Android CPU model did not produce text: " + report, rawSuccess)
+    assertTrue("AI QA must never save a schedule: " + report,
+      report.optBoolean("noScheduleSavedByTest", false))
   }
 }

@@ -19,4 +19,10 @@ if not report.get("sha256VerifiedOnAndroid"):
 if not report.get("actualCpuTextGenerated"):
     raise SystemExit("Real Android LiteRT-LM CPU inference did not produce text.")
 if not report.get("koreanSchedulePassed"):
-    print("NOTICE: Native text generation succeeded, but Korean schedule extraction is not yet accurate.")
+    raise SystemExit("Android model produced text, but Korean schedule extraction was incorrect.")
+if not report.get("noScheduleSavedByTest"):
+    raise SystemExit("Model QA unexpectedly modified the saved schedule count.")
+if report.get("modelId") == "qwen35-08" and not report.get("localBriefingPassed"):
+    raise SystemExit("Qwen3.5 0.8B local briefing integration did not pass.")
+if not report.get("notificationCandidatePolicyPassed"):
+    raise SystemExit("Android notification suggestion policy verification did not pass.")

@@ -108,3 +108,16 @@ test('AI model responses accept null error but reject hallucinated dates and dam
   assert.match(manager, /verifiedInstalledFile\(ctx,model\) != null\) "installed"/);
   assert.doesNotMatch(manager, /else if \(available\(ctx,model\)\) "installed"/);
 });
+
+test('Android inference QA separates generated text from schedule accuracy and saved-data safety', () => {
+  const verifier = read('tools/ci/verify_android_ai_real_report.py');
+  const nativeQa = read('modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/AiModelAndroidRealInferenceTest.kt');
+  assert.match(verifier, /not report\.get\("koreanSchedulePassed"\)/);
+  assert.match(verifier, /not report\.get\("noScheduleSavedByTest"\)/);
+  assert.match(verifier, /not report\.get\("notificationCandidatePolicyPassed"\)/);
+  assert.match(nativeQa, /sampleScheduleRawPreview/);
+  assert.match(nativeQa, /localBriefingPassed/);
+  assert.match(nativeQa, /ScheduleStore\(context\)\.use/);
+  assert.match(runner, /onRawSchedule\?\.invoke\(raw\)/);
+  assert.match(runner, /Copy these verified values EXACTLY/);
+});
