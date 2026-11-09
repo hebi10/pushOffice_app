@@ -399,6 +399,7 @@ def capture_preserved_route(page: str, expected_label: str, screenshot_name: str
 
 capture_preserved_route("briefing", "데일리 다이제스트", "18-legacy-briefing")
 capture_preserved_route("chatHistory", "채팅 내역", "19-legacy-chat-history")
+capture_preserved_route("ai-models", "기기 AI 모델 비교", "19a-ai-model-manager")
 
 
 # Final QA matrix: system font enlargement and a tablet-class portrait viewport.

@@ -56,6 +56,10 @@ test('new accessible model management screen lists, downloads, compares, selects
   assert.match(settings, /title="기기 AI 모델 관리"/);
   assert.match(settings, /router\.push\('\/ai-models'\)/);
   assert.match(navigation, /Stack\.Screen name="ai-models"/);
+  const capture = read('tools/ui/capture_android.py');
+  const verifier = read('tools/ui/verify_captures.py');
+  assert.match(capture, /capture_preserved_route\("ai-models", "기기 AI 모델 비교", "19a-ai-model-manager"\)/);
+  assert.match(verifier, /"19a-ai-model-manager\.png"/);
   assert.match(screen, /PushOfficeNative\.listAiModels\(\)/);
   for (const action of ['downloadAiModelById','selectAiModel','removeAiModel','testAiModel'])
     assert.ok(screen.includes('PushOfficeNative.' + action + '('), action);

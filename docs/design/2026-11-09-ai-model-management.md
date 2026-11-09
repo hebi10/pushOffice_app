@@ -41,3 +41,8 @@
 - 첫 CI #42557171118에서 `AiModelRunner.kt`의 `conversation.sendMessage(prompt).text`가 Kotlin 미지원 속성으로 컴파일 실패.
 - 공식 Android API의 `Message.toString()` 이용 방식으로 변환하고 새 커밋 재검증.
 - 실패한 CI는 완료 성공으로 판단하지 않음.
+
+## Android 실화면 캡처 추가
+- 기존 57장 캡처 매트릭스를 유지하면서 AI 모델 관리 화면 1장을 추가.
+- `pushofficeapp://ai-models` 실제 Android 딥링크로 화면을 열고 `기기 AI 모델 비교` 텍스트 노출을 확인한 다음 PNG 저장.
+- UI 캡처 검증에서 `19a-ai-model-manager.png`를 필수로 지정.
