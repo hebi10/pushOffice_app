@@ -33,6 +33,10 @@ class AiModelAndroidRealInferenceTest {
     val id = requireNotNull(InstrumentationRegistry.getArguments().getString("modelId")) {
       "Real-model CI must provide modelId"
     }
+    val expectedBytes = requireNotNull(InstrumentationRegistry.getArguments().getString("modelBytes")) {
+      "Real-model CI must provide the exact verified host file size"
+    }.toLong()
+    require(expectedBytes in 100_000_000L..4_500_000_000L) { "Invalid expected model size" }
     val model = AiModelCatalog.get(id)
     require(model.file != null && model.sha256 != null) { "Only pinned LiteRT-LM weights are supported." }
     val directory = File(requireNotNull(context.getExternalFilesDir(null)), "ai_models")
@@ -45,18 +49,19 @@ class AiModelAndroidRealInferenceTest {
       .put("api", Build.VERSION.SDK_INT)
       .put("abi", Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown")
       .put("modelId", id)
+      .put("expectedFileBytes", expectedBytes)
       .put("expectedPinnedSha256", model.sha256)
     var verified = false
     var rawSuccess = false
     var calendarPassed = false
     try {
       val startedWaiting = SystemClock.elapsedRealtime()
-      while ((!file.isFile || file.length() < 100_000_000L) &&
+      while ((!file.isFile || file.length() != expectedBytes) &&
         SystemClock.elapsedRealtime() - startedWaiting < 180_000L) {
         delay(500L)
       }
       report.put("fileBytes", if (file.isFile) file.length() else 0L)
-      require(file.isFile && file.length() >= 100_000_000L) {
+      require(file.isFile && file.length() == expectedBytes) {
         "Actual .litertlm file missing or incomplete on Android after host transfer."
       }
       val prefs = context.getSharedPreferences("push_office_ai_models", Context.MODE_PRIVATE)
