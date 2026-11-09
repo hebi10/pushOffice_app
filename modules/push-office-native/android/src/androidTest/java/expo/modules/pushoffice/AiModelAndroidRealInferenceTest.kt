@@ -89,6 +89,7 @@ class AiModelAndroidRealInferenceTest {
       // Only fixed synthetic QA input is used. Never log real users' messages.
       report.put("sampleScheduleRawPreview", scheduleRaw.take(600))
       calendarPassed = benchmark["success"] == true &&
+        benchmark["title"] == "치과 예약" &&
         benchmark["startAt"] == 1794895200000L && benchmark["repeatType"] == "none"
       report.put("koreanScheduleMs", benchmark["durationMs"])
       report.put("koreanScheduleTitle", benchmark["title"] ?: JSONObject.NULL)

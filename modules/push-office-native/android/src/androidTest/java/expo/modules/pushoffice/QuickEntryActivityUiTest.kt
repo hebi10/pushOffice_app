@@ -19,6 +19,7 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Test
+import java.time.LocalDate
 
 class QuickEntryActivityUiTest {
   private val context get() = ApplicationProvider.getApplicationContext<Context>()
@@ -76,6 +77,33 @@ class QuickEntryActivityUiTest {
         assertTrue(views(activity).none { it is EditText })
       }
     }
+  }
+
+  @Test fun calendarPreviewIsEditableAndNeverAutoSaves() {
+    val before = ScheduleStore(context).use { it.all().size }
+    val date = LocalDate.now().plusDays(4)
+    val source = "${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일 오후 3시에 치과 예약"
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java).putExtra("entryMode", "text")
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        val input = views(activity).filterIsInstance<EditText>().first()
+        input.setText(source)
+        views(activity).filterIsInstance<TextView>()
+          .first { it.text.toString() == "내용 확인" }.performClick()
+        assertTrue(texts(activity).contains("일정 확인 및 저장"))
+        val fields = views(activity).filterIsInstance<EditText>()
+        assertTrue(fields.any { it.contentDescription == "일정 제목" })
+        assertEquals(date.toString(),
+          fields.first { it.contentDescription == "날짜 (YYYY-MM-DD)" }.text.toString())
+        assertEquals("15:00",
+          fields.first { it.contentDescription == "시간 (HH:mm)" }.text.toString())
+        assertTrue(texts(activity).contains("일정 저장"))
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+      }
+    }
+    assertEquals("Opening an editable preview must not save a calendar event",
+      before, ScheduleStore(context).use { it.all().size })
   }
 
   @Test fun voiceChoiceOnlyOpensTheEditorAndWaitsForAnExplicitRecordingStart() {

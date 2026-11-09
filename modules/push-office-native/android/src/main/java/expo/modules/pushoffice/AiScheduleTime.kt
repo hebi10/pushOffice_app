@@ -8,7 +8,7 @@ import java.time.ZonedDateTime
 internal object AiScheduleTime {
   fun validated(text: String, now: ZonedDateTime, title: String, date: String,
                 time: String, repeat: String): ParsedSchedule {
-    require(title.isNotBlank() && title.length <= 180) { "일정 제목을 다시 확인해 주세요." }
+    require(title.isNotBlank()) { "일정 제목을 다시 확인해 주세요." }
     require(date.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
       "AI 날짜는 YYYY-MM-DD 형식이어야 합니다."
     }
@@ -34,10 +34,18 @@ internal object AiScheduleTime {
     require(start.toInstant() == ground.start.toInstant() && repeat == ground.repeatType) {
       "AI가 날짜·시각이나 반복을 원문과 다르게 추출했습니다. 기본 해석이나 직접 입력을 이용해 주세요."
     }
-    val draft = ScheduleRecord("preview", "local", "event", title,
+    // Some small models echo the entire sentence as the title.
+    // Only replace a verbatim echo with the title parsed from that same input.
+    val normalizedTitle = if (title.trim() == text.trim()) {
+      ground.title.trim().removePrefix("에 ").trim()
+    } else title.trim()
+    require(normalizedTitle.isNotBlank() && normalizedTitle.length <= 180) {
+      "일정 제목을 다시 확인해 주세요."
+    }
+    val draft = ScheduleRecord("preview", "local", "event", normalizedTitle,
       start.toInstant().toEpochMilli(), repeatType=repeat,
       createdAt=now.toInstant().toEpochMilli(), updatedAt=now.toInstant().toEpochMilli())
     ScheduleTime.validate(draft, now.toInstant().toEpochMilli())
-    return ParsedSchedule(title, start, repeat)
+    return ParsedSchedule(normalizedTitle, start, repeat)
   }
 }

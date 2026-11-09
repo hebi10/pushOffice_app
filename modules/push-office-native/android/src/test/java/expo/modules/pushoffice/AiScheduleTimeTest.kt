@@ -17,6 +17,16 @@ class AiScheduleTimeTest {
     assertEquals(15, actual.start!!.hour)
     assertEquals(1794895200000L, actual.start!!.toInstant().toEpochMilli())
   }
+  @Test fun verbatimTranscriptTitleUsesItsVerifiedEventName() {
+    val actual = AiScheduleTime.validated(text, now, text,
+      "2026-11-17", "15:00", "none")
+    assertEquals("치과 예약", actual.title)
+    assertEquals(1794895200000L, actual.start!!.toInstant().toEpochMilli())
+    val explicit = AiScheduleTime.validated(text, now, "치과 예약",
+      "2026-11-17", "15:00", "none")
+    assertEquals("치과 예약", explicit.title)
+  }
+
   @Test fun incorrectFutureDateAndTimeAreRejected() {
     assertThrows(IllegalArgumentException::class.java) {
       AiScheduleTime.validated(text, now, "치과 예약", "2026-11-18", "15:00", "none")
