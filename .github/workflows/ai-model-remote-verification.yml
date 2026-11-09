@@ -50,6 +50,17 @@ jobs:
           mkdir -p actual-model
           hf download litert-community/Qwen3-0.6B Qwen3-0.6B.litertlm --local-dir actual-model
           python tools/ci/verify_litert_remote.py digest qwen3-06 actual-model/Qwen3-0.6B.litertlm
+
+      - name: Test plain HTTPS redirect download used by Android DownloadManager
+        id: direct_http
+        continue-on-error: true
+        run: |
+          curl --fail --location --retry 2 --max-time 600 --silent --show-error \
+            --output actual-model/direct-qwen3-0.6b.litertlm \
+            "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B.litertlm"
+          test "$(stat -c%s actual-model/direct-qwen3-0.6b.litertlm)" -eq 613722264
+          test "$(sha256sum actual-model/direct-qwen3-0.6b.litertlm | cut -d ' ' -f1)" = "c5f39b4191926786c3e6668b62af4d6eb15248dfc7a5348252a9b406f33f2108"
+          echo "Plain redirect HTTPS transfer: full 613722264 bytes, matching SHA256" > model-direct-http-check.txt
       - name: Install runtime and perform actual Linux CPU inference
         id: inference
         continue-on-error: true
@@ -77,6 +88,7 @@ jobs:
             model-inference-status.txt
             model-korean-output.txt
             model-korean-test.json
+            model-direct-http-check.txt
           if-no-files-found: warn
           retention-days: 14
 
