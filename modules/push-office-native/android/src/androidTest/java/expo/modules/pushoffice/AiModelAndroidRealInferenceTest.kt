@@ -6,6 +6,7 @@ import android.os.SystemClock
 import android.util.Log
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.json.JSONObject
@@ -34,20 +35,30 @@ class AiModelAndroidRealInferenceTest {
     }
     val model = AiModelCatalog.get(id)
     require(model.file != null && model.sha256 != null) { "Only pinned LiteRT-LM weights are supported." }
-    val file = File(File(requireNotNull(context.getExternalFilesDir(null)), "ai_models"),
-      id + ".litertlm")
+    val directory = File(requireNotNull(context.getExternalFilesDir(null)), "ai_models")
+    require(directory.isDirectory || directory.mkdirs()) { "Model directory unavailable on Android" }
+    val file = File(directory, id + ".litertlm")
+    // The host stages verified bytes while this same instrumentation run is active.
+    Log.i("PushOfficeAiRealQA", "MODEL_DIR=" + directory.absolutePath)
     val report = JSONObject()
       .put("environment", "actual Android x86_64 emulator instrumentation")
       .put("api", Build.VERSION.SDK_INT)
       .put("abi", Build.SUPPORTED_ABIS.firstOrNull() ?: "unknown")
       .put("modelId", id)
-      .put("fileBytes", if (file.isFile) file.length() else 0L)
       .put("expectedPinnedSha256", model.sha256)
     var verified = false
     var rawSuccess = false
     var calendarPassed = false
     try {
-      require(file.isFile && file.length() >= 100_000_000L) { "Actual .litertlm file missing on Android." }
+      val startedWaiting = SystemClock.elapsedRealtime()
+      while ((!file.isFile || file.length() < 100_000_000L) &&
+        SystemClock.elapsedRealtime() - startedWaiting < 180_000L) {
+        delay(500L)
+      }
+      report.put("fileBytes", if (file.isFile) file.length() else 0L)
+      require(file.isFile && file.length() >= 100_000_000L) {
+        "Actual .litertlm file missing or incomplete on Android after host transfer."
+      }
       val prefs = context.getSharedPreferences("push_office_ai_models", Context.MODE_PRIVATE)
       require(prefs.edit().putLong(id + "_bytes", file.length())
         .putString(id + "_sha", model.sha256).remove(id + "_corrupt").commit()) {
