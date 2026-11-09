@@ -29,7 +29,7 @@ class AiModelCatalogTest {
   @Test fun pinnedArtifactsUseKnownSHA256() {
     assertEquals(64, AiModelCatalog.get("qwen3-06").sha256!!.length)
     assertEquals(64, AiModelCatalog.get("gemma4-e2b").sha256!!.length)
-    assertNull(AiModelCatalog.get("qwen35-08").sha256)
-    assertNull(AiModelCatalog.get("qwen35-2").sha256)
+    assertEquals(64, AiModelCatalog.get("qwen35-08").sha256!!.length)
+    assertEquals(64, AiModelCatalog.get("qwen35-2").sha256!!.length)
   }
 }

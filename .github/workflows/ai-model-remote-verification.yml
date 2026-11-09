@@ -72,3 +72,62 @@ jobs:
             model-inference-status.txt
           if-no-files-found: warn
           retention-days: 14
+
+  other-real-model-files:
+    name: Full downloaded SHA256 and CPU run - ${{ matrix.id }}
+    needs: public-metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: qwen35-08
+            repo: litert-community/Qwen3.5-0.8B
+            file: Qwen3.5-0.8B_int8.litertlm
+          - id: qwen35-2
+            repo: litert-community/Qwen3.5-2B
+            file: Qwen3.5-2B_int8.litertlm
+          - id: gemma4-e2b
+            repo: litert-community/gemma-4-E2B-it-litert-lm
+            file: gemma-4-E2B-it.litertlm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: push-office-real-model-head
+      - name: Install Hugging Face downloader
+        run: python -m pip install "huggingface_hub[hf_xet]>=0.34,<2"
+      - name: Download actual complete model and verify its SHA256
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          mkdir -p actual-model
+          hf download "${{ matrix.repo }}" "${{ matrix.file }}" --local-dir actual-model
+          python tools/ci/verify_litert_remote.py digest "${{ matrix.id }}" "actual-model/${{ matrix.file }}"
+      - name: Attempt real LiteRT-LM CPU inference on full model
+        id: inference
+        continue-on-error: true
+        run: |
+          python -m pip install litert-lm==0.19.1
+          timeout 360 litert-lm run "actual-model/${{ matrix.file }}" --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
+          test -s model-inference.log
+      - name: Record CPU result and Android limitation
+        if: always()
+        run: |
+          echo "Linux CPU inference outcome: ${{ steps.inference.outcome }}" > model-inference-status.txt
+          echo "Not a test on the user's Android device." >> model-inference-status.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-office-${{ matrix.id }}-actual-download-inference
+          path: |
+            model-head-evidence.json
+            model-full-sha.json
+            model-inference.log
+            model-inference-status.txt
+          if-no-files-found: warn
+          retention-days: 14

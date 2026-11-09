@@ -4,8 +4,8 @@ import argparse, hashlib, json, pathlib, re, urllib.error, urllib.parse, urllib.
 
 MODELS = {
  "qwen3-06": ("litert-community/Qwen3-0.6B","Qwen3-0.6B.litertlm",614_000_000,"c5f39b4191926786c3e6668b62af4d6eb15248dfc7a5348252a9b406f33f2108"),
- "qwen35-08": ("litert-community/Qwen3.5-0.8B","Qwen3.5-0.8B_int8.litertlm",964_566_992,None),
- "qwen35-2": ("litert-community/Qwen3.5-2B","Qwen3.5-2B_int8.litertlm",2_119_744_416,None),
+ "qwen35-08": ("litert-community/Qwen3.5-0.8B","Qwen3.5-0.8B_int8.litertlm",964_657_152,"d6702088983b3a997db5299558a37d2fd924a94daf2b09bd42c4e618c6f694a4"),
+ "qwen35-2": ("litert-community/Qwen3.5-2B","Qwen3.5-2B_int8.litertlm",2_119_843_840,"c2438cb9c050220e667366b4beeca4daac56e693b226420674f53fc40f007c49"),
  "gemma4-e2b": ("litert-community/gemma-4-E2B-it-litert-lm","gemma-4-E2B-it.litertlm",2_590_000_000,"181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c")
 }
 class NoRedirect(urllib.request.HTTPRedirectHandler):
