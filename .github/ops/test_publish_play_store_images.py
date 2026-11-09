@@ -115,5 +115,22 @@ class PlayListingCommitTest(unittest.TestCase):
         self.assertEqual(1, len(fake.closed))
 
 
+    def test_screenshot_only_update_does_not_touch_icon_or_feature_graphic(self):
+        fake = FakePlay()
+        original_icons = {key: list(fake.images[key]) for key in ('icon', 'featureGraphic')}
+        with patch.object(publisher, 'TYPES', ('phoneScreenshots',)):
+            code, report = self.execute(fake)
+        self.assertEqual(0, code)
+        self.assertEqual(1, fake.commits)
+        self.assertEqual('committed', report['status'])
+        self.assertEqual(['phoneScreenshots'], report['changed_fields'])
+        self.assertEqual({'phoneScreenshots': 6}, report['image_counts_after'])
+        for key, prior in original_icons.items():
+            self.assertEqual(prior, fake.images[key], key + ' must remain unchanged')
+            self.assertFalse(any(method == 'DELETE' and uri.endswith('/' + key)
+                                 for method, uri in fake.calls))
+
+
+
 if __name__ == "__main__":
     unittest.main()
