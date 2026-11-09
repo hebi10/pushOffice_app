@@ -3,7 +3,7 @@ import { AppState, Linking, ScrollView, Text, TouchableOpacity, View } from 'rea
 import { Ionicons } from '@expo/vector-icons';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { AssistantButton, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
 import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsStatusRow, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
 import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
@@ -20,6 +20,7 @@ import { subscribeOnActive, type LegacyCloudState } from '@/src/features/storage
 import type { UserSettings } from '@/src/types';
 export default function SettingsScreen() {
     const { colors } = useTheme();
+    const router = useRouter();
     const settings = useAppSelector(x => x.settings);
     const [cap, setCap] = useState<ReminderCapabilities | null>(null);
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
@@ -359,6 +360,9 @@ export default function SettingsScreen() {
                 <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
+                <SettingsActionRow icon="layers-outline" title="기기 AI 모델 관리"
+                  description="5개 모델 비교 · 다운로드 · 성능 테스트 · 선택"
+                  onPress={() => router.push('/ai-models')} />
                 <SettingsStatusRow
                   icon="sparkles-outline"
                   title="Gemini Nano"
