@@ -3,16 +3,12 @@ package expo.modules.pushoffice
 import android.app.DownloadManager
 import android.content.Context
 import android.net.Uri
-import android.os.Environment
 import android.os.StatFs
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileInputStream
 import java.net.URL
 import javax.net.ssl.HttpsURLConnection
-import java.security.MessageDigest
-import java.time.ZonedDateTime
 
 /** App-scoped downloads, source SHA256 checks, opt-in install and deletion. */
 internal object AiModelDownloadStore {
@@ -36,12 +32,37 @@ internal object AiModelDownloadStore {
   private fun available(ctx: Context, model: AiModelDefinition): Boolean {
     val file = target(ctx, model.id)
     val expected = expectedSize(ctx, model.id)
-    return file.isFile && expected > 0 && file.length() == expected &&
-      expectedSha(ctx, model.id).matches(Regex("[a-f0-9]{64}"))
+    val sha = expectedSha(ctx, model.id)
+    return !prefs(ctx).getBoolean(model.id + "_corrupt", false) &&
+      file.isFile && expected > 0 && file.length() == expected &&
+      sha.matches(Regex("[a-f0-9]{64}")) &&
+      (model.sha256 == null || model.sha256 == sha)
   }
 
   fun installedFile(ctx: Context, model: AiModelDefinition): File? =
     if (model.file != null && available(ctx,model)) target(ctx, model.id) else null
+
+  /** Used before model selection and every inference, not just when download finishes. */
+  suspend fun verifiedInstalledFile(ctx: Context, model: AiModelDefinition): File? =
+    withContext(Dispatchers.IO) {
+      val file = installedFile(ctx, model) ?: return@withContext null
+      if (AiModelIntegrity.matches(file, expectedSize(ctx, model.id), expectedSha(ctx, model.id)))
+        file
+      else {
+        prefs(ctx).edit().putBoolean(model.id + "_corrupt", true).apply()
+        null
+      }
+    }
+
+  /** Performs an explicit full SHA256 check, useful after a device reboot or storage issue. */
+  suspend fun verify(ctx: Context, id: String): Map<String, Any> {
+    val model = AiModelCatalog.get(id)
+    require(model.file != null) { "Gemini Nano 모델 파일은 Android AICore에서 관리합니다." }
+    return if (verifiedInstalledFile(ctx, model) != null)
+      mapOf("state" to "installed", "verified" to true, "message" to "모델 파일 전체 SHA-256 검증이 통과했습니다.")
+    else mapOf("state" to "error", "verified" to false,
+      "message" to "파일 무결성을 확인하지 못했습니다. 모델을 다시 다운로드해 주세요.")
+  }
 
   fun selected(ctx: Context): String {
     val id = prefs(ctx).getString(SELECTED, "gemini-nano") ?: "gemini-nano"
@@ -112,17 +133,7 @@ internal object AiModelDownloadStore {
     val sha = expectedSha(ctx, model.id)
     if (!file.isFile || file.length() != expected || expected < 100_000_000 ||
         !sha.matches(Regex("[a-f0-9]{64}"))) return@withContext false
-    val digest = MessageDigest.getInstance("SHA-256")
-    FileInputStream(file).buffered(1024*1024).use { stream ->
-      val buffer = ByteArray(1024*1024)
-      while(true) {
-        val n = stream.read(buffer)
-        if(n < 0) break
-        digest.update(buffer,0,n)
-      }
-    }
-    val actual = digest.digest().joinToString("") { "%02x".format(it) }
-    if(actual != sha) return@withContext false
+    if (!AiModelIntegrity.matches(file, expected, sha)) return@withContext false
     val target = target(ctx,model.id)
     if (target.exists() || !file.renameTo(target)) return@withContext false
     prefs(ctx).edit().remove(model.id + "_download").apply()
@@ -134,7 +145,9 @@ internal object AiModelDownloadStore {
     return AiModelCatalog.models.map { model ->
       val current = if (model.id == "gemini-nano") {
         nano["status"]?.toString() ?: "error"
-      } else if (available(ctx,model)) "installed" else {
+      } else if (available(ctx,model)) "installed"
+      else if (prefs(ctx).getBoolean(model.id + "_corrupt", false)) "error"
+      else {
         val state = state(ctx,model.id)
         if (state["state"] == "verifying") {
           if (finish(ctx,model)) "installed" else {
@@ -163,7 +176,7 @@ internal object AiModelDownloadStore {
     val model = AiModelCatalog.get(id)
     if (id == "gemini-nano") return mapOf("state" to "system_managed",
       "message" to "Gemini Nano 모델은 Android AICore에서 관리합니다. 전용 다운로드 기능을 사용해 주세요.")
-    if (available(ctx,model)) return mapOf("state" to "installed")
+    if (verifiedInstalledFile(ctx,model) != null) return mapOf("state" to "installed")
     if (downloadId(ctx,id) > 0L && state(ctx,id)["state"] in listOf("downloading", "verifying"))
       return mapOf("state" to "downloading", "message" to "이미 다운로드 중입니다.")
     val remote = remoteMetadata(model)
@@ -177,6 +190,8 @@ internal object AiModelDownloadStore {
           "여유 저장 공간이 부족합니다. 모델 파일 크기에 300MB 이상을 추가 확보해 주세요."
         }
         clear(ctx,id,true)
+        val stale = target(ctx,id)
+        require(!stale.exists() || stale.delete()) { "손상된 모델 파일을 교체하지 못했습니다." }
         prefs(ctx).edit().putLong(id + "_bytes",remote.size)
           .putString(id + "_sha",remote.sha).commit().also {
             require(it) { "모델 검증 정보를 저장하지 못했습니다." }
@@ -201,7 +216,8 @@ internal object AiModelDownloadStore {
     val job = downloadId(ctx,id)
     if (job != 0L) manager(ctx).remove(job)
     if (erasePending) partial(ctx,id).delete()
-    prefs(ctx).edit().remove(id + "_download").remove(id + "_sha").remove(id + "_bytes").apply()
+    prefs(ctx).edit().remove(id + "_download").remove(id + "_sha").remove(id + "_bytes")
+      .remove(id + "_corrupt").apply()
   }
 
   suspend fun remove(ctx: Context, id: String): Map<String, Any> = withContext(Dispatchers.IO) {
@@ -223,7 +239,9 @@ internal object AiModelDownloadStore {
       require(NanoClient.status()["status"] == "available") {
         "Gemini Nano 사용 가능 상태를 확인한 뒤 선택해 주세요."
       }
-    } else require(installedFile(ctx,model) != null) { "모델을 설치한 뒤 선택해 주세요." }
+    } else require(verifiedInstalledFile(ctx,model) != null) {
+      "모델 전체 파일 SHA-256 검증에 실패했습니다. 다시 다운로드한 뒤 선택해 주세요."
+    }
     require(prefs(ctx).edit().putString(SELECTED,id).commit()) { "선택 모델을 저장하지 못했습니다." }
     return mapOf("selected" to id)
   }

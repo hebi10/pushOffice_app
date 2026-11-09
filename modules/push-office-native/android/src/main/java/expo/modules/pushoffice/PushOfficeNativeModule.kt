@@ -142,6 +142,7 @@ class PushOfficeNativeModule : Module() {
     AsyncFunction("listAiModels") Coroutine { -> AiModelDownloadStore.list(context) }
     AsyncFunction("downloadAiModelById") Coroutine { id: String -> AiModelDownloadStore.download(context,id) }
     AsyncFunction("removeAiModel") Coroutine { id: String -> AiModelDownloadStore.remove(context,id) }
+    AsyncFunction("verifyAiModel") Coroutine { id: String -> AiModelDownloadStore.verify(context,id) }
     AsyncFunction("selectAiModel") Coroutine { id: String -> AiModelDownloadStore.choose(context,id) }
     AsyncFunction("testAiModel") Coroutine { id: String, text: String ->
       require(appContext.currentActivity?.hasWindowFocus() == true) { "앱을 열고 모델을 테스트해 주세요." }

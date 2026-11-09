@@ -21,7 +21,7 @@ internal object AiModelRunner {
     require(prompt.length in 1..3500) { "입력 문장은 3,500자 이내로 작성해 주세요." }
     require(id != "gemini-nano") { "Gemini Nano는 AICore 실행 경로를 사용해 주세요." }
     val model = AiModelCatalog.get(id)
-    val file = AiModelDownloadStore.installedFile(context, model)
+    val file = AiModelDownloadStore.verifiedInstalledFile(context, model)
       ?: throw IllegalStateException("모델 다운로드가 완료되지 않았습니다.")
     val memory = ActivityManager.MemoryInfo()
     (context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager).getMemoryInfo(memory)

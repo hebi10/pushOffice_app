@@ -142,6 +142,11 @@ export default function AiModelsScreen() {
                   onPress={()=>{void action(model.id,()=>model.id==='gemini-nano'
                     ?PushOfficeNative.downloadAiModel():PushOfficeNative.downloadAiModelById(model.id),'기기 AI 다운로드');}} />
               ) : null}
+              {model.id !== 'gemini-nano' && model.state === 'installed' ? (
+                <AssistantButton label="파일 SHA-256 무결성 검사" icon="shield-checkmark-outline" secondary
+                  disabled={Boolean(busyId)} busy={busyId === model.id}
+                  onPress={() => { void action(model.id, () => PushOfficeNative.verifyAiModel(model.id), '파일 무결성 검사'); }} />
+              ) : null}
               {ready ? (
                 <AssistantButton label="이 모델로 테스트" icon="flask-outline" secondary
                   disabled={Boolean(busyId)||!sample.trim()} busy={busyId===model.id}

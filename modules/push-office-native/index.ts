@@ -112,6 +112,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   listAiModels(): Promise<AiModelInfo[]>;
   downloadAiModelById(id: string): Promise<AiModelActionResult>;
   removeAiModel(id: string): Promise<AiModelActionResult>;
+  verifyAiModel(id: string): Promise<AiModelActionResult>;
   selectAiModel(id: string): Promise<AiModelActionResult>;
   testAiModel(id: string, text: string): Promise<AiModelTestResult>;
   generateBriefing(prompt: string): Promise<string>;
@@ -154,6 +155,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   listAiModels: async () => [],
   downloadAiModelById: unavailable,
   removeAiModel: unavailable,
+  verifyAiModel: unavailable,
   selectAiModel: unavailable,
   testAiModel: unavailable,
   generateBriefing: unavailable,

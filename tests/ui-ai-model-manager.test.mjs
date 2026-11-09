@@ -25,7 +25,7 @@ test('five genuine public models have safe source links and a fixed LiteRT runti
 test('model downloads are explicit, verified and app-owned, with delete and recovery', () => {
   for (const phrase of [
     'setAllowedOverMetered(false)', 'setDestinationInExternalFilesDir',
-    'X-Linked-Etag', 'X-Linked-Size', 'MessageDigest.getInstance("SHA-256")',
+    'X-Linked-Etag', 'X-Linked-Size', 'AiModelIntegrity.matches',
     'expectedSize(ctx, model.id)', 'remote.sha',
     'StatFs(folder.path).availableBytes', 'synchronized(lock)',
     'expectedSha(ctx, model.id)', 'downloadId(ctx, id)',
@@ -74,6 +74,14 @@ test('new accessible model management screen lists, downloads, compares, selects
 });
 
 test('local inference never creates schedules or falls back silently to cloud', () => {
+  const integrity = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/AiModelIntegrity.kt');
+  assert.match(integrity, /MessageDigest\.getInstance\("SHA-256"\)/);
+  assert.match(integrity, /MessageDigest\.isEqual\(digest\.digest\(\), bytes\)/);
+  assert.match(manager, /verifiedInstalledFile\(ctx, model\)/);
+  assert.match(runner, /verifiedInstalledFile\(context, model\)/);
+  assert.match(manager, /suspend fun verify\(ctx: Context, id: String\)/);
+  assert.match(native, /AsyncFunction\("verifyAiModel"\)/);
+  assert.match(screen, /PushOfficeNative\.verifyAiModel\(model\.id\)/);
   assert.match(runner, /inferenceMutex\.withLock/);
   assert.match(runner, /Engine\(EngineConfig/);
   assert.match(runner, /createConversation\(\)\.use/);
