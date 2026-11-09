@@ -1,7 +1,7 @@
 #requires -Version 5.1
 param([string]$OutputDirectory = "android-ai-physical-qa")
 $ErrorActionPreference = "Stop"
-[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 if (-not (Get-Command adb -ErrorAction SilentlyContinue)) { throw "adb가 PATH에 없습니다." }
 $devices = @(adb devices | Select-String '^[^\s]+\s+device$')
 if ($LASTEXITCODE -ne 0 -or $devices.Count -ne 1) { throw "USB 디버깅이 허용된 기기 1대가 필요합니다." }
