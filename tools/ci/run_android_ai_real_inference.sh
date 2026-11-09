@@ -6,7 +6,8 @@ WEIGHT="${2:?full verified model file required}"
 test -f "$WEIGHT"
 mkdir -p android-ai-real
 echo "Model ID: $ID"
-echo "Host model bytes: $(stat -c%s "$WEIGHT")"
+WEIGHT_BYTES="$(stat -c%s "$WEIGHT")"
+echo "Host model bytes: $WEIGHT_BYTES"
 
 # Keep the target app alive throughout staging and inference. A separate
 # connectedAndroidTest session may reset application-scoped external storage.
@@ -20,7 +21,8 @@ adb logcat -c
     -Pkotlin.compiler.execution.strategy=in-process \
     -PreactNativeArchitectures=x86_64 \
     '-Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.AiModelAndroidRealInferenceTest#verifyRealWeightFileAndRunNativeAndroidCpuInference' \
-    "-Pandroid.testInstrumentationRunnerArguments.modelId=$ID"
+    "-Pandroid.testInstrumentationRunnerArguments.modelId=$ID" \
+    "-Pandroid.testInstrumentationRunnerArguments.modelBytes=$WEIGHT_BYTES"
 ) > android-ai-real/gradle-instrumentation.txt 2>&1 &
 GRADLE_PID=$!
 
@@ -50,6 +52,7 @@ fi
 
 echo "Android test-owned target: $DIR"
 adb shell mkdir -p "$DIR"
+adb shell rm -f "$DIR/$ID.litertlm" || true
 adb push "$WEIGHT" "$DIR/$ID.litertlm"
 adb shell ls -l "$DIR/$ID.litertlm"
 
@@ -60,6 +63,7 @@ set -e
 tail -100 android-ai-real/gradle-instrumentation.txt
 
 adb logcat -d -v brief -s PushOfficeAiRealQA:I '*:S' > android-ai-real/device-logcat.txt || true
+adb logcat -d -v threadtime -t 3000 > android-ai-real/emulator-logcat-tail.txt || true
 adb shell rm -f "$DIR/$ID.litertlm" || true
 
 set +e
