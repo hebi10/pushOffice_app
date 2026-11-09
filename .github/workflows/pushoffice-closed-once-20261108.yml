@@ -1,4 +1,4 @@
-name: Push Office closed testing one-time request (2026-11-08)
+name: Push Office existing 1차 테스트 closed-track request
 
 on:
   push:
@@ -30,4 +30,4 @@ jobs:
             -f ref=main \
             -f 'inputs[mode]=deploy' \
             -f 'inputs[target]=closed' \
-            -f 'inputs[closed_track]=alpha'
+            -f 'inputs[closed_track]=1차 테스트'
