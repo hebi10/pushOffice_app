@@ -26,15 +26,31 @@ if [[ -z "$DIR" || "$DIR" != /storage/emulated/0/Android/data/*/files/ai_models 
   exit 1
 fi
 echo "Android app-scoped target: $DIR"
+# Gradle connectedAndroidTest can uninstall its instrumentation APK after the
+# directory probe. Restore that same test APK before staging the model bytes.
+adb shell pm list instrumentation | tr -d '\r' > android-ai-real/instrumentation-packages.txt
+RUNNER="$(sed -n '/expo\.modules\.pushoffice/s/^instrumentation:\([^ ]*\).*/\1/p' android-ai-real/instrumentation-packages.txt | head -1)"
+if [[ -z "$RUNNER" ]]; then
+  TEST_APK="$(find modules/push-office-native/android/build/outputs/apk/androidTest -type f -name '*.apk' -print -quit 2>/dev/null || true)"
+  if [[ -z "$TEST_APK" ]]; then
+    echo "::error::Instrumentation APK missing after Gradle connectedDebugAndroidTest."
+    exit 1
+  fi
+  echo "Restoring instrumentation APK removed by Gradle test cleanup: $TEST_APK"
+  adb install -r "$TEST_APK" > android-ai-real/instrumentation-reinstall.txt
+  adb shell pm list instrumentation | tr -d '\r' > android-ai-real/instrumentation-packages.txt
+  RUNNER="$(sed -n '/expo\.modules\.pushoffice/s/^instrumentation:\([^ ]*\).*/\1/p' android-ai-real/instrumentation-packages.txt | head -1)"
+fi
+if [[ -z "$RUNNER" ]]; then
+  echo "::error::Android instrumentation runner unavailable after test APK reinstall."
+  cat android-ai-real/instrumentation-packages.txt
+  adb shell pm list packages | tr -d '\r' | grep -F 'expo.modules.pushoffice' || true
+  exit 1
+fi
+echo "Android instrumentation runner: $RUNNER"
 adb shell mkdir -p "$DIR"
 adb push "$WEIGHT" "$DIR/$ID.litertlm"
 adb shell ls -l "$DIR/$ID.litertlm"
-
-RUNNER="$(adb shell pm list instrumentation | tr -d '\r' | grep -F expo.modules.pushoffice | sed -n 's/^instrumentation:\([^ ]*\).*/\1/p' | head -1)"
-if [[ -z "$RUNNER" ]]; then
-  echo "::error::Android instrumentation runner not installed."
-  exit 1
-fi
 adb logcat -c
 set +e
 adb shell am instrument -w -r \
