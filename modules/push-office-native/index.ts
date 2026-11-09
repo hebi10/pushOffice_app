@@ -33,6 +33,9 @@ export interface ReminderCapabilities {
 export interface AiStatus {
   status: 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'error';
   message: string;
+  /** Non-sensitive code only. */
+  errorCode?: string;
+  retryable?: boolean;
 }
 export interface NotificationSuggestion {
   id: string;
@@ -53,6 +56,7 @@ export interface AiDownloadProgress {
   status: 'started' | 'progress' | 'completed' | 'failed';
   bytesDownloaded: number;
   totalBytes: number;
+  errorCode?: string;
 }
 export type PushOfficeNativeEvents = {
   schedulesChanged: () => void;
