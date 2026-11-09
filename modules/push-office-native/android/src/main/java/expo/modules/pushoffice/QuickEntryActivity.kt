@@ -320,7 +320,7 @@ class QuickEntryActivity : Activity() {
         try {
           val availability=NanoClient.status()
           ensureActive(); if(!current()) return@launch
-          status.text=availability.getValue("message")
+          status.text=(availability["message"] as? String) ?: "기기 AI 상태를 확인할 수 없습니다."
           if(availability["status"]=="available") {
             val basic=ScheduleParser.parse(request.source,ZonedDateTime.now(zone))
             val parsed=if(basic.shiftMinutes!=null) basic else NanoClient.parse(request.source,ZonedDateTime.now(zone))

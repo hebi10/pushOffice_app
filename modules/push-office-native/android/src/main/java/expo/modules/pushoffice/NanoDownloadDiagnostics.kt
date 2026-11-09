@@ -38,7 +38,7 @@ internal object NanoDownloadDiagnostics {
         "AICORE_FOREGROUND_REQUIRED",
         "AI 모델은 앱을 화면에 열어 둔 상태에서 다시 요청해 주세요."
       )
-      listOf("UNABLE TO RESOLVE HOST", "UNKNOWNHOST", "DOWNLOAD_ERROR", "TIMEOUT",
+      listOf("UNABLE TO RESOLVE HOST", "UNKNOWNHOST", "TIMEOUT",
         "SOCKETEXCEPTION", "NETWORK", "CONNECTION REFUSED").any { it in text } ->
         NanoDownloadDiagnostic(
           "AICORE_NETWORK",

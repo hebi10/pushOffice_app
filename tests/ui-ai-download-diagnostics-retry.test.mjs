@@ -8,6 +8,7 @@ const diagnostics = read('modules/push-office-native/android/src/main/java/expo/
 const screen = read('app/(tabs)/settings.tsx');
 const types = read('modules/push-office-native/index.ts');
 const bridge = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/PushOfficeNativeModule.kt');
+const editor = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/QuickEntryActivity.kt');
 
 test('Gemini Nano download retains actual ML Kit failure code and never treats failure as success', () => {
   assert.match(nano, /DownloadStatus\.DownloadFailed/);
@@ -30,6 +31,7 @@ test('Gemini Nano retries are explicit and protected against concurrent requests
   assert.match(nano, /FeatureStatus\.DOWNLOADING/);
   assert.match(nano, /FeatureStatus\.UNAVAILABLE/);
   assert.match(bridge, /require\(appContext\.currentActivity\?\.hasWindowFocus\(\) == true\)/);
+  assert.match(editor, /availability\["message"\] as\? String/);
   assert.doesNotMatch(nano.split('suspend fun status()')[1].split('suspend fun download(')[0], /client\.download\(\)/);
 });
 
