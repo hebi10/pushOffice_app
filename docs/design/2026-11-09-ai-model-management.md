@@ -36,3 +36,8 @@
 - Qwen3.5 2B https://huggingface.co/litert-community/Qwen3.5-2B
 - Gemma 4 E2B https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm
 - Gemini Nano https://developers.google.com/ml-kit/genai/prompt/android/get-started
+
+## CI 수정: LiteRT-LM 0.19.1 응답 타입
+- 첫 CI #42557171118에서 `AiModelRunner.kt`의 `conversation.sendMessage(prompt).text`가 Kotlin 미지원 속성으로 컴파일 실패.
+- 공식 Android API의 `Message.toString()` 이용 방식으로 변환하고 새 커밋 재검증.
+- 실패한 CI는 완료 성공으로 판단하지 않음.

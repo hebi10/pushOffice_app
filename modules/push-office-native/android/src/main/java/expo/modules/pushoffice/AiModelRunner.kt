@@ -33,7 +33,7 @@ internal object AiModelRunner {
         Engine(EngineConfig(modelPath = file.absolutePath, backend = Backend.CPU())).use { engine ->
           engine.initialize()
           engine.createConversation().use { conversation ->
-            conversation.sendMessage(prompt).text.trim()
+            conversation.sendMessage(prompt).toString().trim()
           }
         }
       }

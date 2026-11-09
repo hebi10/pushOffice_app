@@ -70,7 +70,7 @@ test('local inference never creates schedules or falls back silently to cloud', 
   assert.match(runner, /inferenceMutex\.withLock/);
   assert.match(runner, /Engine\(EngineConfig/);
   assert.match(runner, /createConversation\(\)\.use/);
-  assert.match(runner, /conversation\.sendMessage\(prompt\)\.text/);
+  assert.match(runner, /conversation\.sendMessage\(prompt\)\.toString\(\)/);
   assert.match(runner, /if \(id == "gemini-nano"\) return NanoClient\.parse/);
   assert.match(runner, /if \(id == "gemini-nano"\) return NanoClient\.briefing/);
   assert.doesNotMatch(runner, /fetch\(|axios|\.firebase|URL\(/);
