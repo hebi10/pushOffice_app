@@ -11,10 +11,10 @@ export const uiSpacing = {
 } as const;
 
 export const uiRadii = {
-  field: 10,
-  button: 12,
-  card: 16,
-  dialog: 16,
+  field: 6,
+  button: 8,
+  card: 10,
+  dialog: 10,
 } as const;
 
 export const uiSizes = {

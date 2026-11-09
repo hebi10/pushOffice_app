@@ -64,13 +64,13 @@ test('precision stage 6 uses one shared brand and clear widget action hierarchy'
     assert.match(widget, /android:layout_height="48dp"/);
   }
   assert.match(action, /@color\/po_widget_accent/);
-  assert.match(action, /android:radius="10dp"/);
+  assert.match(action, /android:radius="8dp"/);
 });
 
 test('precision stage 6 widget primary button has adequate contrast in both themes', () => {
   const colors = [
-    { mode: 'values', background: '#2563EB', text: '#FFFFFF' },
-    { mode: 'values-night', background: '#5B9FE6', text: '#121212' },
+    { mode: 'values', background: '#23262B', text: '#FFFFFF' },
+    { mode: 'values-night', background: '#E7E9EC', text: '#111315' },
   ];
   const linear = v => {
     const c = v / 255;
@@ -116,7 +116,7 @@ test('precision stage 6 audits existing launcher, adaptive, splash and header im
   ];
   assert.ok(images.every(p => p.startsWith('./assets/images/push-office-')));
   for (const p of images) assert.ok(existsSync(new URL('../' + p, import.meta.url)), 'Missing asset ' + p);
-  assert.match(read('src/components/ui/AppBrandHeader.tsx'), /assets\/images\/push-office-icon\.png/);
+  assert.match(read('src/components/ui/AppBrandHeader.tsx'), /assets\/images\/push-office-mark\.png/);
   assert.match(read('src/components/ui/AppBrandHeader.tsx'), /PushOffice/);
 });
 

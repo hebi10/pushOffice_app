@@ -119,19 +119,20 @@ export default function CalendarScreen() {
         />
         {!schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
           <Text style={[styles.markHint, { color: colors.textSecondary }]}>
-            날짜 아래 점은 일정 개수(최대 3개)를 뜻합니다.
+            날짜 아래 점은 일정 개수(최대 3개)를 표시합니다.
           </Text>
         ) : null}
       </View>
       <View
-        style={[styles.selectionSummary, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
+        style={styles.selectionSummary}
         accessible
+        accessibilityRole="summary"
         accessibilityLabel={selectedLabel + ', 일정 ' + summary}
       >
-        <Ionicons name="calendar-clear-outline" size={20} color={colors.primary} />
+        <Ionicons name="calendar-clear-outline" size={20} color={colors.textSecondary} />
         <Text style={[styles.selectionTitle, { color: colors.text }]}>{selectedLabel}</Text>
-        <View style={[styles.countBadge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.countText, { color: colors.primary }]}>일정 {summary}</Text>
+        <View style={styles.countBadge}>
+          <Text style={[styles.countText, { color: colors.textSecondary }]}>일정 {summary}</Text>
         </View>
       </View>
       <AssistantButton
@@ -174,10 +175,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: uiSpacing.xs,
     minHeight: uiSizes.touchMinHeight,
-    borderRadius: uiRadii.field,
-    borderWidth: uiSizes.borderWidth,
-    paddingHorizontal: uiSpacing.sm,
-    paddingVertical: uiSpacing.xs,
+    paddingHorizontal: uiSpacing.xxs,
+    paddingVertical: uiSpacing.xxs,
   },
   selectionTitle: { ...uiTypography.body, flex: 1, minWidth: 0, fontWeight: '700' },
   countBadge: {
@@ -186,7 +185,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: uiSpacing.xs,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: uiRadii.field,
   },
   countText: { ...uiTypography.body, fontSize: 13, fontWeight: '700', fontVariant: ['tabular-nums'] },
 });

@@ -57,7 +57,7 @@ class QuickEntryActivityUiTest {
         assertTrue("Dialog must not expand across a tablet", activity.window.attributes.width <= 400 * density)
         assertTrue("Dialog must fit the display", activity.window.decorView.height <= activity.resources.displayMetrics.heightPixels)
         scroll.scrollTo(0, scroll.getChildAt(0).height)
-        val close = views(activity).filterIsInstance<TextView>().single { it.text.toString() == "닫기" }
+        val close = views(activity).filterIsInstance<TextView>().single { it.contentDescription == context.getString(R.string.quick_entry_close) }
         val visible = Rect()
         assertTrue("Close must remain reachable by scrolling", close.getGlobalVisibleRect(visible))
         assertTrue("The close touch target must remain visible", visible.height() >= 48 * density)
@@ -120,7 +120,7 @@ class QuickEntryActivityUiTest {
   @Test fun closeDismissesTheChooserWithoutOpeningAnEditor() {
     launch().use { scenario ->
       scenario.onActivity { activity ->
-        views(activity).filterIsInstance<TextView>().single { it.text.toString() == "닫기" }.performClick()
+        views(activity).filterIsInstance<TextView>().single { it.contentDescription == context.getString(R.string.quick_entry_close) }.performClick()
         assertTrue(activity.isFinishing)
       }
     }

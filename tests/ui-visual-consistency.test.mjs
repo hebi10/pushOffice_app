@@ -49,7 +49,12 @@ test('native quick-entry follows explicit app theme without altering reminder st
   assert.match(settings, /PushOfficeNative\.setUiTheme\(settings\.themeMode\)/);
 });
 
-test('native dark-mode chooser does not show the white-backed light illustration', () => {
+test('native dark-mode chooser uses a night-specific flat PNG instead of a white-backed JPG', () => {
   const native = source('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/QuickEntryActivity.kt');
-  assert.match(native, /if \(!isDark\) root\.addView\(ImageView\(this\)/);
+  const assetRoot = '../modules/push-office-native/android/src/main/res/';
+  const light = readFileSync(new URL(assetRoot + 'drawable-nodpi/quick_entry_mono.png', import.meta.url));
+  const dark = readFileSync(new URL(assetRoot + 'drawable-night/quick_entry_mono.png', import.meta.url));
+  assert.match(native, /R\.drawable\.quick_entry_mono/);
+  assert.doesNotMatch(native, /R\.drawable\.quick_entry_illustration/);
+  assert.notDeepEqual(light, dark);
 });

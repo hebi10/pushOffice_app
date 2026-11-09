@@ -116,7 +116,8 @@ export default function HomeScreen() {
           eyebrow={dayjs(now).format('M월 D일 dddd')}
           title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
           description="중요한 일정부터 하나씩 살펴보세요."
-          artwork={require('@/assets/images/illustration-home.jpg')}
+          artwork={require("@/assets/images/illustration-home-mono.png")}
+          monochromeArtwork
           featured
         />
 
@@ -142,6 +143,44 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        <AssistantCard title="다음 일정" icon="calendar-outline" compact>
+          {schedules.isLoading ? (
+            <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
+          ) : schedules.isError ? (
+            <Text style={[s.body, { color: colors.danger }]}>일정 조회 오류로 다음 일정을 표시할 수 없습니다.</Text>
+          ) : next && nextAt ? (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={`${next.title}, ${dayjs(nextAt).format('M월 D일')}, ${next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}${nextEndLabel ? ` ${nextEndLabel}` : ''}, 일정 상세 보기`}
+              accessibilityState={{ disabled: !next.id }}
+              disabled={!next.id}
+              onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
+              activeOpacity={0.75}
+              style={[styles.nextCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+            >
+              <View style={styles.nextTimeCol}>
+                <Text style={[styles.nextTime, { color: colors.primary }]}>
+                  {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
+                </Text>
+                {nextEndLabel && nextEndSameDay ? (
+                  <Text style={[styles.nextEnd, { color: colors.textSecondary }]}>{nextEndLabel}</Text>
+                ) : null}
+              </View>
+              <View style={styles.nextContent}>
+                <Text style={[styles.nextTitle, { color: colors.text }]} numberOfLines={2}>{next.title}</Text>
+                <Text style={[styles.nextDate, { color: colors.textSecondary }]}>
+                  {dayjs(nextAt).format('M월 D일 (ddd)')}
+                  {nextEndLabel && !nextEndSameDay ? ` · ${nextEndLabel}` : ''}
+                  {next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
+                </Text>
+              </View>
+              {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}
+            </TouchableOpacity>
+          ) : (
+            <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
+          )}
+        </AssistantCard>
 
         {notificationFeature && !notificationFeature.enabled ? (
           <AssistantCard title="알림에서 일정 추천" icon="notifications-outline" compact>
@@ -196,8 +235,8 @@ export default function HomeScreen() {
               </Text>
             </View>
             {!schedules.isLoading && !schedules.isError && todayItems.length > 0 ? (
-              <View style={[styles.countPill, { backgroundColor: colors.primaryLight }]}>
-                <Text style={[styles.countText, { color: colors.primary }]}>
+              <View style={styles.countPill}>
+                <Text style={[styles.countText, { color: colors.textSecondary }]}>
                   {todayItems.length}건
                 </Text>
               </View>
@@ -212,45 +251,6 @@ export default function HomeScreen() {
               onPress={refine}
             />
           ) : null}
-        </AssistantCard>
-
-        <AssistantCard title="다음 일정" icon="calendar-outline" compact>
-          {schedules.isLoading ? (
-            <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
-          ) : schedules.isError ? (
-            <Text style={[s.body, { color: colors.danger }]}>일정 조회 오류로 다음 일정을 표시할 수 없습니다.</Text>
-          ) : next && nextAt ? (
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={`${next.title}, ${dayjs(nextAt).format('M월 D일')}, ${next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}${nextEndLabel ? ` ${nextEndLabel}` : ''}, 일정 상세 보기`}
-              accessibilityState={{ disabled: !next.id }}
-              disabled={!next.id}
-              onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
-              activeOpacity={0.75}
-              style={[styles.nextCard, { backgroundColor: colors.primaryLight, borderColor: colors.surfaceBorder }]}
-            >
-              <View style={[styles.nextAccent, { backgroundColor: colors.primary }]} />
-              <View style={styles.nextTimeCol}>
-                <Text style={[styles.nextTime, { color: colors.primary }]}>
-                  {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
-                </Text>
-                {nextEndLabel && nextEndSameDay ? (
-                  <Text style={[styles.nextEnd, { color: colors.textSecondary }]}>{nextEndLabel}</Text>
-                ) : null}
-              </View>
-              <View style={styles.nextContent}>
-                <Text style={[styles.nextTitle, { color: colors.text }]} numberOfLines={2}>{next.title}</Text>
-                <Text style={[styles.nextDate, { color: colors.textSecondary }]}>
-                  {dayjs(nextAt).format('M월 D일 (ddd)')}
-                  {nextEndLabel && !nextEndSameDay ? ` · ${nextEndLabel}` : ''}
-                  {next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
-                </Text>
-              </View>
-              {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}
-            </TouchableOpacity>
-          ) : (
-            <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
-          )}
         </AssistantCard>
 
         {(schedules.isLoading || schedules.isError || todayItems.length > 0) ? (
@@ -363,10 +363,9 @@ const styles = StyleSheet.create({
   countPill: {
     minHeight: 30,
     minWidth: 42,
-    borderRadius: uiRadii.button,
-    paddingHorizontal: uiSpacing.sm,
+    paddingHorizontal: uiSpacing.xxs,
     paddingVertical: uiSpacing.xxs,
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   countText: { ...uiTypography.caption, fontWeight: '700' },
@@ -380,8 +379,7 @@ const styles = StyleSheet.create({
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
   },
-  nextAccent: { width: 3, alignSelf: 'stretch' },
-  nextTimeCol: { width: 62, gap: uiSpacing.xxs },
+  nextTimeCol: { width: 68, gap: uiSpacing.xxs },
   nextTime: { ...uiTypography.body, fontSize: 18, fontWeight: '800' },
   nextEnd: { ...uiTypography.caption },
   nextContent: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },

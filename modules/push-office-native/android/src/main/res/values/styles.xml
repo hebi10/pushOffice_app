@@ -1,9 +1,9 @@
 <resources>
   <style name="PushOfficeDialog" parent="@android:style/Theme.Material.Light.Dialog.NoActionBar">
-    <item name="android:colorAccent">#2563EB</item>
+    <item name="android:colorAccent">@color/po_native_primary</item>
     <item name="android:windowIsTranslucent">true</item>
     <item name="android:windowBackground">@drawable/push_office_dialog_background</item>
-    <item name="android:textColorPrimary">#1F2937</item>
-    <item name="android:textColorSecondary">#64748B</item>
+    <item name="android:textColorPrimary">@color/po_native_text</item>
+    <item name="android:textColorSecondary">@color/po_native_secondary</item>
   </style>
 </resources>

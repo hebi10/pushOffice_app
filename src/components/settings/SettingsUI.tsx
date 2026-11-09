@@ -9,8 +9,8 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 function RowIcon({ name }: { name: IconName }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
-      <Ionicons name={name} color={colors.primary} size={20} />
+    <View style={styles.iconBox}>
+      <Ionicons name={name} color={colors.textSecondary} size={20} />
     </View>
   );
 }
@@ -39,8 +39,8 @@ export function SettingsGroup({
   const { colors } = useTheme();
   return (
     <View style={[styles.group, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
-      <View style={[styles.groupHeader, { backgroundColor: colors.primaryLight }]}>
-        <Ionicons name={icon} color={colors.primary} size={20} />
+      <View style={[styles.groupHeader, { backgroundColor: colors.surface }]}>
+        <Ionicons name={icon} color={colors.textSecondary} size={20} />
         <View style={styles.copy}>
           <Text style={[styles.groupTitle, { color: colors.text }]}>{title}</Text>
           {description ? <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text> : null}
@@ -68,7 +68,7 @@ export function SettingsToggleRow({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.row, { opacity: disabled ? 0.55 : 1 }]}>
+    <View style={[styles.row, { opacity: disabled ? 0.8 : 1 }]}>
       <RowIcon name={icon} />
       <RowCopy title={title} description={description} />
       <Switch
@@ -111,13 +111,13 @@ export function SettingsActionRow({
       accessibilityValue={status ? { text: status } : undefined}
       disabled={busy}
       onPress={onPress}
-      style={[styles.row, { opacity: busy ? 0.6 : 1 }]}
+      style={[styles.row, { opacity: busy ? 0.8 : 1 }]}
     >
       <RowIcon name={icon} />
       <RowCopy title={title} description={description} />
       {status ? (
-        <View style={[styles.statusBadge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.status, { color: colors.primary }]}>{status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: colors.inputBackground }]}>
+          <Text style={[styles.status, { color: colors.text }]}>{status}</Text>
         </View>
       ) : null}
       {busy
@@ -169,7 +169,7 @@ export function SettingsChoiceRow({
       <Ionicons
         name={selected ? 'radio-button-on' : 'radio-button-off'}
         size={22}
-        color={selected ? colors.primary : colors.textTertiary}
+        color={selected ? colors.primary : colors.textSecondary}
       />
     </Pressable>
   );
@@ -206,7 +206,6 @@ const styles = StyleSheet.create({
   iconBox: {
     width: 34,
     height: 34,
-    borderRadius: uiRadii.field,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,

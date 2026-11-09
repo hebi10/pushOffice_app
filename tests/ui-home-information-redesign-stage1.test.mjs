@@ -14,11 +14,13 @@ const verify = read('tools/ui/verify_captures.py');
 test('HOME-01 uses actual date, greeting and a home-only hero layout', () => {
   assert.ok(home.includes("eyebrow={dayjs(now).format('M월 D일 dddd')}"));
   assert.match(home, /description="중요한 일정부터 하나씩 살펴보세요\."/);
-  assert.match(home, /illustration-home\.jpg/);
+  assert.ok(home.includes('illustration-home-mono.png'));
+  assert.match(home, /monochromeArtwork/);
   assert.match(home, /featured\s*\/>/);
   assert.match(intro, /featured = false/);
   assert.match(intro, /featured && styles\.featuredContainer/);
   assert.match(intro, /featured && styles\.featuredArtwork/);
+  assert.match(intro, /featured && styles\.featuredGraphic/);
   assert.match(intro, /artwork && !compact && !isDark/);
 });
 
@@ -55,7 +57,8 @@ test('HOME-04 keeps real end time, repetition, detail navigation and data integr
   assert.match(home, /nextEndAt\.getTime\(\) > nextAt\.getTime\(\)/);
   assert.match(home, /next\.repeatType === 'monthly'/);
   assert.match(home, /next\.repeatType === 'yearly'/);
-  assert.match(home, /styles\.nextAccent/);
+  assert.doesNotMatch(home, /styles\.nextAccent/);
+  assert.match(home, /backgroundColor: colors\.inputBackground, borderColor: colors\.inputBorder/);
   assert.match(home, /router\.push\(/);
   assert.match(home, /<ScheduleItem/);
   assert.doesNotMatch(home, /<AssistantCard title="할 일"/);

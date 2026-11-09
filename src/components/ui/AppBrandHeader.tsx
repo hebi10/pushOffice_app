@@ -11,8 +11,8 @@ export function AppBrandHeader() {
   return (
     <View style={styles.brand} accessible accessibilityRole="header" accessibilityLabel="Push Office">
       <Image
-        source={require('@/assets/images/push-office-icon.png')}
-        style={styles.logo}
+        source={require('@/assets/images/push-office-mark.png')}
+        style={[styles.logo, { tintColor: colors.primary }]}
         resizeMode="contain"
         accessible={false}
       />
@@ -34,7 +34,7 @@ export function NotificationSettingsAction() {
       activeOpacity={0.8}
       style={styles.action}
     >
-      <Ionicons name="notifications-outline" size={22} color={colors.text} />
+      <Ionicons name="notifications-outline" size={22} color={colors.textSecondary} />
     </TouchableOpacity>
   );
 }

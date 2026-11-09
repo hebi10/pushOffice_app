@@ -1,16 +1,16 @@
 <resources>
   <style name="PushOfficeDialogLight" parent="@android:style/Theme.Material.Light.Dialog.NoActionBar">
-    <item name="android:colorAccent">#2563EB</item>
+    <item name="android:colorAccent">#23262B</item>
     <item name="android:windowIsTranslucent">true</item>
     <item name="android:windowBackground">@drawable/push_office_dialog_light_background</item>
-    <item name="android:textColorPrimary">#1F2937</item>
-    <item name="android:textColorSecondary">#64748B</item>
+    <item name="android:textColorPrimary">#1C1E21</item>
+    <item name="android:textColorSecondary">#5D6269</item>
   </style>
   <style name="PushOfficeDialogDark" parent="@android:style/Theme.Material.Dialog.NoActionBar">
-    <item name="android:colorAccent">#93C5FD</item>
+    <item name="android:colorAccent">#E7E9EC</item>
     <item name="android:windowIsTranslucent">true</item>
     <item name="android:windowBackground">@drawable/push_office_dialog_dark_background</item>
-    <item name="android:textColorPrimary">#F1F5F9</item>
-    <item name="android:textColorSecondary">#CBD5E1</item>
+    <item name="android:textColorPrimary">#F5F6F7</item>
+    <item name="android:textColorSecondary">#B1B6BD</item>
   </style>
 </resources>

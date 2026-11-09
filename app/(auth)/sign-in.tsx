@@ -13,8 +13,8 @@ export default function SignInScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.content}>
         <Image
-          source={require('@/assets/images/push-office-icon.png')}
-          style={styles.logo}
+          source={require('@/assets/images/push-office-mark.png')}
+          style={[styles.logo, { tintColor: colors.primary }]}
           resizeMode="contain"
           accessibilityLabel="Push Office 앱 아이콘"
         />

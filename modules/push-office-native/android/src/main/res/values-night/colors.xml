@@ -1,8 +1,17 @@
 <resources>
-  <color name="po_widget_surface">#1E1E1E</color>
-  <color name="po_widget_text">#E0E0E0</color>
-  <color name="po_widget_accent">#5B9FE6</color>
-  <color name="po_widget_on_primary">#121212</color>
-  <color name="po_widget_border">#334155</color>
-  <color name="po_widget_action_surface">#2A2A2A</color>
+  <color name="po_widget_surface">#1C1F22</color>
+  <color name="po_widget_text">#F5F6F7</color>
+  <color name="po_widget_accent">#E7E9EC</color>
+  <color name="po_widget_on_primary">#111315</color>
+  <color name="po_widget_border">#3B4046</color>
+  <color name="po_widget_action_surface">#292D31</color>
+  <color name="po_native_primary">#E7E9EC</color>
+  <color name="po_native_on_primary">#111315</color>
+  <color name="po_native_surface">#1C1F22</color>
+  <color name="po_native_text">#F5F6F7</color>
+  <color name="po_native_secondary">#B1B6BD</color>
+  <color name="po_native_field">#292D31</color>
+  <color name="po_native_input_border">#777F88</color>
+  <color name="po_native_danger">#FF7878</color>
+  <color name="po_widget_secondary">#B1B6BD</color>
 </resources>

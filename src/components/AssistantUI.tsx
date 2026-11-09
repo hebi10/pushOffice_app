@@ -29,9 +29,9 @@ export function AssistantCard({ title, subtitle, icon, compact = false, flat = f
     <View style={[styles.card, compact && styles.compactCard, flat && styles.flatCard, { backgroundColor: flat ? colors.background : colors.surface, borderColor: colors.surfaceBorder }]}>
       {title ? (
         <View style={styles.cardHeader}>
-          {icon ? <Ionicons name={icon} size={20} color={colors.primary} /> : null}
+          {icon ? <Ionicons name={icon} size={20} color={colors.textSecondary} /> : null}
           <View style={styles.headerText}>
-            <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+            <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</Text>
             {subtitle ? <Text style={[styles.helper, { color: colors.textSecondary }]}>{subtitle}</Text> : null}
           </View>
         </View>
@@ -60,15 +60,13 @@ export function AssistantButton({
 }) {
   const { colors } = useTheme();
   const resolved = variant ?? (secondary ? 'secondary' : 'primary');
-  const foreground = resolved === 'secondary'
-    ? colors.primary
-    : resolved === 'destructive' ? colors.onDanger : colors.onPrimary;
-  const background = resolved === 'secondary'
-    ? colors.surface
-    : resolved === 'destructive' ? colors.danger : colors.primary;
-  const border = resolved === 'secondary'
-    ? colors.inputBorder
-    : background;
+  const foreground = disabled
+    ? colors.textSecondary
+    : resolved === 'secondary' ? colors.text : resolved === 'destructive' ? colors.onDanger : colors.onPrimary;
+  const background = disabled
+    ? colors.inputBackground
+    : resolved === 'secondary' ? colors.surface : resolved === 'destructive' ? colors.danger : colors.primary;
+  const border = disabled || resolved === 'secondary' ? colors.inputBorder : background;
   const inactive = disabled || busy;
 
   return (
@@ -82,7 +80,6 @@ export function AssistantButton({
       style={[styles.button, {
         backgroundColor: background,
         borderColor: border,
-        opacity: inactive ? 0.56 : 1,
       }]}
     >
       {busy
@@ -126,9 +123,10 @@ export function AssistantTextField({
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
         placeholderTextColor={colors.textTertiary}
+        selectionColor={colors.primary}
         style={[assistantStyles.input, {
           color: colors.text,
-          backgroundColor: colors.background,
+          backgroundColor: colors.inputBackground,
           borderColor: colors.inputBorder,
         }]}
       />
@@ -151,7 +149,7 @@ export function SettingRow({
 }) {
   const { colors } = useTheme();
   return (
-    <View style={[styles.settingRow, { opacity: disabled ? 0.56 : 1 }]}>
+    <View style={[styles.settingRow, { opacity: disabled ? 0.8 : 1 }]}>
       <View style={styles.settingCopy}>
         <Text style={[assistantStyles.body, { color: colors.text }]}>{title}</Text>
         {description ? (
