@@ -112,12 +112,13 @@ object NanoClient {
     require(error == null || error == JSONObject.NULL || (error is String && error.isBlank())) {
       error.toString().take(200)
     }
-    return AiScheduleTime.validated(text, now, obj.optString("title").trim(),
+    return AiScheduleTime.validated(text, now, AiModelFields.text(obj, "title", "제목", "eventTitle"),
       obj.optString("localDate"), obj.optString("localTime"), obj.optString("repeatType"))
   }
   suspend fun briefing(prompt: String): String {
     val now=ZonedDateTime.now()
-    val result=json("""Current datetime: $now. Timezone: ${now.zone.id}. Summarize only supplied real local schedules in Korean. Do not invent events, weather, news or prices. Return only JSON {"briefing":string}. Data: ${JSONObject.quote(prompt)}""").getString("briefing").trim()
+    val response=json("""Current datetime: $now. Timezone: ${now.zone.id}. Summarize only supplied real local schedules in Korean. Do not invent events, weather, news or prices. Return only JSON {"briefing":string}. Data: ${JSONObject.quote(prompt)}""")
+    val result=AiModelFields.text(response, "briefing", "요약", "summary")
     require(result.isNotBlank() && result.length <= 12000) { "AI 요약을 확인할 수 없습니다." }
     return result
   }

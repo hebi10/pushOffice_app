@@ -91,7 +91,7 @@ test('local inference never creates schedules or falls back silently to cloud', 
   assert.match(screen, /PushOfficeNative\.verifyAiModel\(model\.id\)/);
   assert.match(runner, /inferenceMutex\.withLock/);
   assert.match(runner, /Engine\(EngineConfig/);
-  assert.match(runner, /createConversation\(\)\.use/);
+  assert.match(runner, /createConversation\(ConversationConfig\(/);
   assert.match(runner, /conversation\.sendMessage\(prompt\)\.toString\(\)/);
   assert.match(runner, /if \(id == "gemini-nano"\) return NanoClient\.parse/);
   assert.match(runner, /if \(id == "gemini-nano"\) return NanoClient\.briefing/);
@@ -120,4 +120,16 @@ test('Android inference QA separates generated text from schedule accuracy and s
   assert.match(nativeQa, /ScheduleStore\(context\)\.use/);
   assert.match(runner, /onRawSchedule\?\.invoke\(raw\)/);
   assert.match(runner, /Copy these verified values EXACTLY/);
+});
+
+test('LiteRT model output stays bounded and accepts vetted localized JSON keys', () => {
+  const nano = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/NanoClient.kt');
+  const androidQa = read('modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/AiModelAndroidRealInferenceTest.kt');
+  assert.match(runner, /ConversationConfig\(/);
+  assert.match(runner, /maxOutputToken = maxOutputTokens/);
+  assert.match(runner, /ThinkingConfig\(enableThinking = false, thinkingTokenBudget = 0\)/);
+  assert.match(runner, /AiModelFields\.text\(data, "title", "제목", "eventTitle"\)/);
+  assert.match(nano, /AiModelFields\.text\(obj, "title", "제목", "eventTitle"\)/);
+  assert.match(runner, /AiModelFields\.text\(response, "briefing", "요약", "summary"\)/);
+  assert.match(androidQa, /sampleBriefingRawPreview/);
 });

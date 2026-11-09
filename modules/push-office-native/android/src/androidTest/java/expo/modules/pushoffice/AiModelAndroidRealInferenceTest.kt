@@ -55,6 +55,7 @@ class AiModelAndroidRealInferenceTest {
     var rawSuccess = false
     var calendarPassed = false
     var briefingPassed: Boolean? = null
+    var briefingRaw = ""
     val scheduleCountBefore = ScheduleStore(context).use { it.all().size }
     try {
       val startedWaiting = SystemClock.elapsedRealtime()
@@ -99,7 +100,10 @@ class AiModelAndroidRealInferenceTest {
       if (id == "qwen35-08") {
         val startedBriefing = SystemClock.elapsedRealtime()
         val result = withTimeout(150_000L) {
-          AiModelRunner.briefing(context, id, "일정 1건: 2026년 11월 17일 오후 3시 치과 예약. 이 일정만 간단히 요약해 주세요.")
+          AiModelRunner.briefing(context, id,
+            "일정 1건: 2026년 11월 17일 오후 3시 치과 예약. 이 일정만 간단히 요약해 주세요.") {
+              raw -> briefingRaw = raw
+            }
         }
         briefingPassed = result.contains("치과")
         report.put("briefingMs", SystemClock.elapsedRealtime() - startedBriefing)
@@ -111,6 +115,7 @@ class AiModelAndroidRealInferenceTest {
     } finally {
       report.put("sha256VerifiedOnAndroid", verified)
       report.put("actualCpuTextGenerated", rawSuccess)
+      if (id == "qwen35-08") report.put("sampleBriefingRawPreview", briefingRaw.take(600))
       report.put("noScheduleSavedByTest",
         ScheduleStore(context).use { it.all().size } == scheduleCountBefore)
       if (briefingPassed != null) report.put("localBriefingPassed", briefingPassed)
