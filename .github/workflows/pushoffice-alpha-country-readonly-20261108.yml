@@ -40,6 +40,7 @@ jobs:
           python3 - <<'PY'
           import json, os, sys
           from pathlib import Path
+          from urllib.parse import quote
           sys.path.insert(0, '.github/ops')
           from promote_existing_internal16_closed_alpha_20261108 import API, Client, api_edit
           client = Client(os.environ['PLAY_ACCESS_TOKEN'])
@@ -47,14 +48,30 @@ jobs:
           report = {'package': 'com.hebi96.pushOffice_app', 'read_only': True}
           try:
               edit = api_edit(client.request('POST', API, {}))
-              for track in ('alpha', 'production'):
-                  availability = client.request('GET', edit + '/countryAvailability/' + track)
+              for track in ('alpha', 'production', '1차 테스트'):
+                  availability = client.request('GET', edit + '/countryAvailability/' + quote(track, safe=''))
                   report[track] = {
                       'syncWithProduction': availability.get('syncWithProduction', False),
                       'countries': [item.get('countryCode') for item in availability.get('countries', [])
                                     if isinstance(item, dict)],
                       'restOfWorld': availability.get('restOfWorld', False),
                   }
+              tracks = client.request('GET', edit + '/tracks').get('tracks', [])
+              report['selected_track_releases'] = [
+                  {'status': r.get('status'), 'versionCodes': r.get('versionCodes', [])}
+                  for t in tracks if isinstance(t, dict) and t.get('track') == '1차 테스트'
+                  for r in t.get('releases', []) if isinstance(r, dict)
+              ]
+              report['selected_track_exists'] = any(
+                  isinstance(t, dict) and t.get('track') == '1차 테스트' for t in tracks
+              )
+              report['selected_track_country_ready'] = (
+                  report['selected_track_exists'] and (
+                      bool(report['1차 테스트']['countries']) or report['1차 테스트']['restOfWorld']
+                  )
+              )
+              print('Closed 1st test country configuration:', json.dumps(report['1차 테스트'], sort_keys=True, ensure_ascii=False))
+              print('Closed 1st test readiness:', json.dumps({'exists': report['selected_track_exists'], 'country_ready': report['selected_track_country_ready'], 'releases': report['selected_track_releases']}, ensure_ascii=False))
               print('Closed alpha country configuration:', json.dumps(report['alpha'], sort_keys=True))
               print('Production country configuration:', json.dumps(report['production'], sort_keys=True))
           finally:
