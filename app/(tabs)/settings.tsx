@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { AssistantButton, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
 import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsStatusRow, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
 import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
@@ -20,13 +20,17 @@ import { subscribeOnActive, type LegacyCloudState } from '@/src/features/storage
 import type { UserSettings } from '@/src/types';
 export default function SettingsScreen() {
     const { colors } = useTheme();
+    const router = useRouter();
     const settings = useAppSelector(x => x.settings);
     const [cap, setCap] = useState<ReminderCapabilities | null>(null);
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
     const [recovering, setRecovering] = useState(false);
     const [ai, setAi] = useState<AiStatus>({ status: 'error', message: '기기 지원 상태를 확인하고 있습니다.' });
     const [aiDownloading, setAiDownloading] = useState(false);
+    const [aiChecking, setAiChecking] = useState(false);
     const [aiProgress, setAiProgress] = useState<AiDownloadProgress | null>(null);
+    const aiDownloadInFlight = useRef(false);
+    const aiStatusSequence = useRef(0);
     const [tileEnabled, setTileEnabled] = useState(true);
     const [notificationStatus, setNotificationStatus] = useState<NotificationSuggestionStatus | null>(null);
     const [notificationDisclosure, setNotificationDisclosure] = useState<'enable' | 'access' | null>(null);
@@ -49,7 +53,24 @@ export default function SettingsScreen() {
     useEffect(() => setKeywords(settings.newsKeywords.join(', ')), [settings.newsKeywords]);
     useEffect(() => setTickers(settings.stockTickers.join(', ')), [settings.stockTickers]);
     useEffect(() => setLanguage(settings.newsLanguage), [settings.newsLanguage]);
-    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); PushOfficeNative.getAiStatus().then(setAi).catch(() => setAi({ status: 'error', message: '로컬 AI 지원 Android 빌드가 필요합니다.' })); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, []);
+    const checkAiStatus = useCallback(async () => {
+      if (aiDownloadInFlight.current) return;
+      const requestId = ++aiStatusSequence.current;
+      setAiChecking(true);
+      try {
+        const result = await PushOfficeNative.getAiStatus();
+        if (requestId === aiStatusSequence.current && !aiDownloadInFlight.current) {
+          setAi(result);
+          setAiProgress(null);
+        }
+      } catch {
+        if (requestId === aiStatusSequence.current && !aiDownloadInFlight.current)
+          setAi({ status: 'error', message: '기기 AI 상태를 확인하지 못했습니다. Android 빌드 또는 AICore 상태를 확인해 주세요.', errorCode: 'AI_STATUS_UNAVAILABLE', retryable: false });
+      } finally {
+        if (requestId === aiStatusSequence.current) setAiChecking(false);
+      }
+    }, []);
+    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); void checkAiStatus(); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, [checkAiStatus]);
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
     useEffect(() => {
@@ -61,14 +82,29 @@ export default function SettingsScreen() {
         return () => listener.remove();
     }, []);
     const downloadAi = async () => {
+      if (aiDownloadInFlight.current) return;
+      aiDownloadInFlight.current = true;
+      aiStatusSequence.current += 1;
       setAiDownloading(true);
+      setAiChecking(false);
       setAiProgress(null);
       try {
         const result = await PushOfficeNative.downloadAiModel();
         setAi(result);
         if (result.status === 'error') setNotice({ title: '기기 AI 다운로드', message: result.message });
-      } catch (error) { showError(error, 'AI 모델 다운로드를 실행할 수 없습니다.'); }
-      finally { setAiDownloading(false); }
+      } catch {
+        const failure: AiStatus = {
+          status: 'error',
+          message: '다운로드를 실행하지 못했습니다. Push Office를 열어 둔 상태에서 다시 시도해 주세요.',
+          errorCode: 'AI_DOWNLOAD_REQUEST_FAILED',
+          retryable: true,
+        };
+        setAi(failure);
+        setNotice({ title: '기기 AI 다운로드', message: failure.message });
+      } finally {
+        aiDownloadInFlight.current = false;
+        setAiDownloading(false);
+      }
     };
     const toggleTile = async (enabled: boolean) => {
       try {
@@ -324,16 +360,35 @@ export default function SettingsScreen() {
                 <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
+                <SettingsActionRow icon="layers-outline" title="기기 AI 모델 관리"
+                  description="5개 모델 비교 · 다운로드 · 성능 테스트 · 선택"
+                  onPress={() => router.push('/ai-models')} />
                 <SettingsStatusRow
                   icon="sparkles-outline"
                   title="Gemini Nano"
                   description={ai.message}
                 />
-                {ai.status === 'downloadable' ? (
-                  <SettingsActionRow icon="cloud-download-outline" title="기기 AI 모델 다운로드" description="기기가 지원하는 Gemini Nano를 직접 내려받습니다. Wi-Fi 사용을 권장합니다." busy={aiDownloading} onPress={() => { void downloadAi(); }} />
+                {(ai.status === 'downloadable' || (ai.status === 'error' && ai.retryable)) ? (
+                  <SettingsActionRow
+                    icon="cloud-download-outline"
+                    title={ai.status === 'error' ? '기기 AI 다운로드 다시 시도' : '기기 AI 모델 다운로드'}
+                    description="지원 상태를 확인하고 사용자가 요청할 때만 다운로드합니다."
+                    busy={aiDownloading || aiChecking}
+                    onPress={() => { void downloadAi(); }}
+                  />
                 ) : null}
+                {ai.status !== 'available' ? (
+                  <SettingsActionRow
+                    icon="refresh-outline"
+                    title="기기 AI 상태 다시 확인"
+                    description="AICore 업데이트·네트워크 변경·다운로드 완료 후 현재 상태를 조회합니다."
+                    busy={aiChecking || aiDownloading}
+                    onPress={() => { void checkAiStatus(); }}
+                  />
+                ) : null}
+                {ai.errorCode ? <SettingsNote>진단 코드: {ai.errorCode} · 오류 원문이나 알림 내용은 전송하지 않습니다.</SettingsNote> : null}
                 {aiDownloading || aiProgress ? (
-                  <SettingsNote>{aiDownloading ? '다운로드 처리 중 · ' : ''}{aiProgress?.status === 'progress' && aiProgress.totalBytes > 0 ? `${Math.min(100, Math.round(aiProgress.bytesDownloaded / aiProgress.totalBytes * 100))}%` : aiProgress?.status === 'completed' ? '다운로드 완료' : aiProgress?.status === 'failed' ? '다운로드 실패' : '진행 상태 확인 중'}</SettingsNote>
+                  <SettingsNote>{aiDownloading ? '다운로드 처리 중 · ' : ''}{aiProgress?.status === 'progress' && aiProgress.totalBytes > 0 ? `${Math.min(100, Math.round(aiProgress.bytesDownloaded / aiProgress.totalBytes * 100))}%` : aiProgress?.status === 'completed' ? '다운로드 완료' : aiProgress?.status === 'failed' ? `다운로드 실패${aiProgress.errorCode ? ` (${aiProgress.errorCode})` : ''}` : '진행 상태 확인 중'}</SettingsNote>
                 ) : null}
                 <SettingsActionRow
                   icon="mic-outline"

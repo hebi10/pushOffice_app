@@ -47,6 +47,7 @@ function InnerLayout() {
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)/sign-in" options={{ title: '로그인', presentation: 'modal' }} />
         <Stack.Screen name="schedule/[id]" options={{ title: '일정 상세' }} />
+        <Stack.Screen name="ai-models" options={{ title: '기기 AI 모델 관리' }} />
       </Stack>
       <AppDialog
         visible={notice !== null}

@@ -33,6 +33,9 @@ export interface ReminderCapabilities {
 export interface AiStatus {
   status: 'available' | 'downloadable' | 'downloading' | 'unavailable' | 'error';
   message: string;
+  /** Non-sensitive code only. */
+  errorCode?: string;
+  retryable?: boolean;
 }
 export interface NotificationSuggestion {
   id: string;
@@ -49,10 +52,39 @@ export interface NotificationSuggestionStatus {
   accessGranted: boolean;
   pendingCount: number;
 }
+export interface AiModelInfo {
+  id: string;
+  title: string;
+  description: string;
+  engine: 'AICore' | 'LiteRT-LM';
+  license: string;
+  approximateMb: number;
+  sourceUrl: string;
+  state: 'available' | 'downloadable' | 'downloading' | 'not_installed' | 'installed' | 'verifying' | 'error' | 'unavailable';
+  selected: boolean;
+  bytesDownloaded: number;
+  totalBytes: number;
+  message: string;
+}
+export interface AiModelTestResult {
+  modelId: string;
+  success: boolean;
+  title?: string;
+  startAt?: number;
+  repeatType?: 'none' | 'monthly' | 'yearly';
+  message?: string;
+  durationMs: number;
+}
+export interface AiModelActionResult {
+  state?: string;
+  selected?: string;
+  message?: string;
+}
 export interface AiDownloadProgress {
   status: 'started' | 'progress' | 'completed' | 'failed';
   bytesDownloaded: number;
   totalBytes: number;
+  errorCode?: string;
 }
 export type PushOfficeNativeEvents = {
   schedulesChanged: () => void;
@@ -77,6 +109,12 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   requestPinWidget(kind: 'small' | 'agenda'): Promise<boolean>;
   getAiStatus(): Promise<AiStatus>;
   downloadAiModel(): Promise<AiStatus>;
+  listAiModels(): Promise<AiModelInfo[]>;
+  downloadAiModelById(id: string): Promise<AiModelActionResult>;
+  removeAiModel(id: string): Promise<AiModelActionResult>;
+  verifyAiModel(id: string): Promise<AiModelActionResult>;
+  selectAiModel(id: string): Promise<AiModelActionResult>;
+  testAiModel(id: string, text: string): Promise<AiModelTestResult>;
   generateBriefing(prompt: string): Promise<string>;
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
@@ -114,6 +152,12 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   requestPinWidget: unavailable,
   getAiStatus: async () => ({ status: 'unavailable', message: '기기 AI는 지원되는 Android 기기에서 사용할 수 있습니다.' }),
   downloadAiModel: unavailable,
+  listAiModels: async () => [],
+  downloadAiModelById: unavailable,
+  removeAiModel: unavailable,
+  verifyAiModel: unavailable,
+  selectAiModel: unavailable,
+  testAiModel: unavailable,
   generateBriefing: unavailable,
   refreshWidgets: unavailable,
   setUiTheme: unavailable,

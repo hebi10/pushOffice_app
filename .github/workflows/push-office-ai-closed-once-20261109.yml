@@ -1,0 +1,31 @@
+name: Push Office AI PR45 closed test one-time request
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/push-office-ai-closed-once-20261109.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  request-closed:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[push-office-ai-closed-20261109]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Dispatch signed build and upload to existing Korean 1차 테스트 track
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh api --method POST             "repos/${GH_REPO}/actions/workflows/android-release.yml/dispatches"             -f ref=main             -f 'inputs[mode]=deploy'             -f 'inputs[target]=closed'             -f 'inputs[closed_track]=1차 테스트'
+
+# One-time marker on the PR #45 merge commit, not on this file's preparation commit.
+# Physical-device Gemini Nano and ARM64 QA remains a post-release closed-testing task.

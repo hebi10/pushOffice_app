@@ -1,0 +1,158 @@
+name: Push Office actual LiteRT model verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "tools/ci/verify_litert_remote.py"
+      - "tools/ci/verify_litert_schedule.py"
+      - ".github/workflows/ai-model-remote-verification.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-metadata:
+    name: Real Hugging Face SHA/size for all four models
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify actual upstream HEAD metadata for all four models
+        run: python tools/ci/verify_litert_remote.py metadata
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-office-real-model-head
+          path: model-head-evidence.json
+          if-no-files-found: warn
+          retention-days: 14
+  qwen3-real-file:
+    name: Download and SHA256 Qwen3 0.6B; attempt CPU inference
+    needs: public-metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: push-office-real-model-head
+      - name: Install official model download client
+        run: python -m pip install "huggingface_hub[hf_xet]>=0.34,<2"
+      - name: Download actual Qwen3 0.6B and hash full 614MB
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          mkdir -p actual-model
+          hf download litert-community/Qwen3-0.6B Qwen3-0.6B.litertlm --local-dir actual-model
+          python tools/ci/verify_litert_remote.py digest qwen3-06 actual-model/Qwen3-0.6B.litertlm
+
+      - name: Test plain HTTPS redirect download used by Android DownloadManager
+        id: direct_http
+        run: |
+          curl --fail --location --retry 2 --max-time 600 --silent --show-error \
+            --output actual-model/direct-qwen3-0.6b.litertlm \
+            "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B.litertlm"
+          test "$(stat -c%s actual-model/direct-qwen3-0.6b.litertlm)" -eq 613722264
+          test "$(sha256sum actual-model/direct-qwen3-0.6b.litertlm | cut -d ' ' -f1)" = "c5f39b4191926786c3e6668b62af4d6eb15248dfc7a5348252a9b406f33f2108"
+          echo "Plain redirect HTTPS transfer: full 613722264 bytes, matching SHA256" > model-direct-http-check.txt
+      - name: Install runtime and perform actual Linux CPU inference
+        id: inference
+        continue-on-error: true
+        run: |
+          python -m pip install litert-lm==0.19.1
+          timeout 360 litert-lm run actual-model/Qwen3-0.6B.litertlm --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
+          test -s model-inference.log
+      - name: Parse a real Korean event with Qwen3
+        id: korean
+        run: python tools/ci/verify_litert_schedule.py --model qwen3-06 --path actual-model/Qwen3-0.6B.litertlm
+      - name: Persist real inference outcome
+        if: always()
+        run: |
+          echo "CPU inference status: ${{ steps.inference.outcome }}" > model-inference-status.txt
+          echo "Host: Linux CI runner. Android supported phone inference not tested." >> model-inference-status.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-office-qwen3-actual-file-evidence
+          path: |
+            model-head-evidence.json
+            model-full-sha.json
+            model-inference.log
+            model-inference-status.txt
+            model-korean-output.txt
+            model-korean-test.json
+            model-direct-http-check.txt
+          if-no-files-found: warn
+          retention-days: 14
+
+  other-real-model-files:
+    # Other three models were already fully downloaded and validated in #42565764421.
+    # Avoid re-downloading >5 GB on every PR synchronize; run the matrix manually.
+    if: github.event_name == 'workflow_dispatch'
+    name: Full downloaded SHA256 and CPU run - ${{ matrix.id }}
+    needs: public-metadata
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: qwen35-08
+            repo: litert-community/Qwen3.5-0.8B
+            file: Qwen3.5-0.8B_int8.litertlm
+          - id: qwen35-2
+            repo: litert-community/Qwen3.5-2B
+            file: Qwen3.5-2B_int8.litertlm
+          - id: gemma4-e2b
+            repo: litert-community/gemma-4-E2B-it-litert-lm
+            file: gemma-4-E2B-it.litertlm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          name: push-office-real-model-head
+      - name: Install Hugging Face downloader
+        run: python -m pip install "huggingface_hub[hf_xet]>=0.34,<2"
+      - name: Download actual complete model and verify its SHA256
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          mkdir -p actual-model
+          hf download "${{ matrix.repo }}" "${{ matrix.file }}" --local-dir actual-model
+          python tools/ci/verify_litert_remote.py digest "${{ matrix.id }}" "actual-model/${{ matrix.file }}"
+      - name: Attempt real LiteRT-LM CPU inference on full model
+        id: inference
+        continue-on-error: true
+        run: |
+          python -m pip install litert-lm==0.19.1
+          timeout 360 litert-lm run "actual-model/${{ matrix.file }}" --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
+          test -s model-inference.log
+      - name: Parse a real Korean event with the selected model
+        id: korean
+        run: python tools/ci/verify_litert_schedule.py --model "${{ matrix.id }}" --path "actual-model/${{ matrix.file }}"
+      - name: Record CPU result and Android limitation
+        if: always()
+        run: |
+          echo "Linux CPU inference outcome: ${{ steps.inference.outcome }}" > model-inference-status.txt
+          echo "Not a test on the user's Android device." >> model-inference-status.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: push-office-${{ matrix.id }}-actual-download-inference
+          path: |
+            model-head-evidence.json
+            model-full-sha.json
+            model-inference.log
+            model-inference-status.txt
+            model-korean-output.txt
+            model-korean-test.json
+          if-no-files-found: warn
+          retention-days: 14
