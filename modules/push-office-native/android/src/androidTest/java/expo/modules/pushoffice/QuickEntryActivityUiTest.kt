@@ -90,7 +90,7 @@ class QuickEntryActivityUiTest {
         val input = views(activity).filterIsInstance<EditText>().first()
         input.setText(source)
         views(activity).filterIsInstance<TextView>()
-          .first { it.text.toString() == "내용 확인" }.performClick()
+          .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
         assertTrue(texts(activity).contains("일정 확인 및 저장"))
         val fields = views(activity).filterIsInstance<EditText>()
         assertTrue(fields.any { it.contentDescription == "일정 제목" })
