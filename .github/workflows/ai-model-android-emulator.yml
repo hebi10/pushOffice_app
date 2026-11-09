@@ -1,0 +1,79 @@
+name: Push Office Android five-model emulator runtime probe
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/ai-model-android-emulator.yml"
+      - "tools/ci/run_android_ai_emulator_qa.sh"
+      - "tools/ci/check_android_ai_abi.py"
+      - "tools/ci/verify_android_ai_emulator_report.py"
+      - "modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/AiModelsEmulatorProbeTest.kt"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: push-office-android-ai-probe-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  android-five-model-probe:
+    name: Android API 35 real runtime & AICore availability probe
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_NO_DOTENV: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Restore checksum-verified Gradle distribution
+        uses: actions/cache/restore@v4
+        id: gradle-cache
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - run: bash .github/ci/bootstrap-gradle.sh
+      - name: Build Android debug APK and inspect actual LiteRT JNI ABIs
+        working-directory: android
+        run: |
+          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleDebug \
+            --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PreactNativeArchitectures=x86_64
+      - run: python3 tools/ci/check_android_ai_abi.py android/app/build/outputs/apk/debug/app-debug.apk android-ai-qa/abi-report.json
+      - name: Grant KVM device access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Probe five actual Android AI engine routes (no synthetic inference)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash tools/ci/run_android_ai_emulator_qa.sh
+      - name: Preserve Android evidence (unsupported is not success)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: PushOffice-Android-5-model-runtime-probe
+          path: |
+            android-ai-qa/
+            android/**/build/reports/androidTests/connected/**
+            android/**/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 14
