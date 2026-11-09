@@ -169,6 +169,9 @@ internal object AiModelDownloadStore {
     val remote = remoteMetadata(model)
     return withContext(Dispatchers.IO) {
       synchronized(lock) {
+        if (downloadId(ctx,id) > 0L && state(ctx,id)["state"] in listOf("downloading","verifying")) {
+          return@synchronized mapOf("state" to "downloading", "message" to "이미 다운로드 중입니다.")
+        }
         val folder = directory(ctx)
         require(StatFs(folder.path).availableBytes > remote.size + 300_000_000L) {
           "여유 저장 공간이 부족합니다. 모델 파일 크기에 300MB 이상을 추가 확보해 주세요."
@@ -205,10 +208,11 @@ internal object AiModelDownloadStore {
     val model = AiModelCatalog.get(id)
     require(id != "gemini-nano") { "Gemini Nano는 Android AICore에서 관리합니다." }
     synchronized(lock) {
+      val wasSelected = prefs(ctx).getString(SELECTED,"gemini-nano") == id
       clear(ctx,id,true)
       val local = target(ctx,model.id)
       require(!local.exists() || local.delete()) { "기기 모델 파일을 삭제하지 못했습니다." }
-      if (selected(ctx) == id) prefs(ctx).edit().putString(SELECTED,"gemini-nano").apply()
+      if (wasSelected) prefs(ctx).edit().putString(SELECTED,"gemini-nano").apply()
       mapOf("state" to "not_installed", "message" to "모델이 삭제됐습니다.")
     }
   }

@@ -318,12 +318,15 @@ class QuickEntryActivity : Activity() {
         fun current()=session.accepts(request,transcript.text.toString())
         status.text="기기 AI 상태 확인 중…"
         try {
-          val availability=NanoClient.status()
+          val selectedModel=AiModelDownloadStore.selected(this@QuickEntryActivity)
+          val availability=if(selectedModel=="gemini-nano") NanoClient.status()
+            else mapOf("status" to "available", "message" to ("선택한 AI 모델: " + AiModelCatalog.get(selectedModel).title))
           ensureActive(); if(!current()) return@launch
           status.text=(availability["message"] as? String) ?: "기기 AI 상태를 확인할 수 없습니다."
           if(availability["status"]=="available") {
             val basic=ScheduleParser.parse(request.source,ZonedDateTime.now(zone))
-            val parsed=if(basic.shiftMinutes!=null) basic else NanoClient.parse(request.source,ZonedDateTime.now(zone))
+            val parsed=if(basic.shiftMinutes!=null) basic else AiModelRunner.parse(
+              this@QuickEntryActivity,selectedModel,request.source,ZonedDateTime.now(zone))
             ensureActive(); if(current()) preview(parsed,request.source)
           }
         } catch(e: CancellationException) { throw e } catch(e: Exception) {

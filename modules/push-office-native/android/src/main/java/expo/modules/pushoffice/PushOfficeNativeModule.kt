@@ -76,7 +76,7 @@ class PushOfficeNativeModule : Module() {
         ?: throw IllegalStateException("일정 후보가 삭제되었거나 만료됐습니다.")
       val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
       val timestamp = java.time.Instant.ofEpochMilli(original.receivedAt).atZone(zone)
-      val parsed = NanoClient.parse(original.excerpt, timestamp)
+      val parsed = AiModelRunner.parse(context,AiModelDownloadStore.selected(context),original.excerpt,timestamp)
       require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 화면이 닫혀 AI 결과를 저장하지 않았습니다." }
       NotificationSuggestionStore.refine(context, id, parsed.title, parsed.start?.toInstant()?.toEpochMilli()
         ?: throw IllegalArgumentException("AI 분석 날짜가 올바르지 않습니다.")).toMap()
@@ -139,13 +139,22 @@ class PushOfficeNativeModule : Module() {
       }
     }
     AsyncFunction("getAiStatus") Coroutine { -> NanoClient.status() }
+    AsyncFunction("listAiModels") Coroutine { -> AiModelDownloadStore.list(context) }
+    AsyncFunction("downloadAiModelById") Coroutine { id: String -> AiModelDownloadStore.download(context,id) }
+    AsyncFunction("removeAiModel") Coroutine { id: String -> AiModelDownloadStore.remove(context,id) }
+    AsyncFunction("selectAiModel") Coroutine { id: String -> AiModelDownloadStore.choose(context,id) }
+    AsyncFunction("testAiModel") Coroutine { id: String, text: String ->
+      require(appContext.currentActivity?.hasWindowFocus() == true) { "앱을 열고 모델을 테스트해 주세요." }
+      val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
+      AiModelRunner.benchmark(context,id,text,java.time.ZonedDateTime.now(zone))
+    }
     AsyncFunction("downloadAiModel") Coroutine { ->
       require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 설정 화면에서 다운로드를 실행해 주세요." }
       NanoClient.download { update -> sendEvent("aiDownloadProgress", update) }
     }
     AsyncFunction("generateBriefing") Coroutine { prompt: String ->
       require(appContext.currentActivity?.hasWindowFocus()==true) { "AI 요약은 앱 화면이 열려 있을 때 사용할 수 있습니다." }
-      NanoClient.briefing(prompt)
+      AiModelRunner.briefing(context,AiModelDownloadStore.selected(context),prompt)
     }
     AsyncFunction("refreshWidgets") { ScheduleWidgetProvider.refreshAll(context) }
     AsyncFunction("setUiTheme") { mode: String ->
