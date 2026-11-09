@@ -41,7 +41,10 @@ concurrency:
 
 jobs:
   release:
-    if: github.repository == 'hebi10/pushOffice_app' && github.ref == 'refs/heads/main'
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      !(github.event_name == 'push' && contains(github.event.head_commit.message, '[push-office-ai-closed-20261109]'))
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     permissions:
