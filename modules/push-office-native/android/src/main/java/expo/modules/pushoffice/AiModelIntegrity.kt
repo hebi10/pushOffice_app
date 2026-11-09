@@ -9,16 +9,22 @@ internal object AiModelIntegrity {
   fun matches(file: File, expectedBytes: Long, expectedSha256: String): Boolean {
     if (!file.isFile || expectedBytes <= 0 || file.length() != expectedBytes ||
         !expectedSha256.matches(Regex("[a-f0-9]{64}"))) return false
-    val digest = MessageDigest.getInstance("SHA-256")
-    FileInputStream(file).buffered(1024 * 1024).use { stream ->
-      val buffer = ByteArray(1024 * 1024)
-      while (true) {
-        val count = stream.read(buffer)
-        if (count < 0) break
-        digest.update(buffer, 0, count)
+    return try {
+      val digest = MessageDigest.getInstance("SHA-256")
+      FileInputStream(file).buffered(1024 * 1024).use { stream ->
+        val buffer = ByteArray(1024 * 1024)
+        while (true) {
+          val count = stream.read(buffer)
+          if (count < 0) break
+          digest.update(buffer, 0, count)
+        }
       }
+      val bytes = expectedSha256.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+      MessageDigest.isEqual(digest.digest(), bytes)
+    } catch (_: java.io.IOException) {
+      false
+    } catch (_: SecurityException) {
+      false
     }
-    val bytes = expectedSha256.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
-    return MessageDigest.isEqual(digest.digest(), bytes)
   }
 }

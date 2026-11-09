@@ -45,18 +45,20 @@ def main():
     full = json.loads(pathlib.Path("model-full-sha.json").read_text(encoding="utf-8"))
     assert full.get("id") == args.model and full.get("verified") is True
     start = time.perf_counter()
+    inference_completed = False
     try:
         result = subprocess.run(["litert-lm", "run", args.path, "--backend", "cpu", "--prompt", PROMPT],
             text=True, capture_output=True, timeout=360, check=False)
         pathlib.Path("model-korean-output.txt").write_text(
             result.stdout + "\n" + result.stderr[-5000:], encoding="utf-8")
         assert result.returncode == 0, "LiteRT-LM exited with code " + str(result.returncode)
+        inference_completed = True
         parsed = parse_response(result.stdout)
         info = {"model":args.model,"linux_cpu_inference":True,"full_sha256_verified":True,
             "calendar_json_passed":True,"duration_ms":round(1000*(time.perf_counter()-start)),
             "expected_epoch_ms":int(EVENT.timestamp()*1000),"parsed":parsed}
     except Exception as error:
-        info = {"model":args.model,"linux_cpu_inference":False,"full_sha256_verified":True,
+        info = {"model":args.model,"linux_cpu_inference":inference_completed,"full_sha256_verified":True,
             "calendar_json_passed":False,"duration_ms":round(1000*(time.perf_counter()-start)),
             "failure_type":type(error).__name__,"message":str(error)[:200]}
     pathlib.Path("model-korean-test.json").write_text(

@@ -96,3 +96,14 @@ test('local inference never creates schedules or falls back silently to cloud', 
   assert.match(runner, /if \(id == "gemini-nano"\) return NanoClient\.briefing/);
   assert.doesNotMatch(runner, /fetch\(|axios|\.firebase|URL\(/);
 });
+
+test('AI model responses accept null error but reject hallucinated dates and damaged installed files', () => {
+  const nano = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/NanoClient.kt');
+  const time = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/AiScheduleTime.kt');
+  assert.match(runner, /error == JSONObject\.NULL/);
+  assert.match(nano, /error == JSONObject\.NULL/);
+  assert.match(time, /require\(ground\.error == null && ground\.start != null/);
+  assert.match(time, /getValidOffsets\(localDateTime\)/);
+  assert.match(manager, /verifiedInstalledFile\(ctx,model\) != null\) "installed"/);
+  assert.doesNotMatch(manager, /else if \(available\(ctx,model\)\) "installed"/);
+});

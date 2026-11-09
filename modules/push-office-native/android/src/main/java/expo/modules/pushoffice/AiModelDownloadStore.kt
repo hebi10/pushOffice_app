@@ -45,8 +45,10 @@ internal object AiModelDownloadStore {
   /** Used before model selection and every inference, not just when download finishes. */
   suspend fun verifiedInstalledFile(ctx: Context, model: AiModelDefinition): File? =
     withContext(Dispatchers.IO) {
-      val file = installedFile(ctx, model) ?: return@withContext null
-      if (AiModelIntegrity.matches(file, expectedSize(ctx, model.id), expectedSha(ctx, model.id)))
+      val file = target(ctx, model.id)
+      if (!file.exists()) return@withContext null
+      if (file.isFile && available(ctx, model) &&
+          AiModelIntegrity.matches(file, expectedSize(ctx, model.id), expectedSha(ctx, model.id)))
         file
       else {
         prefs(ctx).edit().putBoolean(model.id + "_corrupt", true).apply()
@@ -145,7 +147,7 @@ internal object AiModelDownloadStore {
     return AiModelCatalog.models.map { model ->
       val current = if (model.id == "gemini-nano") {
         nano["status"]?.toString() ?: "error"
-      } else if (available(ctx,model)) "installed"
+      } else if (verifiedInstalledFile(ctx,model) != null) "installed"
       else if (prefs(ctx).getBoolean(model.id + "_corrupt", false)) "error"
       else {
         val state = state(ctx,model.id)

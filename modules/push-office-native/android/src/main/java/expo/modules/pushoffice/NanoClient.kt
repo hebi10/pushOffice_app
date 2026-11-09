@@ -108,7 +108,10 @@ object NanoClient {
       "or request changes existing event. Do not calculate Unix timestamps. Never guess. Keep the event title in Korean when user text is Korean. " +
       "User text: " + JSONObject.quote(text)
     val obj = json(prompt)
-    require(!obj.has("error")) { obj.optString("error") }
+    val error = obj.opt("error")
+    require(error == null || error == JSONObject.NULL || (error is String && error.isBlank())) {
+      error.toString().take(200)
+    }
     return AiScheduleTime.validated(text, now, obj.optString("title").trim(),
       obj.optString("localDate"), obj.optString("localTime"), obj.optString("repeatType"))
   }

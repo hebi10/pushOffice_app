@@ -53,7 +53,6 @@ jobs:
 
       - name: Test plain HTTPS redirect download used by Android DownloadManager
         id: direct_http
-        continue-on-error: true
         run: |
           curl --fail --location --retry 2 --max-time 600 --silent --show-error \
             --output actual-model/direct-qwen3-0.6b.litertlm \
@@ -69,7 +68,6 @@ jobs:
           timeout 360 litert-lm run actual-model/Qwen3-0.6B.litertlm --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
           test -s model-inference.log
       - name: Parse a real Korean event with Qwen3
-        continue-on-error: true
         id: korean
         run: python tools/ci/verify_litert_schedule.py --model qwen3-06 --path actual-model/Qwen3-0.6B.litertlm
       - name: Persist real inference outcome
@@ -138,7 +136,6 @@ jobs:
           timeout 360 litert-lm run "actual-model/${{ matrix.file }}" --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
           test -s model-inference.log
       - name: Parse a real Korean event with the selected model
-        continue-on-error: true
         id: korean
         run: python tools/ci/verify_litert_schedule.py --model "${{ matrix.id }}" --path "actual-model/${{ matrix.file }}"
       - name: Record CPU result and Android limitation
