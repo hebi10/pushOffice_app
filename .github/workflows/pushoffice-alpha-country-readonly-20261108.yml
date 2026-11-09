@@ -71,3 +71,5 @@ jobs:
           path: ${{ runner.temp }}/push-office-country-audit.json
           if-no-files-found: warn
           retention-days: 14
+
+# 2026-11-09: one-time read-only country availability recheck before closed testing.
