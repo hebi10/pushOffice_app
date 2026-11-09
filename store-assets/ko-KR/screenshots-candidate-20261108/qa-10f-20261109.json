@@ -1,0 +1,49 @@
+{
+  "package": "com.hebi96.pushOffice_app",
+  "locale": "ko-KR",
+  "appUiCommit": "23b9be6599695bab04cb15576cf3a78747096b92",
+  "sourceCaptureRun": "https://github.com/hebi10/pushOffice_app/actions/runs/42537692045",
+  "captureScreenshotCount": 57,
+  "captureWarnings": 0,
+  "pixelProof": "Exact captured Android UI pasted into smartphone mockup with rounded mask and camera cutout; independent comparison performed before poster resize",
+  "outputSize": [
+    1080,
+    1920
+  ],
+  "mode": "RGB",
+  "authorizedSlots": [
+    "phoneScreenshots"
+  ],
+  "files": [
+    {
+      "name": "01-home-briefing.png",
+      "sha256": "67510199f019532448f1821597ecd49c13398fa154d5d5e6b63c5fec5f46c5fc",
+      "sourceAndroidCapture": "01-home.png"
+    },
+    {
+      "name": "02-calendar.png",
+      "sha256": "ecb646dc9ebf8041697ae2719ed023b9fb93f846ebf030e4eb533061b011b88f",
+      "sourceAndroidCapture": "23c-calendar-today-three-list.png"
+    },
+    {
+      "name": "03-quick-entry.png",
+      "sha256": "dd1372aaba0451262edbb274b01eabc5b906f97e1297c336319ab058edfa7576",
+      "sourceAndroidCapture": "05-quick-entry.png"
+    },
+    {
+      "name": "04-save-confirmation.png",
+      "sha256": "8278504ea1a28e8f84529c29110fe993e4a4891c8411d876e060e74dbbe52e2d",
+      "sourceAndroidCapture": "07-native-save-preview.png"
+    },
+    {
+      "name": "05-schedule-detail.png",
+      "sha256": "32f8d38f453b27ba1b11d6f541e0b97a9c6b4f8b33c261fc3570119825881cee",
+      "sourceAndroidCapture": "11-schedule-detail.png"
+    },
+    {
+      "name": "06-notification-settings.png",
+      "sha256": "379a3be2ee27047f68f559d3ca789cf9cb1a513834f553871fdd4b5f1d7c9c27",
+      "sourceAndroidCapture": "03c-settings-time-expanded.png"
+    }
+  ]
+}

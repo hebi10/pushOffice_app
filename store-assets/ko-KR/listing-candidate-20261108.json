@@ -14,12 +14,11 @@
     "store-assets/ko-KR/screenshots-candidate-20261108/06-notification-settings.png"
   ],
   "reviewNotes": [
-    "Six 1080x1920 RGB images are derived from real Android 29 screenshots using natural sample events.",
-    "Screenshot source: PR #30, Actions run #42438071965, Asia/Seoul (+0900), seven 1080x1920 captures verified.",
-    "Marketing composition uses generated visual framing; in-app UI area replaced with actual emulator captures.",
-    "Actual Play Console listing/image state must be audited before committing changes, preserving existing locales and review state.",
-    "Google Play high-resolution icon and feature graphic are canonical brand assets in store-assets/ko-KR."
+    "Six 1080×1920 RGB PNG marketing posters use the latest validated Mono Office 10-F Android API 29 capture set (57 screenshots; 0 verifier warnings).",
+    "Every smartphone screen was composited using authentic emulator screenshot pixels, with accurate app labels, controls, dates, and UI states. Poster title/device frame artwork is the separately generated marketing design.",
+    "Capture source commit: 23b9be6599695bab04cb15576cf3a78747096b92. Screenshot QA and SHA-256 mapping are in store-assets/ko-KR/screenshots-candidate-20261108/qa-10f-20261109.json.",
+    "Publish only six ko-KR phoneScreenshots, preserving the existing icon, feature graphic, listing text, and all release tracks."
   ],
-  "sourceCaptureRun": "https://github.com/hebi10/pushOffice_app/actions/runs/42438071965",
-  "driveFolder": "https://drive.google.com/drive/folders/1lp0wl4JvXB4Yp3wsrwNXitaSMfrcg5G7"
+  "sourceCaptureRun": "https://github.com/hebi10/pushOffice_app/actions/runs/42537692045",
+  "driveFolder": "https://drive.google.com/drive/folders/1KGq5UMjAqS46dWymgfUJszUCbydv1MMM"
 }
