@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "tools/ci/verify_litert_remote.py"
+      - "tools/ci/verify_litert_schedule.py"
       - ".github/workflows/ai-model-remote-verification.yml"
   workflow_dispatch:
 permissions:
@@ -56,6 +57,10 @@ jobs:
           python -m pip install litert-lm==0.19.1
           timeout 360 litert-lm run actual-model/Qwen3-0.6B.litertlm --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
           test -s model-inference.log
+      - name: Parse a real Korean event with Qwen3
+        continue-on-error: true
+        id: korean
+        run: python tools/ci/verify_litert_schedule.py --model qwen3-06 --path actual-model/Qwen3-0.6B.litertlm
       - name: Persist real inference outcome
         if: always()
         run: |
@@ -70,6 +75,8 @@ jobs:
             model-full-sha.json
             model-inference.log
             model-inference-status.txt
+            model-korean-output.txt
+            model-korean-test.json
           if-no-files-found: warn
           retention-days: 14
 
@@ -115,6 +122,10 @@ jobs:
           python -m pip install litert-lm==0.19.1
           timeout 360 litert-lm run "actual-model/${{ matrix.file }}" --backend cpu --prompt "Reply only READY" > model-inference.log 2>&1
           test -s model-inference.log
+      - name: Parse a real Korean event with the selected model
+        continue-on-error: true
+        id: korean
+        run: python tools/ci/verify_litert_schedule.py --model "${{ matrix.id }}" --path "actual-model/${{ matrix.file }}"
       - name: Record CPU result and Android limitation
         if: always()
         run: |
@@ -129,5 +140,7 @@ jobs:
             model-full-sha.json
             model-inference.log
             model-inference-status.txt
+            model-korean-output.txt
+            model-korean-test.json
           if-no-files-found: warn
           retention-days: 14
