@@ -124,7 +124,7 @@ export default function AiModelsScreen() {
                 <Text style={[styles.caption,{color:colors.textSecondary}]}>
                   {model.engine+' · '+model.license+' · '+(model.approximateMb>0?'약 '+model.approximateMb+'MB':'시스템 관리')}
                 </Text>
-                {model.selected ? <Text style={[styles.selected,{color:colors.text}]}>사용 중</Text> : null}
+                {model.selected && ready ? <Text style={[styles.selected,{color:colors.text}]}>기본 모델</Text> : null}
               </View>
               <Text style={[styles.copy,{color:colors.textSecondary}]}>{model.description}</Text>
               <Text style={[styles.caption,{color:colors.textSecondary}]}>

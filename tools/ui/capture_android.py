@@ -400,6 +400,15 @@ def capture_preserved_route(page: str, expected_label: str, screenshot_name: str
 capture_preserved_route("briefing", "데일리 다이제스트", "18-legacy-briefing")
 capture_preserved_route("chatHistory", "채팅 내역", "19-legacy-chat-history")
 capture_preserved_route("ai-models", "기기 AI 모델 비교", "19a-ai-model-manager")
+# Verify the lower part of the real scrollable model catalogue, not only the first fold.
+for _ in range(4):
+    if find("Gemma 4 E2B"):
+        break
+    adb("shell", "input", "swipe", "360", "1330", "360", "360", "420")
+    time.sleep(1)
+if find("Gemma 4 E2B") is None:
+    raise RuntimeError("The fifth AI model was not reachable in the Android model manager")
+screenshot("19b-ai-model-manager-lower", "scroll-accessible fifth AI model with install/source actions")
 
 
 # Final QA matrix: system font enlargement and a tablet-class portrait viewport.

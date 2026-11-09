@@ -46,6 +46,7 @@ REQUIRED = {
     "18-legacy-briefing.png",
     "19-legacy-chat-history.png",
     "19a-ai-model-manager.png",
+    "19b-ai-model-manager-lower.png",
     "20a-large-font-home.png",
     "20b-large-font-calendar.png",
     "20c-large-font-settings.png",

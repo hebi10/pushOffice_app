@@ -60,6 +60,9 @@ test('new accessible model management screen lists, downloads, compares, selects
   const verifier = read('tools/ui/verify_captures.py');
   assert.match(capture, /capture_preserved_route\("ai-models", "기기 AI 모델 비교", "19a-ai-model-manager"\)/);
   assert.match(verifier, /"19a-ai-model-manager\.png"/);
+  assert.match(verifier, /"19b-ai-model-manager-lower\.png"/);
+  assert.match(capture, /find\("Gemma 4 E2B"\)/);
+  assert.match(screen, /model\.selected && ready/);
   assert.match(screen, /PushOfficeNative\.listAiModels\(\)/);
   for (const action of ['downloadAiModelById','selectAiModel','removeAiModel','testAiModel'])
     assert.ok(screen.includes('PushOfficeNative.' + action + '('), action);
