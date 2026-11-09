@@ -36,10 +36,12 @@ test('10-B has coherent five-screen illustration assets and themed native assets
   assert.notDeepEqual(image(light), image(dark));
 });
 
-test('10-B adjusts only app icon/splash themes without changing package or release version', () => {
+test('10-B retains app identity and valid release versionCode when icons change', () => {
   const config = JSON.parse(readFileSync(new URL('../app.json', import.meta.url), 'utf8')).expo;
   assert.equal(config.android.package, 'com.hebi96.pushOffice_app');
-  assert.equal(config.android.versionCode, 3);
+  assert.ok(Number.isInteger(config.android.versionCode));
+  assert.ok(config.android.versionCode >= 3 && config.android.versionCode <= 2100000000,
+    'Release must retain a valid nondecreasing versionCode');
   assert.equal(config.android.adaptiveIcon.backgroundColor, '#F7F8FA');
   const splash = config.plugins.find(p => Array.isArray(p) && p[0] === 'expo-splash-screen')[1];
   assert.equal(splash.backgroundColor, '#F7F8FA');

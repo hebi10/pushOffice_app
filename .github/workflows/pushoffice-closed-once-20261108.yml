@@ -31,3 +31,5 @@ jobs:
             -f 'inputs[mode]=deploy' \
             -f 'inputs[target]=closed' \
             -f 'inputs[closed_track]=1차 테스트'
+
+# 2026-11-09: replay after dynamic release versionCode assertion fix (no previous AAB uploaded).
