@@ -77,6 +77,7 @@ test('new accessible model management screen lists, downloads, compares, selects
   assert.match(screen, /model\.sourceUrl/);
   assert.match(screen, /model\.state==='downloading'/);
   assert.match(screen, /destructive title="기기 AI 모델 삭제"/);
+  assert.match(screen, /'오류 모델 데이터 삭제'/);
 });
 
 test('local inference never creates schedules or falls back silently to cloud', () => {

@@ -157,8 +157,8 @@ export default function AiModelsScreen() {
                   disabled={Boolean(busyId)||!result?.success}
                   onPress={()=>{void action(model.id,()=>PushOfficeNative.selectAiModel(model.id),'기본 모델 변경');}} />
               ) : null}
-              {model.id!=='gemini-nano' && (model.state==='installed'||model.state==='downloading'||model.state==='verifying') ? (
-                <AssistantButton label={model.state==='installed'?'모델 삭제':'다운로드 중지 및 삭제'}
+              {model.id!=='gemini-nano' && (model.state==='installed'||model.state==='downloading'||model.state==='verifying'||model.state==='error') ? (
+                <AssistantButton label={model.state==='installed'?'모델 삭제':model.state==='error'?'오류 모델 데이터 삭제':'다운로드 중지 및 삭제'}
                   icon="trash-outline" secondary disabled={Boolean(busyId)}
                   onPress={()=>setRemoval(model.id)} />
               ) : null}
