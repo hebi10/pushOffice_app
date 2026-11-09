@@ -81,6 +81,9 @@ jobs:
           retention-days: 14
 
   other-real-model-files:
+    # Other three models were already fully downloaded and validated in #42565764421.
+    # Avoid re-downloading >5 GB on every PR synchronize; run the matrix manually.
+    if: github.event_name == 'workflow_dispatch'
     name: Full downloaded SHA256 and CPU run - ${{ matrix.id }}
     needs: public-metadata
     runs-on: ubuntu-24.04
