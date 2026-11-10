@@ -16,11 +16,14 @@ import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { router, useFocusEffect } from 'expo-router';
 import { ForegroundRequest, runForegroundRequest } from '@/src/features/notifications/foregroundRequest';
-import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 export default function HomeScreen() {
     const { colors } = useTheme();
+    const { width, fontScale } = useWindowDimensions();
     const now = useClock();
+    const greeting = new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근';
+    const introTitle = width / fontScale < 360 ? greeting.replace(' ', '\n') : greeting;
     const settings = useAppSelector(x => x.settings);
     const uid = useAppSelector(x => x.auth.uid);
     const schedules = useSchedules();
@@ -114,7 +117,7 @@ export default function HomeScreen() {
       >
         <ScreenIntro
           eyebrow={dayjs(now).format('M월 D일 dddd')}
-          title={new Date(now).getHours() < 12 ? '좋은 아침이에요' : '오늘도 차근차근'}
+          title={introTitle}
           description="중요한 일정부터 하나씩 살펴보세요."
           artwork={require("@/assets/images/illustration-home-mono.png")}
           monochromeArtwork

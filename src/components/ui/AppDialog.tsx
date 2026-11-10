@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: uiSizes.borderWidth,
-    borderRadius: uiRadii.field,
+    borderRadius: uiRadii.button,
   },
   label: { ...uiTypography.button, textAlign: 'center', flexShrink: 1 },
 });
