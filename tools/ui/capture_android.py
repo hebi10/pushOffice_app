@@ -147,11 +147,23 @@ def tap(label: str, bottom: bool = False, scroll: bool = False) -> None:
     print(f"Tapped {label}: {target}")
 
 
-def type_field(label: str, value: str) -> None:
-    target = find(label, class_name="android.widget.EditText")
+def focus_field(label: str, scroll: bool = False) -> None:
+    target = None
+    for _ in range(7 if scroll else 1):
+        target = find(label, class_name="android.widget.EditText")
+        if target:
+            break
+        if scroll:
+            adb("shell", "input", "swipe", "360", "1150", "360", "440", "420")
+            time.sleep(2)
     if not target:
         raise RuntimeError(f"Missing editable field: {label}")
     adb("shell", "input", "tap", str(target[0]), str(target[1]))
+    time.sleep(2)
+
+
+def type_field(label: str, value: str, scroll: bool = False) -> None:
+    focus_field(label, scroll)
     adb("shell", "input", "text", value)
     adb("shell", "input", "keyevent", "4")
     time.sleep(2)
@@ -229,9 +241,11 @@ try:
     emulator_date = adb("shell", "date", "+%Y-%m-%d").decode().strip()
     tomorrow = (date.fromisoformat(emulator_date) + timedelta(days=1)).isoformat()
     type_field("일정 제목", "UITest")
-    tap("날짜·시간 직접 입력")
-    type_field("날짜 (YYYY-MM-DD)", tomorrow)
-    type_field("시간 (HH:mm)", "09:00")
+    tap("날짜·시간 직접 입력", scroll=True)
+    type_field("날짜 (YYYY-MM-DD)", tomorrow, scroll=True)
+    type_field("시간 (HH:mm)", "09:00", scroll=True)
+    adb("shell", "input", "swipe", "360", "430", "360", "1320", "420")
+    tap("직접 입력 접기", scroll=True)
     screenshot("07c-native-confirmation-populated", "real filled schedule with localized datetime summary and footer action")
     tap("일정 저장", scroll=True)
     time.sleep(10)
@@ -380,7 +394,7 @@ try:
         raise RuntimeError("Compact confirmation footer actions are unreachable after scrolling")
     screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
     tap("날짜·시간 직접 입력", scroll=True)
-    tap("날짜 (YYYY-MM-DD)", scroll=True)
+    focus_field("날짜 (YYYY-MM-DD)", scroll=True)
     if find("일정 저장") is None or find("입력으로 돌아가기") is None:
         raise RuntimeError("Compact confirmation footer is obscured while the keyboard is open")
     screenshot("17c-compact-confirmation-keyboard", "compact confirmation with focused ISO editor and visible fixed footer")
