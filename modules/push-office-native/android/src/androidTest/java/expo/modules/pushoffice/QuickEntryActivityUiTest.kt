@@ -135,8 +135,8 @@ class QuickEntryActivityUiTest {
           .single { it.contentDescription == "시간 (HH:mm)" }
         assertEquals(date.toString(), fieldDate.text.toString())
         assertEquals("15:00", fieldTime.text.toString())
-        assertEquals("ISO fields must be hidden until requested", View.GONE, (fieldDate.parent as View).visibility)
-        assertEquals(View.GONE, (fieldTime.parent as View).visibility)
+        assertEquals("ISO fields must be hidden until requested", View.GONE, (fieldDate.parent.parent as View).visibility)
+        assertEquals(View.GONE, (fieldTime.parent.parent as View).visibility)
         val buttons = views(activity).filterIsInstance<Button>()
         val back = buttons.single { it.text.toString() == "입력으로 돌아가기" }
         val save = buttons.single { it.text.toString() == "일정 저장" }
