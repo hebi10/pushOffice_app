@@ -103,9 +103,6 @@ export default function CalendarScreen() {
     >
       <ScreenIntro title="캘린더" compact />
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
-        <View style={styles.monthHeaderHint} accessible accessibilityRole="text">
-          <Text style={[styles.monthHeaderHintText, { color: colors.textSecondary }]}>날짜를 선택해 일정을 확인하세요.</Text>
-        </View>
         <Calendar
           key={isDark ? 'dark' : 'light'}
           current={monthStart}
@@ -122,7 +119,7 @@ export default function CalendarScreen() {
         />
         {!schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
           <Text style={[styles.markHint, { color: colors.textSecondary }]}>
-            날짜 아래 점은 일정 개수(최대 3개)를 표시합니다.
+            날짜 아래 점은 일정 개수(최대 3개)를 표시합니다. 날짜를 선택해 일정을 확인하세요.
           </Text>
         ) : null}
       </View>
@@ -176,8 +173,6 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: uiSpacing.xxs,
   },
-  monthHeaderHint: { paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xs },
-  monthHeaderHintText: { ...uiTypography.caption },
   selectionPanel: {
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
