@@ -265,6 +265,12 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, 
 # preference: cmd uimode alone did not change the prior captured app surfaces.
 adb("shell", "input", "keyevent", "4")
 time.sleep(3)
+# Return to a known main-tab state after native detail and confirmation dialogs.
+adb("shell", "am", "force-stop", APP)
+adb("shell", "monkey", "-p", APP, "1")
+time.sleep(12)
+if find("일정 빠르게 추가") is None:
+    raise RuntimeError("Home tab was not restored before dark-mode capture")
 tap("설정", bottom=True)
 tap("고급 설정")
 tap("어두운 테마", scroll=True)
