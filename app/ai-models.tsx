@@ -17,7 +17,7 @@ function isReady(model: AiModelInfo) {
 function modelStatus(model: AiModelInfo) {
   if (isReady(model)) return '사용 준비됨';
   if (model.state === 'downloadable') return '설치 가능';
-  if (model.state === 'downloading') return '다운로드 중 · ' + showProgress(model);
+  if (model.state==='downloading') return '다운로드 중 · ' + showProgress(model);
   if (model.state === 'verifying') return '무결성 검사 중';
   if (model.state === 'unavailable') return '기기 미지원';
   if (model.state === 'error') return '오류 · 재시도 필요';
