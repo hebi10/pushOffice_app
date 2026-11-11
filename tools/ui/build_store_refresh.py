@@ -110,7 +110,7 @@ def main():
         results.append(poster(index, title, subtitle, path, args.out / name))
     manifest = {
         "package": "com.hebi96.pushOffice_app", "language": "ko-KR",
-        "appUiCommit": os.environ.get("GITHUB_SHA", "local-preview"),
+        "appUiCommit": os.environ.get("SOURCE_COMMIT_SHA", os.environ.get("GITHUB_SHA", "local-preview")),
         "captureRun": os.environ.get("GITHUB_RUN_ID", "local-preview"),
         "sourcePolicy": "unmodified actual Android emulator screenshot pixels",
         "complete": len(results) == 8 and not missing,
