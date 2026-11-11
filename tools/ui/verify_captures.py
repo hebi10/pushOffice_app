@@ -43,6 +43,7 @@ REQUIRED = {
     "16-compact-editor.png",
     "17-compact-confirmation.png",
     "17b-compact-confirmation-actions.png",
+    "17c-compact-confirmation-keyboard.png",
     "18-legacy-briefing.png",
     "19-legacy-chat-history.png",
     "19a-ai-model-manager.png",
@@ -52,6 +53,7 @@ REQUIRED = {
     "20c-large-font-settings.png",
     "20d-large-font-chooser.png",
     "20e-large-font-editor.png",
+    "20f-large-font-confirmation.png",
     "21a-tablet-home.png",
     "21b-tablet-calendar.png",
     "21c-tablet-settings.png",
@@ -82,6 +84,9 @@ def verify() -> None:
         errors.append("capture-manifest.json: missing warnings array")
     elif warnings:
         errors.extend(f"capture warning: {warning}" for warning in warnings)
+
+    if report.get("timezone") != "Asia/Seoul" or report.get("utc_offset") != "+0900":
+        errors.append("Android capture timezone must be Asia/Seoul at UTC+09:00")
 
     screens = report.get("screens")
     if not isinstance(screens, list):
@@ -124,6 +129,7 @@ def verify() -> None:
         "20c-large-font-settings.png",
         "20d-large-font-chooser.png",
         "20e-large-font-editor.png",
+        "20f-large-font-confirmation.png",
     ]:
         if normal and name in dimensions and dimensions[name] != normal:
             errors.append(f"large-font screenshot has wrong viewport: {name}")

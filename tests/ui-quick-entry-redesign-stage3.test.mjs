@@ -26,8 +26,8 @@ test('stage 3 shows Korean date summary while ISO fields and timezone-safe save 
 
 test('stage 3 reserves independent confirmation footer and requires real error/filled captures', () => {
   assert.match(native, /private var confirmationFooter: LinearLayout\?=null/);
-  assert.match(native, /val target=if\(label=="일정 저장" \|\| label=="변경 내용 저장"\)/);
-  assert.match(native, /dp\(160\)/);
+  assert.match(native, /val target=if\(label=="일정 저장" \|\| label=="변경 내용 저장" \|\| label=="입력으로 돌아가기"\)/);
+  assert.match(native, /dp\(if\(confirmationPage\) 240 else 160\)/);
   for (const name of ['07c-native-confirmation-populated', '07d-native-confirmation-invalid']) {
     assert.ok(capture.includes(name), name + ' not captured');
     assert.ok(verify.includes(name + '.png'), name + ' not required');

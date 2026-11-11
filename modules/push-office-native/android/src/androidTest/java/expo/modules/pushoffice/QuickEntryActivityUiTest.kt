@@ -12,8 +12,10 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
+import android.widget.Button
 import android.widget.ScrollView
 import android.widget.TextView
+import android.view.WindowManager
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
@@ -105,6 +107,62 @@ class QuickEntryActivityUiTest {
     assertEquals("Opening an editable preview must not save a calendar event",
       before, ScheduleStore(context).use { it.all().size })
   }
+
+  @Test fun confirmationKeepsBackAndSaveFixedWhileDirectIsoEditingRemainsOptional() {
+    val before = ScheduleStore(context).use { it.all().size }
+    val date = LocalDate.now().plusDays(4)
+    val spoken = "${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일 오후 3시에 치과 예약"
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java).putExtra("entryMode", "text")
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        val input = views(activity).filterIsInstance<EditText>().first()
+        input.setText(spoken)
+        views(activity).filterIsInstance<TextView>()
+          .single { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
+      }
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+      scenario.onActivity { activity ->
+        val visibleTexts = texts(activity)
+        assertTrue("Display a Korean date first", visibleTexts.any {
+          it.contains("${date.year}년") && it.contains("15:00")
+        })
+        assertTrue("Display actual configured timezone, not a forced conversion",
+          visibleTexts.any { it.startsWith("저장 기준 시간대: ") })
+        val fieldDate = views(activity).filterIsInstance<EditText>()
+          .single { it.contentDescription == "날짜 (YYYY-MM-DD)" }
+        val fieldTime = views(activity).filterIsInstance<EditText>()
+          .single { it.contentDescription == "시간 (HH:mm)" }
+        assertEquals(date.toString(), fieldDate.text.toString())
+        assertEquals("15:00", fieldTime.text.toString())
+        assertEquals("ISO fields must be hidden until requested", View.GONE, (fieldDate.parent.parent as View).visibility)
+        assertEquals(View.GONE, (fieldTime.parent.parent as View).visibility)
+        val buttons = views(activity).filterIsInstance<Button>()
+        val back = buttons.single { it.text.toString() == "입력으로 돌아가기" }
+        val save = buttons.single { it.text.toString() == "일정 저장" }
+        assertSame("Both confirmation actions must share the fixed footer", back.parent, save.parent)
+        assertTrue("Footer must be outside the scroll container", save.parent !is ScrollView)
+        val saveBounds = Rect()
+        val backBounds = Rect()
+        assertTrue("Save must be reachable without scrolling", save.getGlobalVisibleRect(saveBounds))
+        assertTrue("Back must be reachable without scrolling", back.getGlobalVisibleRect(backBounds))
+        assertEquals(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+          activity.window.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST)
+        buttons.single { it.text.toString() == "날짜·시간 직접 입력" }.performClick()
+        assertEquals(View.VISIBLE, (fieldDate.parent as View).visibility)
+        assertEquals(View.VISIBLE, (fieldTime.parent as View).visibility)
+        fieldDate.setText("invalid")
+        save.performClick()
+        assertTrue("Invalid date must show a visible footer error", visibleError(activity))
+        assertEquals("Invalid form must not save an event", before, ScheduleStore(context).use { it.all().size })
+      }
+    }
+  }
+
+  private fun visibleError(activity: QuickEntryActivity): Boolean =
+    views(activity).filterIsInstance<TextView>().any {
+      it.visibility == View.VISIBLE && it.text.toString().contains("날짜와 시간을 다시 확인")
+    }
 
   @Test fun voiceChoiceOnlyOpensTheEditorAndWaitsForAnExplicitRecordingStart() {
     val permission = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)

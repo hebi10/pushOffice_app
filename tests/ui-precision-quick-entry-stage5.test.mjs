@@ -78,8 +78,8 @@ test('precision stage 5 verifies real primary save actions on normal and compact
     assert.ok(capture.includes(name), 'No screenshot recorded: ' + name);
     assert.ok(verify.includes(name + '.png'), 'Missing required screenshot: ' + name);
   }
-  assert.match(capture, /Native confirmation save button is unreachable after scrolling/);
-  assert.match(capture, /Compact confirmation save button is unreachable after scrolling/);
+  assert.match(capture, /Native confirmation footer actions are unreachable after scrolling/);
+  assert.match(capture, /Compact confirmation footer actions are unreachable after scrolling/);
   for (const name of ['05-quick-entry', '05a-voice-editor', '07-native-save-preview', '09-native-time-picker', '11-quick-entry-dark', '16-compact-editor']) {
     assert.ok(capture.includes(name));
   }

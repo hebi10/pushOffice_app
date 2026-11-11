@@ -147,11 +147,23 @@ def tap(label: str, bottom: bool = False, scroll: bool = False) -> None:
     print(f"Tapped {label}: {target}")
 
 
-def type_field(label: str, value: str) -> None:
-    target = find(label, class_name="android.widget.EditText")
+def focus_field(label: str, scroll: bool = False) -> None:
+    target = None
+    for _ in range(7 if scroll else 1):
+        target = find(label, class_name="android.widget.EditText")
+        if target:
+            break
+        if scroll:
+            adb("shell", "input", "swipe", "360", "1150", "360", "440", "420")
+            time.sleep(2)
     if not target:
         raise RuntimeError(f"Missing editable field: {label}")
     adb("shell", "input", "tap", str(target[0]), str(target[1]))
+    time.sleep(2)
+
+
+def type_field(label: str, value: str, scroll: bool = False) -> None:
+    focus_field(label, scroll)
     adb("shell", "input", "text", value)
     adb("shell", "input", "keyevent", "4")
     time.sleep(2)
@@ -192,6 +204,12 @@ tap("텍스트로 일정 입력")
 screenshot("06-native-editor", "native text entry editor")
 
 WARNINGS: list[str] = []
+EMULATOR_TIMEZONE = adb("shell", "getprop", "persist.sys.timezone").decode().strip()
+EMULATOR_UTC_OFFSET = adb("shell", "date", "+%z").decode().strip()
+if EMULATOR_TIMEZONE != "Asia/Seoul" or EMULATOR_UTC_OFFSET != "+0900":
+    WARNINGS.append(
+        f"Asia/Seoul capture environment not verified: timezone={EMULATOR_TIMEZONE}, offset={EMULATOR_UTC_OFFSET}"
+    )
 
 try:
     tap("직접 날짜와 시간 지정")
@@ -208,8 +226,8 @@ try:
         adb("shell", "input", "keyevent", "4")
         time.sleep(2)
         adb("shell", "input", "swipe", "360", "1200", "360", "460", "420")
-        if find("일정 저장") is None:
-            raise RuntimeError("Native confirmation save button is unreachable after scrolling")
+        if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+            raise RuntimeError("Native confirmation footer actions are unreachable after scrolling")
         screenshot("07b-native-confirmation-actions", "native confirmation save action after scrolling")
         adb("shell", "input", "swipe", "360", "440", "360", "1300", "420")
     except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
@@ -223,8 +241,11 @@ try:
     emulator_date = adb("shell", "date", "+%Y-%m-%d").decode().strip()
     tomorrow = (date.fromisoformat(emulator_date) + timedelta(days=1)).isoformat()
     type_field("일정 제목", "UITest")
-    type_field("날짜 (YYYY-MM-DD)", tomorrow)
-    type_field("시간 (HH:mm)", "09:00")
+    tap("날짜·시간 직접 입력", scroll=True)
+    type_field("날짜 (YYYY-MM-DD)", tomorrow, scroll=True)
+    type_field("시간 (HH:mm)", "09:00", scroll=True)
+    adb("shell", "input", "swipe", "360", "430", "360", "1320", "420")
+    tap("직접 입력 접기", scroll=True)
     screenshot("07c-native-confirmation-populated", "real filled schedule with localized datetime summary and footer action")
     tap("일정 저장", scroll=True)
     time.sleep(10)
@@ -301,6 +322,8 @@ assert_native_mono_surface("12-native-editor-dark", 100, 500)
     json.dumps(
         {
             "source": "Android 29 emulator, new local installation",
+            "timezone": EMULATOR_TIMEZONE,
+            "utc_offset": EMULATOR_UTC_OFFSET,
             "screens": REPORT,
             "warnings": WARNINGS,
         },
@@ -367,9 +390,15 @@ try:
     tap("직접 날짜와 시간 지정", scroll=True)
     screenshot("17-compact-confirmation", "confirmation form on compact portrait screen")
     adb("shell", "input", "swipe", "360", "1180", "360", "430", "420")
-    if find("일정 저장") is None:
-        raise RuntimeError("Compact confirmation save button is unreachable after scrolling")
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("Compact confirmation footer actions are unreachable after scrolling")
     screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
+    tap("날짜·시간 직접 입력", scroll=True)
+    focus_field("날짜 (YYYY-MM-DD)", scroll=True)
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("Compact confirmation footer is obscured while the keyboard is open")
+    screenshot("17c-compact-confirmation-keyboard", "compact confirmation with focused ISO editor and visible fixed footer")
+    adb("shell", "input", "keyevent", "4")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Compact-screen capture: {exc}")
 finally:
@@ -423,6 +452,7 @@ QA_PROFILES = {
             "20c-large-font-settings.png",
             "20d-large-font-chooser.png",
             "20e-large-font-editor.png",
+            "20f-large-font-confirmation.png",
         ],
     },
     "tablet_viewport": {
@@ -474,6 +504,10 @@ try:
     screenshot("20d-large-font-chooser", "130% font scale: native input chooser")
     tap("텍스트로 일정 입력")
     screenshot("20e-large-font-editor", "130% font scale: native text editor")
+    tap("직접 날짜와 시간 지정", scroll=True)
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("130% font confirmation footer buttons are unreachable")
+    screenshot("20f-large-font-confirmation", "130% font scale: Korean date picker first, fixed back/save footer")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"130% Android font-scale QA: {exc}")
 finally:
@@ -514,6 +548,7 @@ finally:
             "Microphone-based speech recognition (emulator uses -noaudio)",
             "Gemini Nano inference on supported real hardware",
             "Play Store install/update on a tester account",
+            "Korean date/time picker preserves the configured recurrence anchor timezone",
         ],
     }, ensure_ascii=False, indent=2),
     encoding="utf-8",
@@ -539,8 +574,9 @@ try:
         tap("텍스트로 일정 입력")
         tap("직접 날짜와 시간 지정", scroll=True)
         type_field("일정 제목", f"TodayQA{sample}")
-        type_field("날짜 (YYYY-MM-DD)", fixture.strftime("%Y-%m-%d"))
-        type_field("시간 (HH:mm)", fixture.strftime("%H:%M"))
+        tap("날짜·시간 직접 입력", scroll=True)
+        type_field("날짜 (YYYY-MM-DD)", fixture.strftime("%Y-%m-%d"), scroll=True)
+        type_field("시간 (HH:mm)", fixture.strftime("%H:%M"), scroll=True)
         tap("일정 저장", scroll=True)
         time.sleep(4)
         if sample == 1:
@@ -582,6 +618,8 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, 
 (OUT / "capture-manifest.json").write_text(
     json.dumps({
         "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",
+        "timezone": EMULATOR_TIMEZONE,
+        "utc_offset": EMULATOR_UTC_OFFSET,
         "screens": REPORT,
         "warnings": WARNINGS,
     }, ensure_ascii=False, indent=2),
