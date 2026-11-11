@@ -52,6 +52,7 @@ REQUIRED = {
     "20c-large-font-settings.png",
     "20d-large-font-chooser.png",
     "20e-large-font-editor.png",
+    "20f-large-font-confirmation.png",
     "21a-tablet-home.png",
     "21b-tablet-calendar.png",
     "21c-tablet-settings.png",
@@ -124,6 +125,7 @@ def verify() -> None:
         "20c-large-font-settings.png",
         "20d-large-font-chooser.png",
         "20e-large-font-editor.png",
+        "20f-large-font-confirmation.png",
     ]:
         if normal and name in dimensions and dimensions[name] != normal:
             errors.append(f"large-font screenshot has wrong viewport: {name}")
