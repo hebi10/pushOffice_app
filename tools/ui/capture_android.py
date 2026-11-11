@@ -358,14 +358,19 @@ try:
         adb("shell", "input", "tap", str(x), str(y))
         time.sleep(4)
         tap("UITest", scroll=True)
-        if find("기본 정보") is None:
+        if find("일정 제목 수정") is None:
             raise RuntimeError("Compact fixture action did not open the actual schedule detail")
         screenshot("17a-schedule-detail-compact", "schedule detail on compact portrait screen")
         adb("shell", "input", "keyevent", "4")
         time.sleep(3)
     except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError, ValueError) as exc:
         WARNINGS.append(f"Compact schedule detail capture: {exc}")
-    tap("홈", bottom=True)
+    # Restore a reliable main-tab state even if compact detail evidence failed.
+    adb("shell", "am", "force-stop", APP)
+    adb("shell", "monkey", "-p", APP, "1")
+    time.sleep(11)
+    if find("일정 빠르게 추가") is None:
+        raise RuntimeError("Compact home was not restored before quick-entry capture")
     tap("일정 빠르게 추가")
     screenshot("15-compact-chooser", "bottom-sheet chooser on compact portrait screen")
     tap("텍스트로 일정 입력")
