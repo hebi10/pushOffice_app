@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { AssistantButton, AssistantCard, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
-import { uiSpacing, uiTypography } from '@/src/lib/designTokens';
+import { uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { PushOfficeNative, type AiModelInfo, type AiModelTestResult } from '@/modules/push-office-native';
 
@@ -13,6 +13,15 @@ function sampleInput() {
 }
 function isReady(model: AiModelInfo) {
   return model.state === 'installed' || model.state === 'available';
+}
+function modelStatus(model: AiModelInfo) {
+  if (isReady(model)) return '사용 준비됨';
+  if (model.state === 'downloadable') return '설치 가능';
+  if (model.state==='downloading') return '다운로드 중 · ' + showProgress(model);
+  if (model.state === 'verifying') return '무결성 검사 중';
+  if (model.state === 'unavailable') return '기기 미지원';
+  if (model.state === 'error') return '오류 · 재시도 필요';
+  return '설치 전';
 }
 function showProgress(model: AiModelInfo) {
   if (model.totalBytes <= 0) return 'Wi-Fi 대기';
@@ -27,6 +36,7 @@ export default function AiModelsScreen() {
   const [notice, setNotice] = useState<{title:string;message:string} | null>(null);
   const [removal, setRemoval] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const refreshing = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -122,20 +132,17 @@ export default function AiModelsScreen() {
             <AssistantCard key={model.id} title={model.title} icon="hardware-chip-outline" compact>
               <View style={styles.heading}>
                 <Text style={[styles.caption,{color:colors.textSecondary}]}>
-                  {model.engine+' · '+model.license+' · '+(model.approximateMb>0?'약 '+model.approximateMb+'MB':'시스템 관리')}
+                  {model.engine+' · '+(model.approximateMb>0?'약 '+model.approximateMb+'MB':'시스템 관리')}
                 </Text>
                 {model.selected && ready ? <Text style={[styles.selected,{color:colors.text}]}>기본 모델</Text> : null}
               </View>
-              <Text style={[styles.copy,{color:colors.textSecondary}]}>{model.description}</Text>
-              <Text style={[styles.caption,{color:colors.textSecondary}]}>
-                {ready?'사용 준비됨':
-                  model.state==='downloadable'?'다운로드 가능':
-                  model.state==='downloading'?'다운로드 중 · '+showProgress(model):
-                  model.state==='verifying'?'파일 무결성 검사 중':
-                  model.state==='unavailable'?'현재 기기 사용 불가':
-                  model.state==='error'?'다운로드 또는 모델 확인 오류':'설치되지 않음'}
-              </Text>
-              {model.message ? <Text style={[styles.caption,{color:colors.textSecondary}]}>{model.message}</Text> : null}
+              <View style={[styles.statusRow,{backgroundColor:colors.inputBackground}]} accessibilityLabel={'모델 상태: '+modelStatus(model)}>
+                <Text style={[styles.statusText,{color:model.state==='error'?colors.danger:colors.text}]}>{modelStatus(model)}</Text>
+                {model.selected && ready ? <Text style={[styles.caption,{color:colors.textSecondary}]}>현재 사용 중</Text> : null}
+              </View>
+              {(model.state==='error' || model.state==='unavailable') && model.message ? (
+                <Text style={[styles.caption,{color:colors.textSecondary}]}>{model.message}</Text>
+              ) : null}
               {canInstall ? (
                 <AssistantButton label={model.state==='error'?'모델 다운로드 재시도':'모델 다운로드'}
                   icon="download-outline" secondary disabled={Boolean(busyId)} busy={busyId===model.id}
@@ -162,8 +169,23 @@ export default function AiModelsScreen() {
                   icon="trash-outline" secondary disabled={Boolean(busyId)}
                   onPress={()=>setRemoval(model.id)} />
               ) : null}
-              <AssistantButton label="모델 출처·라이선스" icon="information-circle-outline" secondary
-                onPress={()=>{void Linking.openURL(model.sourceUrl).catch(()=>setNotice({title:'모델 출처',message:'모델 제공 페이지를 열지 못했습니다.'}));}} />
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={model.title+' 상세 정보 '+(expandedIds.includes(model.id)?'접기':'펼치기')}
+                accessibilityState={{expanded:expandedIds.includes(model.id)}}
+                onPress={()=>setExpandedIds(old=>old.includes(model.id)?old.filter(id=>id!==model.id):[...old,model.id])}
+                style={styles.detailsToggle}
+              >
+                <Text style={[styles.caption,{color:colors.textSecondary}]}>{expandedIds.includes(model.id)?'상세 정보 접기':'설명·라이선스 보기'}</Text>
+              </TouchableOpacity>
+              {expandedIds.includes(model.id) ? (
+                <View style={styles.details}>
+                  <Text style={[styles.copy,{color:colors.textSecondary}]}>{model.description}</Text>
+                  <Text style={[styles.caption,{color:colors.textSecondary}]}>{'라이선스: '+model.license}</Text>
+                  <AssistantButton label="모델 출처·라이선스" icon="information-circle-outline" secondary
+                    onPress={()=>{void Linking.openURL(model.sourceUrl).catch(()=>setNotice({title:'모델 출처',message:'모델 제공 페이지를 열지 못했습니다.'}));}} />
+                </View>
+              ) : null}
               {result ? (
                 <View style={[styles.result,{backgroundColor:colors.inputBackground}]}>
                   <Text style={[styles.selected,{color:colors.text}]}>
@@ -196,4 +218,8 @@ const styles=StyleSheet.create({
   copy:{...uiTypography.body},
   caption:{...uiTypography.caption},
   result:{padding:uiSpacing.sm,gap:uiSpacing.xs},
+  statusRow:{minHeight:uiSizes.touchMinHeight,flexDirection:'row',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:uiSpacing.xs,paddingHorizontal:uiSpacing.sm,paddingVertical:uiSpacing.xs},
+  statusText:{...uiTypography.body,fontWeight:'700'},
+  detailsToggle:{minHeight:uiSizes.touchMinHeight,justifyContent:'center',paddingHorizontal:uiSpacing.xs},
+  details:{gap:uiSpacing.xs},
 });
