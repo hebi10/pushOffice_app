@@ -208,8 +208,8 @@ try:
         adb("shell", "input", "keyevent", "4")
         time.sleep(2)
         adb("shell", "input", "swipe", "360", "1200", "360", "460", "420")
-        if find("일정 저장") is None:
-            raise RuntimeError("Native confirmation save button is unreachable after scrolling")
+        if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+            raise RuntimeError("Native confirmation footer actions are unreachable after scrolling")
         screenshot("07b-native-confirmation-actions", "native confirmation save action after scrolling")
         adb("shell", "input", "swipe", "360", "440", "360", "1300", "420")
     except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
@@ -223,6 +223,7 @@ try:
     emulator_date = adb("shell", "date", "+%Y-%m-%d").decode().strip()
     tomorrow = (date.fromisoformat(emulator_date) + timedelta(days=1)).isoformat()
     type_field("일정 제목", "UITest")
+    tap("날짜·시간 직접 입력")
     type_field("날짜 (YYYY-MM-DD)", tomorrow)
     type_field("시간 (HH:mm)", "09:00")
     screenshot("07c-native-confirmation-populated", "real filled schedule with localized datetime summary and footer action")
@@ -367,8 +368,8 @@ try:
     tap("직접 날짜와 시간 지정", scroll=True)
     screenshot("17-compact-confirmation", "confirmation form on compact portrait screen")
     adb("shell", "input", "swipe", "360", "1180", "360", "430", "420")
-    if find("일정 저장") is None:
-        raise RuntimeError("Compact confirmation save button is unreachable after scrolling")
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("Compact confirmation footer actions are unreachable after scrolling")
     screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Compact-screen capture: {exc}")
@@ -423,6 +424,7 @@ QA_PROFILES = {
             "20c-large-font-settings.png",
             "20d-large-font-chooser.png",
             "20e-large-font-editor.png",
+            "20f-large-font-confirmation.png",
         ],
     },
     "tablet_viewport": {
@@ -474,6 +476,10 @@ try:
     screenshot("20d-large-font-chooser", "130% font scale: native input chooser")
     tap("텍스트로 일정 입력")
     screenshot("20e-large-font-editor", "130% font scale: native text editor")
+    tap("직접 날짜와 시간 지정", scroll=True)
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("130% font confirmation footer buttons are unreachable")
+    screenshot("20f-large-font-confirmation", "130% font scale: Korean date picker first, fixed back/save footer")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"130% Android font-scale QA: {exc}")
 finally:
@@ -514,6 +520,7 @@ finally:
             "Microphone-based speech recognition (emulator uses -noaudio)",
             "Gemini Nano inference on supported real hardware",
             "Play Store install/update on a tester account",
+            "Korean date/time picker preserves the configured recurrence anchor timezone",
         ],
     }, ensure_ascii=False, indent=2),
     encoding="utf-8",
