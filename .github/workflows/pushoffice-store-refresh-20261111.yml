@@ -1,0 +1,103 @@
+name: Push Office Mono Office 8-image Store refresh
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/ops/publish_play_store_refresh_20261111.py'
+      - '.github/workflows/pushoffice-store-refresh-20261111.yml'
+      - 'store-assets/ko-KR/refresh-manifest-20261111.json'
+      - 'store-assets/ko-KR/screenshots-refresh-20261111/**'
+      - 'store-assets/ko-KR/feature-graphic-refresh-20261111.png'
+      - 'store-assets/ko-KR/app-icon.png'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-store-refresh-20261111.yml'
+      - '.github/ops/publish_play_store_refresh_20261111.py'
+      - 'store-assets/ko-KR/refresh-manifest-20261111.json'
+      - 'store-assets/ko-KR/screenshots-refresh-20261111/**'
+      - 'store-assets/ko-KR/feature-graphic-refresh-20261111.png'
+      - 'store-assets/ko-KR/app-icon.png'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pushoffice-store-8-image-refresh
+  cancel-in-progress: false
+
+jobs:
+  validate-images:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image verifier
+        run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Verify final eight screenshots, provenance, icon and feature graphic
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, '.github/ops')
+          import publish_play_store_refresh_20261111 as refresh
+          assets=refresh.validated_assets_eight()
+          assert len(assets['phoneScreenshots'])==8
+          assert len(assets['icon'])==1
+          assert len(assets['featureGraphic'])==1
+          print('Final Play preflight passed: 8 real screenshots, 1 mono icon, 1 feature graphic')
+          PY
+      - name: Run existing guarded Play transaction regression tests
+        run: python3 -m unittest discover -s .github/ops -p 'test_publish_play_store_images.py'
+
+  publish-images:
+    if: >-
+      github.event_name == 'push' &&
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[push-office-store-refresh-20261111]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install image verifier
+        run: python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Verify final eight screenshot images before any Play edit
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0,'.github/ops')
+          from publish_play_store_refresh_20261111 import validated_assets_eight
+          assets=validated_assets_eight()
+          assert tuple(len(assets[k]) for k in ('icon','featureGraphic','phoneScreenshots'))==(1,1,8)
+          print('Verified all ten files before Play API authentication')
+          PY
+      - name: Run regression tests for transactional Play edits
+        run: python3 -m unittest discover -s .github/ops -p 'test_publish_play_store_images.py'
+      - name: Authenticate the existing app-scoped Play service account
+        uses: google-github-actions/auth@v3
+        id: auth
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Update only ko-KR icon, feature graphic and 8 screenshots; preserve listing and tracks
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python3 .github/ops/publish_play_store_refresh_20261111.py
+      - name: Retain exact Play API readback and outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-store-8-image-publication
+          path: ${{ runner.temp }}/push-office-play-store-publication.json
+          retention-days: 30
+          if-no-files-found: warn
