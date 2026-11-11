@@ -192,6 +192,12 @@ tap("텍스트로 일정 입력")
 screenshot("06-native-editor", "native text entry editor")
 
 WARNINGS: list[str] = []
+EMULATOR_TIMEZONE = adb("shell", "getprop", "persist.sys.timezone").decode().strip()
+EMULATOR_UTC_OFFSET = adb("shell", "date", "+%z").decode().strip()
+if EMULATOR_TIMEZONE != "Asia/Seoul" or EMULATOR_UTC_OFFSET != "+0900":
+    WARNINGS.append(
+        f"Asia/Seoul capture environment not verified: timezone={EMULATOR_TIMEZONE}, offset={EMULATOR_UTC_OFFSET}"
+    )
 
 try:
     tap("직접 날짜와 시간 지정")
@@ -302,6 +308,8 @@ assert_native_mono_surface("12-native-editor-dark", 100, 500)
     json.dumps(
         {
             "source": "Android 29 emulator, new local installation",
+            "timezone": EMULATOR_TIMEZONE,
+            "utc_offset": EMULATOR_UTC_OFFSET,
             "screens": REPORT,
             "warnings": WARNINGS,
         },
@@ -371,6 +379,12 @@ try:
     if find("일정 저장") is None or find("입력으로 돌아가기") is None:
         raise RuntimeError("Compact confirmation footer actions are unreachable after scrolling")
     screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
+    tap("날짜·시간 직접 입력", scroll=True)
+    tap("날짜 (YYYY-MM-DD)", scroll=True)
+    if find("일정 저장") is None or find("입력으로 돌아가기") is None:
+        raise RuntimeError("Compact confirmation footer is obscured while the keyboard is open")
+    screenshot("17c-compact-confirmation-keyboard", "compact confirmation with focused ISO editor and visible fixed footer")
+    adb("shell", "input", "keyevent", "4")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Compact-screen capture: {exc}")
 finally:
