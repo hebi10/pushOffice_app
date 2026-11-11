@@ -47,9 +47,9 @@ export default function CalendarScreen() {
     textSectionTitleColor: colors.textSecondary,
     selectedDayTextColor: colors.onPrimary,
     textDayFontSize: 15,
-    textMonthFontSize: 17,
+    textMonthFontSize: 16,
     textMonthFontWeight: '700' as const,
-    textDayHeaderFontSize: 13,
+    textDayHeaderFontSize: 12,
     'stylesheet.calendar.main': {
       week: { marginTop: 1, marginBottom: 1, flexDirection: 'row' as const, justifyContent: 'space-around' as const },
     },
@@ -103,6 +103,9 @@ export default function CalendarScreen() {
     >
       <ScreenIntro title="캘린더" compact />
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
+        <View style={styles.monthHeaderHint} accessible accessibilityRole="text">
+          <Text style={[styles.monthHeaderHintText, { color: colors.textSecondary }]}>날짜를 선택해 일정을 확인하세요.</Text>
+        </View>
         <Calendar
           key={isDark ? 'dark' : 'light'}
           current={monthStart}
@@ -123,6 +126,7 @@ export default function CalendarScreen() {
           </Text>
         ) : null}
       </View>
+      <View style={[styles.selectionPanel, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
       <View
         style={styles.selectionSummary}
         accessible
@@ -135,6 +139,8 @@ export default function CalendarScreen() {
           <Text style={[styles.countText, { color: colors.textSecondary }]}>일정 {summary}</Text>
         </View>
       </View>
+      </View>
+      <View style={styles.agendaSection}>
       <AssistantButton
         label="빠른 일정 입력"
         icon="add-circle-outline"
@@ -157,6 +163,7 @@ export default function CalendarScreen() {
           <EmptyState message="선택한 날짜에 일정이 없습니다." />
         )}
       </AssistantCard>
+      </View>
     </ScrollView>
   );
 }
@@ -169,6 +176,15 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: uiSpacing.xxs,
   },
+  monthHeaderHint: { paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xs },
+  monthHeaderHintText: { ...uiTypography.caption },
+  selectionPanel: {
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
+    paddingHorizontal: uiSpacing.xs,
+    paddingVertical: uiSpacing.xxs,
+  },
+  agendaSection: { gap: uiSpacing.xs },
   markHint: { ...uiTypography.caption, paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xxs },
   selectionSummary: {
     flexDirection: 'row',
@@ -176,11 +192,11 @@ const styles = StyleSheet.create({
     gap: uiSpacing.xs,
     minHeight: uiSizes.touchMinHeight,
     paddingHorizontal: uiSpacing.xxs,
-    paddingVertical: uiSpacing.xxs,
+    paddingVertical: 0,
   },
   selectionTitle: { ...uiTypography.body, flex: 1, minWidth: 0, fontWeight: '700' },
   countBadge: {
-    minWidth: 60,
+    minWidth: 56,
     minHeight: 30,
     paddingHorizontal: uiSpacing.xs,
     justifyContent: 'center',
