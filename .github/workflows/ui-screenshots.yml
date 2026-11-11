@@ -134,7 +134,8 @@ jobs:
         if: >-
           github.event.pull_request.number == 46 &&
           github.event.pull_request.head.repo.full_name == github.repository &&
-          github.head_ref == 'design/store-brand-refresh-20261111'
+          github.head_ref == 'design/store-brand-refresh-20261111' &&
+          hashFiles('store-assets/ko-KR/refresh-manifest-20261111.json') == ''
         env:
           HEAD_REF: ${{ github.head_ref }}
         run: |
