@@ -170,7 +170,7 @@ export default function ScheduleDetail() {
             {' · '}{notification ? '알림 사용' : '알림 끔'}
           </Text>
         </View>
-        <AssistantCard title="기본 정보" icon="create-outline">
+        <AssistantCard title="일정 제목 수정" icon="create-outline">
           {field('제목', title, setTitle)}
         </AssistantCard>
 
@@ -192,7 +192,7 @@ export default function ScheduleDetail() {
               onPress={() => openTimePicker('start')}
             />
           ) : null}
-          <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>종료 날짜·시간 (선택)</Text>
+          <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>종료 (선택)</Text>
           <View style={styles.endRow}>
             <View style={styles.endField}>
               <SchedulePickerField
@@ -218,7 +218,7 @@ export default function ScheduleDetail() {
           ) : null}
         </AssistantCard>
 
-        <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle="반복 변경은 모든 해당 일정에 적용됩니다.">
+        <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle="반복 일정 수정 시 전체 적용 여부를 확인합니다.">
           <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>반복 주기</Text>
           {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
             <TouchableOpacity
@@ -245,7 +245,7 @@ export default function ScheduleDetail() {
           ))}
           <SettingRow
             title="일정 알림"
-            description="기기 알림 권한과 전체 알림 설정에 따라 전달됩니다."
+            description="알림 권한·전체 설정에 따라 전송"
             value={notification}
             onValueChange={setNotification}
           />
@@ -258,7 +258,7 @@ export default function ScheduleDetail() {
           onPress={confirmSave}
         />
 
-        <AssistantCard title="재알림" icon="alarm-outline" subtitle="기존 일정은 변경하지 않고 다시 알립니다.">
+        <AssistantCard title="재알림" icon="alarm-outline" subtitle="일정은 유지하고 알림만 다시 예약합니다.">
           <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary onPress={() =>
             PushOfficeNative.snoozeSchedule(id, 10).then(() => showToast('10분 뒤 재알림을 예약했습니다.')).catch(e => showError(e, '예약하지 못했습니다.'))
           } />
@@ -266,7 +266,7 @@ export default function ScheduleDetail() {
             PushOfficeNative.cancelSnooze(id).then(() => showToast('재알림을 취소했습니다.')).catch(e => showError(e, '취소하지 못했습니다.'))
           } />
         </AssistantCard>
-        <AssistantCard title="삭제 전 확인" icon="trash-outline" subtitle="일정과 연결된 알림도 함께 삭제됩니다.">
+        <AssistantCard title="일정 삭제" icon="trash-outline" subtitle="연결된 알림도 삭제되며 되돌릴 수 없습니다.">
           <AssistantButton
             label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
             icon="trash-outline"
@@ -392,7 +392,7 @@ export default function ScheduleDetail() {
 }
 
 const styles = StyleSheet.create({
-  scheduleOverview: { padding: uiSpacing.md, gap: uiSpacing.xs, borderRadius: uiRadii.card, borderWidth: uiSizes.borderWidth },
+  scheduleOverview: { padding: uiSpacing.sm, gap: uiSpacing.xxs, borderRadius: uiRadii.card, borderWidth: uiSizes.borderWidth },
   overviewTitle: { ...uiTypography.sectionTitle, fontSize: 20, lineHeight: 28 },
   overviewTime: { ...uiTypography.body, fontVariant: ['tabular-nums'] },
   overviewMeta: { ...uiTypography.caption, paddingTop: uiSpacing.xxs },
