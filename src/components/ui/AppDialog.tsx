@@ -54,7 +54,7 @@ export function AppDialog({
             </View>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</Text>
           </View>
-          <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
             <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
           </ScrollView>
           <View style={styles.actions}>
@@ -71,6 +71,7 @@ export function AppDialog({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={confirmLabel}
+              accessibilityHint={destructive ? "선택하면 삭제 확인 작업을 실행합니다." : undefined}
               onPress={onConfirm}
               style={[styles.action, { backgroundColor: actionColor, borderColor: actionColor }]}
             >
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
   title: { ...uiTypography.dialogTitle, flex: 1, minWidth: 0 },
   messageScroll: { flexShrink: 1 },
   message: { ...uiTypography.body, fontSize: 14, lineHeight: 22 },
-  actions: { flexDirection: 'row', gap: uiSpacing.xs + 2, marginTop: uiSpacing.xs },
+  actions: { flexDirection: 'row', alignItems: 'stretch', gap: uiSpacing.xs + 2, marginTop: uiSpacing.xs },
   action: {
     flex: 1,
     minHeight: uiSizes.touchMinHeight,
@@ -122,5 +123,5 @@ const styles = StyleSheet.create({
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
   },
-  label: { ...uiTypography.button, textAlign: 'center', flexShrink: 1 },
+  label: { ...uiTypography.button, textAlign: 'center', flexShrink: 1, flexWrap: 'wrap' },
 });
