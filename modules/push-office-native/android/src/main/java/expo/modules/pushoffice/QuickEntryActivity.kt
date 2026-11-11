@@ -83,8 +83,10 @@ class QuickEntryActivity : Activity() {
   private fun page(title: String, subtitle: String) {
     exitEditor()
     confirmationFooter=null
+    window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() } }
-    val limit=(resources.displayMetrics.heightPixels-dp(160)).coerceAtLeast(dp(180))
+    val confirmationPage=title=="일정 확인 및 저장" || title=="변경 내용 확인"
+    val limit=(resources.displayMetrics.heightPixels-dp(if(confirmationPage) 240 else 160)).coerceAtLeast(dp(160))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
@@ -406,7 +408,7 @@ class QuickEntryActivity : Activity() {
       setTextColor(foregroundColor)
     })
     note.addView(TextView(this).apply {
-      text="시간대: ${formZone.id}"
+      text="저장 기준 시간대: ${formZone.id}"
       textSize=12f
       setTextColor(secondary)
       setPadding(0,dp(6),0,0)
@@ -467,6 +469,10 @@ class QuickEntryActivity : Activity() {
     val titleField=field("일정 제목","일정 제목",title,compact=true)
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty(),compact=true)
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(),compact=true)
+    val manualDateCard=dateField.parent as View
+    val manualTimeCard=timeField.parent as View
+    root.removeView(manualDateCard)
+    root.removeView(manualTimeCard)
     fun updateLocalizedSummary() {
       val date=runCatching { LocalDate.parse(dateField.text.toString().trim()) }.getOrNull()
       val time=runCatching { LocalTime.parse(timeField.text.toString().trim()) }.getOrNull()
@@ -520,6 +526,32 @@ class QuickEntryActivity : Activity() {
       },initial.hour,initial.minute,true).show()
     }
     root.addView(pickerRow)
+    val manualFields=LinearLayout(this).apply {
+      orientation=LinearLayout.VERTICAL
+      visibility=View.GONE
+    }
+    manualFields.addView(manualDateCard)
+    manualFields.addView(manualTimeCard)
+    root.addView(Button(this).apply {
+      text="날짜·시간 직접 입력"
+      contentDescription=text
+      textSize=14f
+      isAllCaps=false
+      minimumHeight=dp(48)
+      setTextColor(actionColor)
+      stateListAnimator=null
+      background=GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius=dp(8).toFloat()
+        setStroke(dp(1),inputBorder)
+      }
+      setOnClickListener {
+        manualFields.visibility=if(manualFields.visibility==View.VISIBLE) View.GONE else View.VISIBLE
+        text=if(manualFields.visibility==View.VISIBLE) "직접 입력 접기" else "날짜·시간 직접 입력"
+        contentDescription=text
+      }
+    },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(6) })
+    root.addView(manualFields)
     val repeatCard=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(10),dp(8),dp(10),dp(10))
@@ -573,13 +605,15 @@ class QuickEntryActivity : Activity() {
       setTextColor(dangerColor)
       textSize=13f
       setPadding(dp(2),dp(8),dp(2),0)
+      visibility=View.GONE
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     }
-    root.addView(error)
+    (confirmationFooter ?: root).addView(error)
     val clearErrorOnEdit=object: TextWatcher {
       override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
       override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
         error.text=""
+        error.visibility=View.GONE
       }
       override fun afterTextChanged(s: Editable?) {}
     }
@@ -587,7 +621,10 @@ class QuickEntryActivity : Activity() {
     dateField.addTextChangedListener(clearErrorOnEdit)
     timeField.addTextChangedListener(clearErrorOnEdit)
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
+    var saving=false
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
+      if(saving) return@button
+      saving=true
       try {
         val start=LocalDate.parse(dateField.text.toString().trim()).atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
         val now=System.currentTimeMillis()
@@ -609,7 +646,12 @@ class QuickEntryActivity : Activity() {
           if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
         }
         Toast.makeText(this,"일정을 저장했습니다.",Toast.LENGTH_SHORT).show(); finish()
-      } catch(e: Exception) { error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") } ?: "날짜와 시간을 YYYY-MM-DD, HH:mm 형식으로 확인해 주세요." }
+      } catch(e: Exception) {
+        saving=false
+        error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }
+          ?: "날짜와 시간을 다시 확인해 주세요. 직접 입력에서 수정할 수 있습니다."
+        error.visibility=View.VISIBLE
+      }
     }
   }
   private fun field(label: String, hintText: String, value: String, multi: Boolean=false, compact: Boolean=false): EditText {
@@ -652,7 +694,7 @@ class QuickEntryActivity : Activity() {
   private fun button(label: String, description: String=label, action: ()->Unit) {
     val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
     val color=if(primary) (onPrimary) else actionColor
-    val target=if(label=="일정 저장" || label=="변경 내용 저장") confirmationFooter ?: root else root
+    val target=if(label=="일정 저장" || label=="변경 내용 저장" || label=="입력으로 돌아가기") confirmationFooter ?: root else root
     if(target !== root) target.visibility=View.VISIBLE
     target.addView(Button(this).apply {
       text=label
