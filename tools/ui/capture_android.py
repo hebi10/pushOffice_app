@@ -171,7 +171,6 @@ def type_field(label: str, value: str, scroll: bool = False) -> None:
 
 adb("shell", "wm", "size", "720x1600")
 adb("shell", "wm", "density", "280")
-adb("shell", "setprop", "persist.sys.timezone", "Asia/Seoul")
 adb("shell", "monkey", "-p", APP, "1")
 time.sleep(22)
 screenshot("01-home", "home screen")
