@@ -22,6 +22,8 @@ test('UI-11-01 keeps confirmation footer outside keyboard-resized scroll contain
   assert.match(page, /confirmationPage/);
   assert.match(page, /frame\.addView\(scroll/);
   assert.match(page, /confirmationFooter=LinearLayout/);
+  assert.match(page, /if\(confirmationPage\) LinearLayout\.LayoutParams\(-1,0,1f\)/);
+  assert.match(page, /if\(confirmationPage\) WindowManager\.LayoutParams\.MATCH_PARENT/);
   assert.match(button, /label=="입력으로 돌아가기"/);
   assert.match(button, /label=="일정 저장"/);
   assert.match(button, /label=="변경 내용 저장"/);
