@@ -171,6 +171,7 @@ def type_field(label: str, value: str, scroll: bool = False) -> None:
 
 adb("shell", "wm", "size", "720x1600")
 adb("shell", "wm", "density", "280")
+adb("shell", "setprop", "persist.sys.timezone", "Asia/Seoul")
 adb("shell", "monkey", "-p", APP, "1")
 time.sleep(22)
 screenshot("01-home", "home screen")
@@ -574,8 +575,9 @@ try:
         tap("텍스트로 일정 입력")
         tap("직접 날짜와 시간 지정", scroll=True)
         type_field("일정 제목", f"TodayQA{sample}")
-        type_field("날짜 (YYYY-MM-DD)", fixture.strftime("%Y-%m-%d"))
-        type_field("시간 (HH:mm)", fixture.strftime("%H:%M"))
+        tap("날짜·시간 직접 입력", scroll=True)
+        type_field("날짜 (YYYY-MM-DD)", fixture.strftime("%Y-%m-%d"), scroll=True)
+        type_field("시간 (HH:mm)", fixture.strftime("%H:%M"), scroll=True)
         tap("일정 저장", scroll=True)
         time.sleep(4)
         if sample == 1:
@@ -617,6 +619,8 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, 
 (OUT / "capture-manifest.json").write_text(
     json.dumps({
         "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",
+        "timezone": EMULATOR_TIMEZONE,
+        "utc_offset": EMULATOR_UTC_OFFSET,
         "screens": REPORT,
         "warnings": WARNINGS,
     }, ensure_ascii=False, indent=2),
