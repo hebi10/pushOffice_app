@@ -200,7 +200,7 @@ class ScheduleWidgetViewsTest {
     val context = ApplicationProvider.getApplicationContext<Context>()
     val packageManager = context.packageManager
     for (provider in listOf(ScheduleWidgetProvider::class.java, ScheduleAgendaWidgetProvider::class.java)) {
-      val receiver = packageManager.getReceiverInfo(android.content.ComponentName(context, provider), 0)
+      val receiver = packageManager.getReceiverInfo(android.content.ComponentName(context, provider), android.content.pm.PackageManager.GET_META_DATA)
       assertFalse("Widget provider must not be externally exported", receiver.exported)
       assertTrue("Widget provider requires readable label", receiver.loadLabel(packageManager).isNotEmpty())
       assertTrue("Widget provider must have widget metadata", receiver.metaData?.containsKey("android.appwidget.provider") == true)
