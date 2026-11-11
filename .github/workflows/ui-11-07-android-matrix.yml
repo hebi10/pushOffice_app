@@ -64,16 +64,7 @@ jobs:
             adb shell monkey -p com.hebi96.pushOffice_app 1
             sleep 10
             adb exec-out screencap -p > integration-qa/api-${{ matrix.api-level }}/home.png
-            python3 - <<'PY'
-            from pathlib import Path
-            import struct
-            path = Path("integration-qa/api-${{ matrix.api-level }}/home.png")
-            data = path.read_bytes()
-            assert data[:8] == b"\x89PNG\r\n\x1a\n", "no Android screenshot returned"
-            width, height = struct.unpack(">II", data[16:24])
-            assert width >= 320 and height >= 320, "Android screenshot viewport invalid"
-            print(f"Verified real installed Android home screenshot: {width}x{height}")
-            PY
+            python3 -c 'from pathlib import Path; import struct; p=Path("integration-qa/api-${{ matrix.api-level }}/home.png"); d=p.read_bytes(); assert d[:8] == bytes([137,80,78,71,13,10,26,10]), "no Android screenshot returned"; w,h=struct.unpack(">II", d[16:24]); assert w >= 320 and h >= 320, "Android screenshot viewport invalid"; print(f"Verified real installed Android home screenshot: {w}x{h}")'
       - name: Preserve Android matrix evidence
         if: always()
         uses: actions/upload-artifact@v4
