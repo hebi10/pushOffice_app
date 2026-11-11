@@ -8,13 +8,13 @@ const calendar = read('app/(tabs)/calendar.tsx');
 const settings = read('app/(tabs)/settings.tsx');
 const detail = read('app/schedule/[id].tsx');
 
-test('10-D prioritizes next real schedule after quick input while preserving other sections', () => {
+test('10-D keeps next and today schedules ahead of optional notification consent', () => {
   const positions = [
     'label="일정 빠르게 추가"',
     'title="다음 일정"',
-    'title="알림에서 일정 추천"',
     'title="오늘의 브리핑"',
     'title="오늘 일정"',
+    'title="알림에서 일정 추천"',
     'title="외부 브리핑"',
   ].map(value => home.indexOf(value));
   assert.ok(positions.every(value => value >= 0), 'Required home block missing');

@@ -38,12 +38,11 @@ test('HOME-02 preserves chooser and adds opt-in voice entry without auto recordi
   assert.match(home, /uiSizes\.touchMinHeight/);
 });
 
-test('HOME-03 uses one count and first real appointment while hiding redundant empty card', () => {
-  assert.match(home, /const firstToday = todayItems\[0\]/);
+test('HOME-03 shows a single factual count without repeating the next appointment title', () => {
+  assert.doesNotMatch(home, /const firstToday = todayItems\[0\]/);
   assert.match(home, /sort\(\(a, b\) => a\.startAt\.toMillis\(\) - b\.startAt\.toMillis\(\)\)/);
-  assert.match(home, /첫 일정/);
-  assert.match(home, /firstToday\.isAllDay/);
-  assert.match(home, /!schedules\.isLoading && !schedules\.isError && todayItems\.length > 0/);
+  assert.match(home, /오늘 일정 \$\{todayItems\.length\}건을 시간순으로 확인하세요/);
+  assert.doesNotMatch(home, /styles\.countPill/);
   assert.match(home, /\(schedules\.isLoading \|\| schedules\.isError \|\| todayItems\.length > 0\) \? \(/);
   assert.match(home, /title="오늘 일정"/);
   assert.match(home, /'시간순 일정 목록'/);

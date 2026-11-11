@@ -69,7 +69,6 @@ export default function HomeScreen() {
     const today = dayjs(now).format('YYYY-MM-DD');
     const todayItems = occurrences.filter(x => dayjs(x.startAt.toDate()).format('YYYY-MM-DD') === today)
         .sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis());
-    const firstToday = todayItems[0];
     const next = useMemo(() => {
         const record = nextSchedule((schedules.data ?? []).map(toNativeSchedule), now);
         return record ? hydrateSchedule(record) : null;
@@ -103,7 +102,7 @@ export default function HomeScreen() {
         : schedules.isLoading
             ? '기기에 저장된 일정을 확인하는 중입니다.'
             : todayItems.length
-                ? `첫 일정 ${firstToday.isAllDay ? '종일' : dayjs(firstToday.startAt.toDate()).format('HH:mm')} · ${firstToday.title}`
+                ? `오늘 일정 ${todayItems.length}건을 시간순으로 확인하세요.`
                 : '오늘은 예정된 일정이 없어요.';
     return (
       <>
@@ -118,6 +117,7 @@ export default function HomeScreen() {
           description="중요한 일정부터 하나씩 살펴보세요."
           artwork={require("@/assets/images/illustration-home-mono.png")}
           monochromeArtwork
+          dense
           featured
         />
 
@@ -182,48 +182,6 @@ export default function HomeScreen() {
           )}
         </AssistantCard>
 
-        {notificationFeature && !notificationFeature.enabled ? (
-          <AssistantCard title="알림에서 일정 추천" icon="notifications-outline" compact>
-            <Text style={[s.caption, { color: colors.textSecondary }]}>
-              사용자가 허용한 경우에만 다른 앱의 알림에서 일정 후보를 제안합니다. 권한을 허용하면 민감한 알림 내용에도 접근할 수 있으며, 저장 전 반드시 확인합니다.
-            </Text>
-            <AssistantButton
-              label="알림 분석 안내 및 이용 설정"
-              icon="shield-checkmark-outline"
-              secondary
-              onPress={() => setShowNotificationDisclosure(true)}
-            />
-          </AssistantCard>
-        ) : null}
-
-        {notificationSuggestions.length > 0 ? (
-          <AssistantCard title="확인할 일정 추천" icon="calendar-outline" subtitle="다른 앱 알림에서 분석한 일정입니다. 확인한 후에만 저장됩니다." compact>
-            {notificationSuggestions.slice(0, 3).map(item => (
-              <View key={item.id} style={{ borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
-                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{item.title}</Text>
-                <Text style={[s.caption, { color: colors.textSecondary }]}>
-                  {dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
-                </Text>
-                <Text numberOfLines={2} style={[s.caption, { color: colors.textSecondary }]}>{item.excerpt}</Text>
-                <View style={{ gap: uiSpacing.xs }}>
-                  <AssistantButton label="확인 후 일정 추가" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
-                  <AssistantButton label="거절" icon="close-outline" secondary onPress={() => { void declineSuggestion(item.id); }} />
-                </View>
-              </View>
-            ))}
-            {notificationSuggestions.length > 3 ? (
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel={`일정 추천 ${notificationSuggestions.length}건 모두 확인`}
-                onPress={() => router.push('/(tabs)/settings')}
-                style={{ minHeight: uiSizes.touchMinHeight, justifyContent: 'center', alignItems: 'center' }}
-              >
-                <Text style={[s.caption, { color: colors.primary }]}>나머지 {notificationSuggestions.length - 3}건 설정에서 확인</Text>
-              </TouchableOpacity>
-            ) : null}
-          </AssistantCard>
-        ) : null}
-
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
             <View style={styles.briefingCopy}>
@@ -234,13 +192,6 @@ export default function HomeScreen() {
                 {refined ? 'Gemini Nano가 기기에서 정리한 브리핑' : '기기에 저장된 일정만으로 만든 요약'}
               </Text>
             </View>
-            {!schedules.isLoading && !schedules.isError && todayItems.length > 0 ? (
-              <View style={styles.countPill}>
-                <Text style={[styles.countText, { color: colors.textSecondary }]}>
-                  {todayItems.length}건
-                </Text>
-              </View>
-            ) : null}
           </View>
           {ai.status === 'available' ? (
             <AssistantButton
@@ -289,6 +240,54 @@ export default function HomeScreen() {
               아직 일정이 없습니다. “내일 오전 9시 회의”처럼 입력해 보세요.
             </Text>
           )}
+          </AssistantCard>
+        ) : null}
+
+        {notificationFeature && !notificationFeature.enabled ? (
+          <AssistantCard title="알림에서 일정 추천" icon="notifications-outline" compact>
+            <View style={styles.notificationSetupRow}>
+              <Text style={[s.caption, styles.notificationSetupCopy, { color: colors.textSecondary }]}>
+                선택 기능입니다. 허용하면 다른 앱의 민감한 알림 내용도 읽을 수 있습니다. 추천 일정은 직접 승인해야 저장됩니다.
+              </Text>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="알림 분석 안내 및 이용 설정"
+                accessibilityHint="민감한 알림 접근 안내를 확인하고 사용 여부를 선택합니다."
+                onPress={() => setShowNotificationDisclosure(true)}
+                style={[styles.notificationSetupLink, { borderColor: colors.inputBorder }]}
+              >
+                <Text style={[styles.notificationSetupLabel, { color: colors.primary }]}>안내·설정</Text>
+                <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </AssistantCard>
+        ) : null}
+
+        {notificationSuggestions.length > 0 ? (
+          <AssistantCard title="확인할 일정 추천" icon="calendar-outline" subtitle="다른 앱 알림에서 분석한 일정입니다. 확인한 후에만 저장됩니다." compact>
+            {notificationSuggestions.slice(0, 3).map(item => (
+              <View key={item.id} style={{ borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
+                <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{item.title}</Text>
+                <Text style={[s.caption, { color: colors.textSecondary }]}>
+                  {dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
+                </Text>
+                <Text numberOfLines={2} style={[s.caption, { color: colors.textSecondary }]}>{item.excerpt}</Text>
+                <View style={{ gap: uiSpacing.xs }}>
+                  <AssistantButton label="확인 후 일정 추가" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
+                  <AssistantButton label="거절" icon="close-outline" secondary onPress={() => { void declineSuggestion(item.id); }} />
+                </View>
+              </View>
+            ))}
+            {notificationSuggestions.length > 3 ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={`일정 추천 ${notificationSuggestions.length}건 모두 확인`}
+                onPress={() => router.push('/(tabs)/settings')}
+                style={{ minHeight: uiSizes.touchMinHeight, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <Text style={[s.caption, { color: colors.primary }]}>나머지 {notificationSuggestions.length - 3}건 설정에서 확인</Text>
+              </TouchableOpacity>
+            ) : null}
           </AssistantCard>
         ) : null}
 
@@ -360,15 +359,19 @@ const styles = StyleSheet.create({
   },
   briefingCopy: { flex: 1, gap: uiSpacing.xxs },
   briefingHeadline: { ...uiTypography.body, fontWeight: '600' },
-  countPill: {
-    minHeight: 30,
-    minWidth: 42,
-    paddingHorizontal: uiSpacing.xxs,
-    paddingVertical: uiSpacing.xxs,
-    alignItems: 'flex-end',
+  notificationSetupRow: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.sm },
+  notificationSetupCopy: { flex: 1, minWidth: 0 },
+  notificationSetupLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    minHeight: uiSizes.touchMinHeight,
+    paddingHorizontal: uiSpacing.xs,
+    gap: uiSpacing.xxs,
+    borderWidth: uiSizes.borderWidth,
+    borderRadius: uiRadii.field,
   },
-  countText: { ...uiTypography.caption, fontWeight: '700' },
+  notificationSetupLabel: { ...uiTypography.caption, fontWeight: '700' },
   nextCard: {
     flexDirection: 'row',
     alignItems: 'center',
