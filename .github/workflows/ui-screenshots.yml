@@ -147,6 +147,8 @@ jobs:
           git add store-assets/ko-KR/screenshots-refresh-20261111 store-assets/ko-KR/feature-graphic-refresh-20261111.png store-assets/ko-KR/refresh-manifest-20261111.json
           if ! git diff --cached --quiet; then
             git commit -m "design: stage 8 authentic Android Play graphics for PR review"
+            git fetch origin "$HEAD_REF"
+            git rebase FETCH_HEAD
             git push origin "HEAD:refs/heads/$HEAD_REF"
           fi
       - name: Preserve screenshots and capture details
