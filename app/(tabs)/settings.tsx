@@ -261,7 +261,7 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="time-outline"
                   title="아침 브리핑 알림 시간"
-                  description="시간 변경"
+                  description="알림 시각 선택"
                   status={String(settings.dailyBriefingTime.hour).padStart(2, '0') + ':' + String(settings.dailyBriefingTime.minute).padStart(2, '0')}
                   expanded={editingTime}
                   onPress={() => { setSaveFeedback(null); setEditingTime(value => !value); }}
@@ -306,7 +306,7 @@ export default function SettingsScreen() {
                 title="빠른 설정과 홈 위젯"
                 icon="grid-outline"
               >
-                <SettingsToggleRow icon="grid-outline" title="빠른 설정 사용" description="끄면 시스템 타일을 사용할 수 없습니다. 다시 켠 뒤 재추가가 필요할 수 있습니다." value={tileEnabled} onValueChange={v => { void toggleTile(v); }} />
+                <SettingsToggleRow icon="grid-outline" title="빠른 설정 사용" description="끄면 타일 사용이 중단됩니다. 재활성화 후 다시 추가할 수 있습니다." value={tileEnabled} onValueChange={v => { void toggleTile(v); }} />
                 <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 직접 배치" status={!tileEnabled ? '꺼짐' : undefined} onPress={() => { if (tileEnabled) void addTile(); else setNotice({ title: '빠른 설정', message: '먼저 빠른 설정 사용을 켜 주세요.' }); }} />
                 <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가까운 일정 표시" onPress={() => { void pin('small'); }} />
                 <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘 일정 목록 표시" onPress={() => { void pin('agenda'); }} />
@@ -316,7 +316,7 @@ export default function SettingsScreen() {
                 <SettingsToggleRow
                   icon="sparkles-outline"
                   title="백그라운드 일정 후보 분석"
-                  description="알림을 받았을 때만 기기에서 분석합니다. 기본값은 꺼짐입니다."
+                  description="기기 내 알림 분석 · 기본값 꺼짐"
                   value={notificationStatus?.enabled ?? false}
                   disabled={!notificationStatus}
                   onValueChange={v => { void toggleCapture(v); }}
@@ -331,7 +331,7 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="calendar-outline"
                   title="추천 일정 후보"
-                  description="알림에서 추출한 일정의 원문과 시각을 확인합니다."
+                  description="제목·시각·원문 확인 후 승인"
                   status={notificationStatus ? `${suggestions.length}건` : '확인 중'}
                   expanded={suggestionsExpanded}
                   onPress={() => { refresh(); setSuggestionsExpanded(value => !value); }}
@@ -361,7 +361,7 @@ export default function SettingsScreen() {
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
                 <SettingsActionRow icon="layers-outline" title="기기 AI 모델 관리"
-                  description="5개 모델 비교 · 다운로드 · 성능 테스트 · 선택"
+                  description="5종 모델 설치·테스트·선택"
                   onPress={() => router.push('/ai-models')} />
                 <SettingsStatusRow
                   icon="sparkles-outline"
@@ -372,7 +372,7 @@ export default function SettingsScreen() {
                   <SettingsActionRow
                     icon="cloud-download-outline"
                     title={ai.status === 'error' ? '기기 AI 다운로드 다시 시도' : '기기 AI 모델 다운로드'}
-                    description="지원 상태를 확인하고 사용자가 요청할 때만 다운로드합니다."
+                    description="사용자 요청 시 다운로드"
                     busy={aiDownloading || aiChecking}
                     onPress={() => { void downloadAi(); }}
                   />
@@ -381,7 +381,7 @@ export default function SettingsScreen() {
                   <SettingsActionRow
                     icon="refresh-outline"
                     title="기기 AI 상태 다시 확인"
-                    description="AICore 업데이트·네트워크 변경·다운로드 완료 후 현재 상태를 조회합니다."
+                    description="기기 AI 지원·설치 상태 재조회"
                     busy={aiChecking || aiDownloading}
                     onPress={() => { void checkAiStatus(); }}
                   />

@@ -11,12 +11,12 @@ const capture = source('tools/ui/capture_android.py');
 
 test('PO-UI-06 uses distinct editing groups and preserves the primary save action', () => {
   const order = [
-    'title="기본 정보"',
+    'title="일정 제목 수정"',
     'title="날짜와 시간"',
     'title="반복과 알림"',
     'label="변경 사항 저장"',
     'title="재알림"',
-    'title="삭제 전 확인"',
+    'title="일정 삭제"',
   ].map(label => detail.indexOf(label));
   assert.ok(order.every(index => index !== -1), 'Required editing group is missing');
   assert.ok(order.every((value, index) => index === 0 || value > order[index - 1]), 'Unexpected editing order');
