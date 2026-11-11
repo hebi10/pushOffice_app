@@ -1,0 +1,108 @@
+{
+  "package": "com.hebi96.pushOffice_app",
+  "language": "ko-KR",
+  "appUiCommit": "fd0b5a2118c352d442135308e2b1360e1beba599",
+  "captureRun": "42952209462",
+  "sourcePolicy": "unmodified actual Android emulator screenshot pixels",
+  "complete": true,
+  "screenshots": [
+    {
+      "name": "01-home-briefing.png",
+      "source": "22b-home-today-three.png",
+      "source_sha256": "45f67519b4036df8a26207bf82a57754d8d9713afff8bcbbde562410d83366fd",
+      "sha256": "7e4c72491672d14fbbe0a782d21a9228fe788b41603ec9b9b15afee6a39ecb75",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "02-calendar.png",
+      "source": "23c-calendar-today-three-list.png",
+      "source_sha256": "4aafcd47876be85e03291fe20e1ba24948c0355b7101494328f424884de92096",
+      "sha256": "c2c6a2bb67941046f82bd283055bcf63c2ec5fcf0a986bc2bcaac52c8e753d18",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "03-quick-entry.png",
+      "source": "05-quick-entry.png",
+      "source_sha256": "6454a85be0faaae357b9279f31d8a37c1eb6e7c005abcbf20ed2677cd3dc5bb7",
+      "sha256": "ad0b96d412337efb3f62ec899b49cc6532e7552bd39339952c18b56cb3086264",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "04-save-confirmation.png",
+      "source": "07c-native-confirmation-populated.png",
+      "source_sha256": "106c610dcfe8d155a38dc86c9e771d14a316f98b643d390aa7e11f9005837eba",
+      "sha256": "4ee6536d5133d6ced52b4372b550c13ee0d854f2c7ed29fa310a8c71cb98a4a8",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "05-schedule-detail.png",
+      "source": "11-schedule-detail.png",
+      "source_sha256": "a3c5488d433cdbc6e3e0e878f3f9093c230bd754d435686970adcdd7a0ac1331",
+      "sha256": "3e96c3e188146d85bbbd199a90d879f3b9af2c3fd1b8c59390a1b0fc54699cbf",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "06-notification-settings.png",
+      "source": "03c-settings-time-expanded.png",
+      "source_sha256": "38a20c7b7db970f319b756f5ba57a91922930a544df630049f62efaec0f7be5a",
+      "sha256": "cdae2e5823329038a0b8831e8553d580eb3692616d1107b53dc6f5626da3e7f0",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "07-ai-model-overview.png",
+      "source": "19a-ai-model-manager.png",
+      "source_sha256": "7de0bad25c183503c29cb636e822f991c49edcf5d14f95318505449f364f3ffd",
+      "sha256": "85c1904d94262881da7dca057617bccbb7574e6f920b2dc43c4ad4ac0d5941c3",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    },
+    {
+      "name": "08-ai-model-details.png",
+      "source": "19b-ai-model-manager-lower.png",
+      "source_sha256": "ec1f8adc66fe9de3de0ed3375c194ee2b45d210db361ce3f742ac0b460ffbf0f",
+      "sha256": "b8394834437c18bb46f1cab33b013d6f3ec322e0d28d7d2bfb7886831ec3cf5b",
+      "size": [
+        1080,
+        1920
+      ],
+      "mode": "RGB"
+    }
+  ],
+  "missing": [],
+  "featureGraphic": {
+    "name": "feature-graphic.png",
+    "sha256": "7f5bda510d887786920a566af684688a0e526dde2c478cc4f14a1021b7002c7b",
+    "size": [
+      1024,
+      500
+    ],
+    "mode": "RGB"
+  }
+}

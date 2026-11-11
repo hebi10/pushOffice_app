@@ -21,6 +21,8 @@ concurrency:
 jobs:
   screenshots:
     if: github.repository == 'hebi10/pushOffice_app'
+    permissions:
+      contents: write
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
@@ -29,6 +31,8 @@ jobs:
       EXPO_NO_DOTENV: "1"
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -78,6 +82,76 @@ jobs:
           script: bash tools/ui/install_and_capture.sh
       - name: Verify all required UI captures and reject warnings
         run: python3 tools/ui/verify_captures.py
+      - name: Install Korean font and Pillow for Mono Office marketing assets
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y fonts-noto-cjk
+          python3 -m pip install --disable-pip-version-check Pillow==11.3.0
+      - name: Render eight actual-screen preview posters and a 1024x500 feature graphic
+        env:
+          SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 tools/ui/build_store_refresh.py \
+            --captures ui-captures \
+            --out store-refresh-output \
+            --icon store-assets/ko-KR/app-icon.png
+      - name: Verify eight unmodified Android screenshot sources and poster checksums
+        run: |
+          python3 - <<'PY'
+          import hashlib,json
+          from pathlib import Path
+          from PIL import Image
+          out=Path('store-refresh-output')
+          data=json.loads((out/'manifest.json').read_text(encoding='utf-8'))
+          assert data['package']=='com.hebi96.pushOffice_app'
+          assert data['complete'] is True and not data['missing']
+          assert len(data['screenshots'])==8
+          assert len({x['name'] for x in data['screenshots']})==8
+          for item in data['screenshots']:
+              source=Path('ui-captures')/item['source']
+              rendered=out/item['name']
+              assert source.is_file() and rendered.is_file()
+              assert hashlib.sha256(source.read_bytes()).hexdigest()==item['source_sha256']
+              assert hashlib.sha256(rendered.read_bytes()).hexdigest()==item['sha256']
+              with Image.open(rendered) as pic:
+                  assert pic.size==(1080,1920) and pic.mode=='RGB'
+          graphic=out/'feature-graphic.png'
+          assert graphic.is_file()
+          assert hashlib.sha256(graphic.read_bytes()).hexdigest()==data['featureGraphic']['sha256']
+          with Image.open(graphic) as pic:
+              assert pic.size==(1024,500)
+          print('8/8 genuine capture mappings, poster checksums and feature graphic verified.')
+          PY
+      - name: Preserve verified eight-image preview artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-store-refresh-eight-preview
+          path: store-refresh-output/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Stage verified preview assets on the same PR branch only
+        if: >-
+          github.event.pull_request.number == 46 &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          github.head_ref == 'design/store-brand-refresh-20261111' &&
+          hashFiles('store-assets/ko-KR/refresh-manifest-20261111.json') == ''
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          mkdir -p store-assets/ko-KR/screenshots-refresh-20261111
+          cp store-refresh-output/*.png store-assets/ko-KR/screenshots-refresh-20261111/
+          mv store-assets/ko-KR/screenshots-refresh-20261111/feature-graphic.png store-assets/ko-KR/feature-graphic-refresh-20261111.png
+          cp store-refresh-output/manifest.json store-assets/ko-KR/refresh-manifest-20261111.json
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add store-assets/ko-KR/screenshots-refresh-20261111 store-assets/ko-KR/feature-graphic-refresh-20261111.png store-assets/ko-KR/refresh-manifest-20261111.json
+          if ! git diff --cached --quiet; then
+            git commit -m "design: stage 8 authentic Android Play graphics for PR review"
+            git fetch origin "$HEAD_REF"
+            git rebase FETCH_HEAD
+            git push origin "HEAD:refs/heads/$HEAD_REF"
+          fi
       - name: Preserve screenshots and capture details
         if: always()
         uses: actions/upload-artifact@v4
