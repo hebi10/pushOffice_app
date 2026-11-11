@@ -57,6 +57,9 @@ jobs:
           disable-animations: true
           script: |
             bash tools/ui/run_mono_office_native_qa.sh
+            (cd android && ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleDebug --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' -Pkotlin.compiler.execution.strategy=in-process -PreactNativeArchitectures=x86_64)
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell pm path com.hebi96.pushOffice_app
             mkdir -p integration-qa/api-${{ matrix.api-level }}
             adb shell monkey -p com.hebi96.pushOffice_app 1
             sleep 10
