@@ -98,7 +98,7 @@ class QuickEntryActivity : Activity() {
       orientation=LinearLayout.VERTICAL
       background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() }
     }
-    frame.addView(scroll,LinearLayout.LayoutParams(-1,-2))
+    frame.addView(scroll,if(confirmationPage) LinearLayout.LayoutParams(-1,0,1f) else LinearLayout.LayoutParams(-1,-2))
     confirmationFooter=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(18),0,dp(18),dp(12))
@@ -109,7 +109,10 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text=title; textSize=22f; setTextColor(foregroundColor); setTypeface(null,Typeface.BOLD); setPadding(0,dp(6),0,dp(4)) })
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(400)),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(
+      (resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(400)),
+      if(confirmationPage) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
+    )
   }
   private fun chooser() {
     confirmationFooter=null
