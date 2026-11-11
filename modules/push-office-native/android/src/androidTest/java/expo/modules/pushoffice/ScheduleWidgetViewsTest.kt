@@ -196,6 +196,21 @@ class ScheduleWidgetViewsTest {
     }
   }
 
+  @Test fun installedWidgetProvidersAndQuickTileHaveExpectedSecurityAndLabels() {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val packageManager = context.packageManager
+    for (provider in listOf(ScheduleWidgetProvider::class.java, ScheduleAgendaWidgetProvider::class.java)) {
+      val receiver = packageManager.getReceiverInfo(android.content.ComponentName(context, provider), android.content.pm.PackageManager.GET_META_DATA)
+      assertFalse("Widget provider must not be externally exported", receiver.exported)
+      assertTrue("Widget provider requires readable label", receiver.loadLabel(packageManager).isNotEmpty())
+      assertTrue("Widget provider must have widget metadata", receiver.metaData?.containsKey("android.appwidget.provider") == true)
+    }
+    val tile = packageManager.getServiceInfo(android.content.ComponentName(context, ScheduleTileService::class.java), 0)
+    assertTrue("Quick Settings tile must be discoverable by Android", tile.exported)
+    assertEquals("android.permission.BIND_QUICK_SETTINGS_TILE", tile.permission)
+    assertTrue("Quick Settings tile must have readable label", tile.loadLabel(packageManager).isNotEmpty())
+  }
+
   private fun assertInputActionsFit(fixture: Fixture, description: String) {
     val actions = fixture.root.findViewById<View>(R.id.widget_actions)
     val actionBounds = bounds(fixture.root, actions)
