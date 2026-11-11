@@ -1,0 +1,66 @@
+name: Push Office Play image readback 2026-11-11
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-play-readback-20261111.yml'
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+  pull-requests: write
+
+concurrency:
+  group: pushoffice-play-listing-readback-20261111
+  cancel-in-progress: false
+
+jobs:
+  readback:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[push-office-readback-20261111]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - name: Existing app-scoped Google Play authentication
+        uses: google-github-actions/auth@v3
+        id: auth
+        with:
+          project_id: hebi-app-release-80847404
+          workload_identity_provider: ${{ vars.PLAY_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.PLAY_SERVICE_ACCOUNT }}
+          token_format: access_token
+          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
+          access_token_lifetime: 600s
+          create_credentials_file: false
+          export_environment_variables: false
+      - name: Read the committed Play image inventory (no upload, release or track change)
+        env:
+          PLAY_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
+        run: python3 .github/ops/readback_play_store_refresh_20261111.py
+      - name: Record safe Play readback evidence in the merged PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          file="${{ runner.temp }}/push-office-store-readback-20261111.md"
+          if [ ! -f "$file" ]; then
+            printf '%s\n' 'Push Office Play readback could not run; check the Action job status.' > "$file"
+          fi
+          gh issue comment 46 --repo "$GH_REPO" --body-file "$file"
+      - name: Retain read-only Google Play verification report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-store-8-image-readback-20261111
+          path: |
+            ${{ runner.temp }}/push-office-store-readback-20261111.json
+            ${{ runner.temp }}/push-office-store-readback-20261111.md
+          if-no-files-found: warn
+          retention-days: 30
