@@ -27,12 +27,9 @@ class ScheduleNotificationListener : NotificationListenerService() {
         notification.visibility == Notification.VISIBILITY_SECRET) return
     val title = notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.toString().orEmpty()
     val body = notification.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString().orEmpty()
-    val source = NotificationSuggestionPolicy.candidate(title, body) ?: return
-    // A burst of notifications cannot spawn unlimited AICore sessions.
+    if (body.isBlank() || NotificationSuggestionPolicy.isSensitive(title, body)) return
+    // Event-driven local filtering only. No AICore/LiteRT inference in the background.
     if (active.incrementAndGet() > 2) { active.decrementAndGet(); return }
-    val id = MessageDigest.getInstance("SHA-256")
-      .digest((sbn.packageName + "|" + sbn.key + "|" + source).toByteArray(Charsets.UTF_8))
-      .take(16).joinToString("") { "%02x".format(it) }
     val context = applicationContext
     val sourcePackage = sbn.packageName
     val created = sbn.postTime
@@ -40,19 +37,21 @@ class ScheduleNotificationListener : NotificationListenerService() {
       try {
         if (!NotificationSuggestionStore.enabled(context) || !NotificationSuggestionStore.accessGranted(context)) return@launch
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneId.systemDefault())
-        // ML Kit GenAI can reject background inference (BACKGROUND_USE_BLOCKED).
-        // Background only performs deterministic local parsing; AI refinement happens on user action in foreground.
-        val parsed = ScheduleParser.parse(source, now)
-        val start = parsed.start ?: return@launch
-        if (parsed.error != null || parsed.shiftMinutes != null || parsed.title.isBlank()) return@launch
+        val decision = NotificationIntentPolicy.classify(title, body, now)
+        if (decision.triage == NotificationTriage.DISCARD) return@launch
+        val id = MessageDigest.getInstance("SHA-256")
+          .digest((sourcePackage + "|" + sbn.key + "|" + decision.excerpt).toByteArray(Charsets.UTF_8))
+          .take(16).joinToString("") { "%02x".format(it) }
         val label = try {
           packageManager.getApplicationLabel(packageManager.getApplicationInfo(sourcePackage, 0)).toString()
         } catch (_: Exception) { sourcePackage }
         NotificationSuggestionStore.add(context, NotificationSuggestion(
           id = id, sourceApp = label.take(60), packageName = sourcePackage,
-          excerpt = source.take(300), title = parsed.title.trim().take(120),
-          startAt = start.toInstant().toEpochMilli(), receivedAt = System.currentTimeMillis(),
-          analysis = "local_rules"
+          excerpt = decision.excerpt.take(300), title = decision.title.take(120),
+          startAt = decision.startAt, receivedAt = System.currentTimeMillis(),
+          analysis = "local_rules",
+          triage = if (decision.triage == NotificationTriage.CONFIRMED_CANDIDATE)
+            "confirmed_candidate" else "needs_confirmation"
         ))
       } catch (e: CancellationException) { throw e }
       catch (_: Exception) { /* A malformed notification must never crash the listener. */ }
