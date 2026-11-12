@@ -26,7 +26,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          APPROVED_QA_HEAD: 0d0f8cf8293784bfb2ee9d252d35139e4834f4f6
+          APPROVED_QA_HEAD: 458703090ba91bd099f703e3c8e0261196ab1973
         run: |
           set -euo pipefail
           current="$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq '.object.sha')"
@@ -46,7 +46,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          APPROVED_QA_HEAD: 0d0f8cf8293784bfb2ee9d252d35139e4834f4f6
+          APPROVED_QA_HEAD: 458703090ba91bd099f703e3c8e0261196ab1973
         run: |
           set -euo pipefail
           report="$(gh api "repos/${GH_REPO}/commits/${APPROVED_QA_HEAD}/check-runs?per_page=100")"
