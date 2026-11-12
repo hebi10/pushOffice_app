@@ -156,6 +156,7 @@ export default function AiModelsScreen() {
         {models.map(model => {
           const ready=isReady(model);
           const result=results[model.id];
+          const progress=downloadPercent(model.bytesDownloaded, model.totalBytes);
           const canInstall=model.id==='gemini-nano'
             ? model.state==='downloadable' || model.state==='error'
             : model.state==='not_installed' || model.state==='error';
@@ -167,37 +168,57 @@ export default function AiModelsScreen() {
                 </Text>
                 {model.selected && ready ? <Text style={[styles.selected,{color:colors.text}]}>기본 모델</Text> : null}
               </View>
-              <View style={[styles.statusRow,{backgroundColor:colors.inputBackground}]} accessibilityLabel={'모델 상태: '+modelStatus(model)}>
+              <View
+                style={[styles.statusRow,{backgroundColor:colors.inputBackground}]}
+                accessible
+                accessibilityLabel={'모델 상태: '+modelStatus(model)}
+              >
                 <Text style={[styles.statusText,{color:model.state==='error'?colors.danger:colors.text}]}>{modelStatus(model)}</Text>
-                {model.selected && ready ? <Text style={[styles.caption,{color:colors.textSecondary}]}>현재 사용 중</Text> : null}
+                {model.selected && ready ? <Text style={[styles.caption,{color:colors.textSecondary}]}>기본 선택됨</Text> : null}
               </View>
-              {(model.state==='error' || model.state==='unavailable') && model.message ? (
+              {model.state==='downloading' && progress !== null ? (
+                <View style={styles.progressGroup}>
+                  <View
+                    style={[styles.progressTrack,{backgroundColor:colors.surfaceBorder}]}
+                    accessible
+                    accessibilityRole="progressbar"
+                    accessibilityLabel={model.title+' 다운로드 진행률'}
+                    accessibilityValue={{min:0,max:100,now:progress}}
+                  >
+                    <View style={[styles.progressFill,{width:(progress+'%') as `${number}%`,backgroundColor:colors.primary}]} />
+                  </View>
+                  <Text style={[styles.caption,{color:colors.textSecondary}]}>
+                    {Math.max(0,model.bytesDownloaded / 1048576).toFixed(1)+' / '+(model.totalBytes / 1048576).toFixed(1)+' MB'}
+                  </Text>
+                </View>
+              ) : null}
+              {(model.state==='error' || model.state==='unavailable' || model.state==='downloading' || model.state==='verifying') && model.message ? (
                 <Text style={[styles.caption,{color:colors.textSecondary}]}>{model.message}</Text>
               ) : null}
               {canInstall ? (
                 <AssistantButton label={model.state==='error'?'모델 다운로드 재시도':'모델 다운로드'}
-                  icon="download-outline" secondary disabled={Boolean(busyId)} busy={busyId===model.id}
+                  icon="download-outline" secondary disabled={Boolean(busyId) || listState !== 'ready'} busy={busyId===model.id}
                   onPress={()=>{void action(model.id,()=>model.id==='gemini-nano'
                     ?PushOfficeNative.downloadAiModel():PushOfficeNative.downloadAiModelById(model.id),'기기 AI 다운로드');}} />
               ) : null}
               {model.id !== 'gemini-nano' && model.state === 'installed' ? (
                 <AssistantButton label="파일 SHA-256 무결성 검사" icon="shield-checkmark-outline" secondary
-                  disabled={Boolean(busyId)} busy={busyId === model.id}
+                  disabled={Boolean(busyId) || listState !== 'ready'} busy={busyId === model.id}
                   onPress={() => { void action(model.id, () => PushOfficeNative.verifyAiModel(model.id), '파일 무결성 검사'); }} />
               ) : null}
               {ready ? (
                 <AssistantButton label="이 모델로 테스트" icon="flask-outline" secondary
-                  disabled={Boolean(busyId)||!sample.trim()} busy={busyId===model.id}
+                  disabled={Boolean(busyId)||listState !== 'ready'||!sample.trim()} busy={busyId===model.id}
                   onPress={()=>{void testOne(model.id);}} />
               ) : null}
               {ready && !model.selected ? (
                 <AssistantButton label="기본 모델로 사용" icon="checkmark-outline"
-                  disabled={Boolean(busyId)||!result?.success}
+                  disabled={Boolean(busyId)||listState !== 'ready'||!result?.success}
                   onPress={()=>{void action(model.id,()=>PushOfficeNative.selectAiModel(model.id),'기본 모델 변경');}} />
               ) : null}
               {model.id!=='gemini-nano' && (model.state==='installed'||model.state==='downloading'||model.state==='verifying'||model.state==='error') ? (
                 <AssistantButton label={model.state==='installed'?'모델 삭제':model.state==='error'?'오류 모델 데이터 삭제':'다운로드 중지 및 삭제'}
-                  icon="trash-outline" secondary disabled={Boolean(busyId)}
+                  icon="trash-outline" secondary disabled={Boolean(busyId) || listState !== 'ready'}
                   onPress={()=>setRemoval(model.id)} />
               ) : null}
               <TouchableOpacity
@@ -218,23 +239,23 @@ export default function AiModelsScreen() {
                 </View>
               ) : null}
               {result ? (
-                <View style={[styles.result,{backgroundColor:colors.inputBackground}]}>
-                  <Text style={[styles.selected,{color:colors.text}]}>
-                    {(result.success?'테스트 결과':'테스트 실패')+' · '+result.durationMs.toLocaleString('ko-KR')+'ms'}
+                <View style={[styles.result,{backgroundColor:colors.inputBackground}]} accessibilityRole="summary">
+                  <Text style={[styles.selected,{color:result.success?colors.text:colors.danger}]}>
+                    {describeModelTest(result).headline}
                   </Text>
                   <Text style={[styles.copy,{color:colors.textSecondary}]}>
-                    {result.success
-                      ? (result.title||'')+' · '+new Date(result.startAt||0).toLocaleString('ko-KR')+' · '+(result.repeatType||'none')
-                      : result.message||'모델 실행에 실패했습니다.'}
+                    {describeModelTest(result).details}
                   </Text>
                 </View>
+              ) : ready ? (
+                <Text style={[styles.caption,{color:colors.textSecondary}]}>테스트 전 · 모델 선택 전 테스트 결과를 확인해 주세요.</Text>
               ) : null}
             </AssistantCard>
           );
         })}
       </ScrollView>
       <AppDialog visible={removal!==null} destructive title="기기 AI 모델 삭제"
-        message="선택한 모델 파일을 기기에서 삭제합니다. 일정 데이터는 유지되며 선택된 모델은 Gemini Nano로 돌아갑니다."
+        message="선택한 모델 파일을 기기에서 삭제합니다. 일정 데이터는 유지됩니다. 기본 선택 모델을 삭제하면 Gemini Nano로 돌아가며, Nano 미지원 기기에서는 텍스트 입력을 이용해 주세요."
         confirmLabel="모델 삭제" onDismiss={()=>setRemoval(null)} onConfirm={()=>{void remove();}} />
       <AppDialog visible={notice!==null} title={notice?.title??''}
         message={notice?.message??''} showCancel={false}
@@ -249,6 +270,9 @@ const styles=StyleSheet.create({
   copy:{...uiTypography.body},
   caption:{...uiTypography.caption},
   result:{padding:uiSpacing.sm,gap:uiSpacing.xs},
+  progressGroup:{gap:uiSpacing.xxs,paddingHorizontal:uiSpacing.xxs},
+  progressTrack:{height:6,width:'100%',overflow:'hidden'},
+  progressFill:{height:'100%'},
   statusRow:{minHeight:uiSizes.touchMinHeight,flexDirection:'row',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:uiSpacing.xs,paddingHorizontal:uiSpacing.sm,paddingVertical:uiSpacing.xs},
   statusText:{...uiTypography.body,fontWeight:'700'},
   detailsToggle:{minHeight:uiSizes.touchMinHeight,justifyContent:'center',paddingHorizontal:uiSpacing.xs},
