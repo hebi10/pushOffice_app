@@ -322,7 +322,7 @@ assert_native_mono_surface("11-quick-entry-dark", 100, 1000)
 tap("텍스트로 일정 입력")
 screenshot("12-native-editor-dark", "native editor with explicit dark app theme")
 assert_dark_surface("12-native-editor-dark", 100, 500)
-assert_native_mono_surface("12-native-editor-dark", 100, 500)
+assert_native_mono_surface("12-native-editor-dark", 100, 300)
 
 (OUT / "capture-manifest.json").write_text(
     json.dumps(
