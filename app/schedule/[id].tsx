@@ -157,7 +157,7 @@ export default function ScheduleDetail() {
       >
         <ScreenIntro title="일정 관리" compact />
         <View accessibilityRole="summary" style={[styles.scheduleOverview, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
-          <Text style={[styles.overviewTitle, { color: colors.text }]} numberOfLines={3}>{title || '제목 없는 일정'}</Text>
+          <Text style={[styles.overviewTitle, { color: colors.text }]} numberOfLines={2}>{title || '제목 없는 일정'}</Text>
           <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>
             {date ? dayjs(date).format('YYYY년 M월 D일 (ddd)') : '날짜 미지정'}
             {' · '}{allDay ? '종일' : time}
@@ -165,10 +165,14 @@ export default function ScheduleDetail() {
           {end ? (
             <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>종료 {overviewEnd}</Text>
           ) : null}
-          <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
-            {repeat === 'monthly' ? '매월 반복' : repeat === 'yearly' ? '매년 반복' : '반복 없음'}
-            {' · '}{notification ? '알림 사용' : '알림 끔'}
-          </Text>
+          <View style={styles.overviewStatusRow}>
+            <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
+              {repeat === 'monthly' ? '매월 반복' : repeat === 'yearly' ? '매년 반복' : '반복 없음'}
+            </Text>
+            <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
+              {notification ? '알림 사용' : '알림 끔'}
+            </Text>
+          </View>
         </View>
         <AssistantCard title="일정 제목 수정" icon="create-outline">
           {field('제목', title, setTitle)}
@@ -218,31 +222,33 @@ export default function ScheduleDetail() {
           ) : null}
         </AssistantCard>
 
-        <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle="반복 일정 수정 시 전체 적용 여부를 확인합니다.">
+        <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle={detail.data.repeatType !== 'none' || repeat !== 'none' ? '반복 일정은 전체 회차에 적용됩니다.' : undefined}>
           <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>반복 주기</Text>
-          {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
-            <TouchableOpacity
-              key={key}
-              accessibilityRole="radio"
-              accessibilityLabel={label}
-              accessibilityState={{ checked: repeat === key }}
-              onPress={() => setRepeat(key)}
-              style={[
-                styles.repeatChoice,
-                {
-                  borderColor: repeat === key ? colors.primary : colors.inputBorder,
-                  backgroundColor: repeat === key ? colors.primaryLight : colors.surface,
-                },
-              ]}
-            >
-              <Text style={[styles.repeatLabel, { color: colors.text }]}>{label}</Text>
-              <Ionicons
-                name={repeat === key ? 'radio-button-on' : 'radio-button-off'}
-                color={repeat === key ? colors.primary : colors.textTertiary}
-                size={22}
-              />
-            </TouchableOpacity>
-          ))}
+          <View style={styles.repeatOptions}>
+            {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
+              <TouchableOpacity
+                key={key}
+                accessibilityRole="radio"
+                accessibilityLabel={label}
+                accessibilityState={{ checked: repeat === key }}
+                onPress={() => setRepeat(key)}
+                style={[
+                  styles.repeatChoice,
+                  {
+                    borderColor: repeat === key ? colors.primary : colors.inputBorder,
+                    backgroundColor: repeat === key ? colors.primaryLight : colors.surface,
+                  },
+                ]}
+              >
+                <Text style={[styles.repeatLabel, { color: colors.text }]}>{label}</Text>
+                <Ionicons
+                  name={repeat === key ? 'radio-button-on' : 'radio-button-off'}
+                  color={repeat === key ? colors.primary : colors.textTertiary}
+                  size={20}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
           <SettingRow
             title="일정 알림"
             description="알림 권한·전체 설정에 따라 전송"
@@ -258,7 +264,7 @@ export default function ScheduleDetail() {
           onPress={confirmSave}
         />
 
-        <AssistantCard title="재알림" icon="alarm-outline" subtitle="일정은 유지하고 알림만 다시 예약합니다.">
+        <AssistantCard title="재알림" icon="alarm-outline" subtitle="일정 데이터는 유지하고 알림만 다시 예약합니다.">
           <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary onPress={() =>
             PushOfficeNative.snoozeSchedule(id, 10).then(() => showToast('10분 뒤 재알림을 예약했습니다.')).catch(e => showError(e, '예약하지 못했습니다.'))
           } />
@@ -266,16 +272,18 @@ export default function ScheduleDetail() {
             PushOfficeNative.cancelSnooze(id).then(() => showToast('재알림을 취소했습니다.')).catch(e => showError(e, '취소하지 못했습니다.'))
           } />
         </AssistantCard>
-        <AssistantCard title="일정 삭제" icon="trash-outline" subtitle="연결된 알림도 삭제되며 되돌릴 수 없습니다.">
-          <AssistantButton
-            label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
-            icon="trash-outline"
-            variant="destructive"
-            busy={remove.isPending}
-            disabled={update.isPending}
-            onPress={() => setPendingDialog('delete')}
-          />
-        </AssistantCard>
+        <View style={styles.dangerSection}>
+          <AssistantCard title="일정 삭제" icon="trash-outline" subtitle="연결된 알림도 삭제되며 되돌릴 수 없습니다.">
+            <AssistantButton
+              label={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
+              icon="trash-outline"
+              variant="destructive"
+              busy={remove.isPending}
+              disabled={update.isPending}
+              onPress={() => setPendingDialog('delete')}
+            />
+          </AssistantCard>
+        </View>
       </ScrollView>
 
       <SchedulePickerDialog
@@ -392,10 +400,11 @@ export default function ScheduleDetail() {
 }
 
 const styles = StyleSheet.create({
-  scheduleOverview: { padding: uiSpacing.sm, gap: uiSpacing.xxs, borderRadius: uiRadii.card, borderWidth: uiSizes.borderWidth },
-  overviewTitle: { ...uiTypography.sectionTitle, fontSize: 20, lineHeight: 28 },
-  overviewTime: { ...uiTypography.body, fontVariant: ['tabular-nums'] },
-  overviewMeta: { ...uiTypography.caption, paddingTop: uiSpacing.xxs },
+  scheduleOverview: { padding: uiSpacing.xs, gap: uiSpacing.xxs, borderRadius: uiRadii.card, borderWidth: uiSizes.borderWidth },
+  overviewTitle: { ...uiTypography.sectionTitle, fontSize: 18, lineHeight: 25 },
+  overviewTime: { ...uiTypography.body, fontSize: 14, lineHeight: 20, fontVariant: ['tabular-nums'] },
+  overviewStatusRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: uiSpacing.sm },
+  overviewMeta: { ...uiTypography.caption },
   missingScreen: { flex: 1 },
   missingContent: {
     paddingVertical: uiSpacing.xxl,
@@ -405,18 +414,23 @@ const styles = StyleSheet.create({
   groupCaption: uiTypography.caption,
   endRow: { flexDirection: 'row', flexWrap: 'wrap', gap: uiSpacing.xs },
   endField: { flexGrow: 1, flexBasis: 138, minWidth: 0 },
+  repeatOptions: { flexDirection: 'row', flexWrap: 'wrap', gap: uiSpacing.xs },
   repeatChoice: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: uiSpacing.sm,
+    flexGrow: 1,
+    flexBasis: 94,
+    minWidth: 94,
+    gap: uiSpacing.xxs,
     minHeight: uiSizes.controlMinHeight,
-    paddingHorizontal: uiSpacing.md,
-    paddingVertical: uiSpacing.sm,
+    paddingHorizontal: uiSpacing.xs,
+    paddingVertical: uiSpacing.xs,
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
   },
-  repeatLabel: { ...uiTypography.body, flex: 1, minWidth: 0 },
+  repeatLabel: { ...uiTypography.body, fontSize: 14, lineHeight: 21, flex: 1, minWidth: 0 },
+  dangerSection: { marginTop: uiSpacing.sm },
   timeRow: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.sm },
   timeField: { flex: 1, minWidth: 0, gap: uiSpacing.xxs },
   timeSeparator: { ...uiTypography.sectionTitle, paddingTop: uiSpacing.md },
