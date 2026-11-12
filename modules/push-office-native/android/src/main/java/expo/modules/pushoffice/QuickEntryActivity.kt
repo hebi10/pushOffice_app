@@ -85,7 +85,7 @@ class QuickEntryActivity : Activity() {
     confirmationFooter=null
     window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() } }
-    val confirmationPage=title=="일정 확인 및 저장" || title=="변경 내용 확인"
+    val confirmationPage=title=="일정 확인 및 저장" || title=="변경 내용 확인" || title=="일정 입력"
     val limit=(resources.displayMetrics.heightPixels-dp(if(confirmationPage) 240 else 160)).coerceAtLeast(dp(160))
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -176,6 +176,7 @@ class QuickEntryActivity : Activity() {
       setOnClickListener { finish() }
     },LinearLayout.LayoutParams(dp(48),dp(48)))
     root.addView(heading)
+    stepHint(1,"입력 방식 선택")
     root.addView(ImageView(this).apply {
       setImageResource(R.drawable.quick_entry_mono)
       setColorFilter(actionColor)
@@ -262,6 +263,16 @@ class QuickEntryActivity : Activity() {
     window.setGravity(Gravity.BOTTOM)
     window.setLayout(availableWidth.coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
   }
+  private fun stepHint(step: Int, name: String) {
+    root.addView(TextView(this).apply {
+      text="$step / 3 · $name"
+      contentDescription="전체 3단계 중 ${step}단계 · $name"
+      textSize=12f
+      setTypeface(null,Typeface.BOLD)
+      setTextColor(secondary)
+      setPadding(dp(2),dp(4),dp(2),dp(8))
+    })
+  }
   private fun sectionLabel(title: String, detail: String?=null) {
     root.addView(TextView(this).apply {
       text=title
@@ -279,6 +290,7 @@ class QuickEntryActivity : Activity() {
   }
   private fun editor(voice: Boolean) {
     page("일정 입력", "텍스트나 음성으로 기록하고 저장 전에 확인하세요.")
+    stepHint(2,"일정 내용 작성")
     root.addView(TextView(this).apply {
       text="예: 내일 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
       textSize=13f
@@ -366,7 +378,7 @@ class QuickEntryActivity : Activity() {
     root.addView(toolsToggle)
     optionalTools.visibility=if(voice) View.VISIBLE else View.GONE
     root.addView(optionalTools)
-    sectionLabel("내용 확인")
+    sectionLabel("직접 지정", "문장에서 날짜나 시간을 찾기 어려울 때 선택하세요.")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
     button("뒤로") { chooser() }
     button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
@@ -397,6 +409,7 @@ class QuickEntryActivity : Activity() {
       if(original==null) "일정 확인 및 저장" else "변경 내용 확인",
       "제목, 날짜, 시간, 반복을 확인한 뒤 저장하세요."
     )
+    stepHint(3,"저장 전 확인")
     val note=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(12),dp(9),dp(12),dp(9))
@@ -408,7 +421,8 @@ class QuickEntryActivity : Activity() {
     note.addView(TextView(this).apply {
       text=if(original==null) message else "기존 일정에서 변경되는 내용을 확인해 주세요."
       textSize=14f
-      setTextColor(foregroundColor)
+      setTextColor(if(original==null && dateTime==null) dangerColor else foregroundColor)
+      accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
     })
     note.addView(TextView(this).apply {
       text="저장 기준 시간대: ${formZone.id}"
@@ -697,7 +711,7 @@ class QuickEntryActivity : Activity() {
   private fun button(label: String, description: String=label, action: ()->Unit) {
     val primary=label=="내용 확인" || label=="일정 저장" || label=="변경 내용 저장"
     val color=if(primary) (onPrimary) else actionColor
-    val target=if(label=="일정 저장" || label=="변경 내용 저장" || label=="입력으로 돌아가기") confirmationFooter ?: root else root
+    val target=if(label=="일정 저장" || label=="변경 내용 저장" || label=="입력으로 돌아가기" || label=="뒤로" || label=="내용 확인") confirmationFooter ?: root else root
     if(target !== root) target.visibility=View.VISIBLE
     target.addView(Button(this).apply {
       text=label

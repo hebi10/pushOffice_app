@@ -81,6 +81,32 @@ class QuickEntryActivityUiTest {
     }
   }
 
+  @Test fun editorHasFixedActionsAndStepFeedback() {
+    launch().use { scenario ->
+      scenario.onActivity { activity ->
+        assertTrue(texts(activity).contains("1 / 3 · 입력 방식 선택"))
+        views(activity).single { it.contentDescription == TEXT_CHOICE }.performClick()
+      }
+      InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+      scenario.onActivity { activity ->
+        assertTrue(texts(activity).contains("2 / 3 · 일정 내용 작성"))
+        assertTrue(texts(activity).contains("모든 입력은 기기에서 처리합니다."))
+        val buttons = views(activity).filterIsInstance<Button>()
+        val back = buttons.single { it.text.toString() == "뒤로" }
+        val next = buttons.single { it.text.toString() == "내용 확인" }
+        assertSame("Step 2 actions must stay together in a fixed footer", back.parent, next.parent)
+        assertEquals("The editor must preserve keyboard resize behavior",
+          WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+          activity.window.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST)
+        assertTrue("Back must be reachable without scrolling", back.getGlobalVisibleRect(Rect()))
+        assertTrue("Confirm must be reachable without scrolling", next.getGlobalVisibleRect(Rect()))
+        assertEquals("Entering text input must not request microphone access",
+          context.checkSelfPermission(Manifest.permission.RECORD_AUDIO),
+          activity.checkSelfPermission(Manifest.permission.RECORD_AUDIO))
+      }
+    }
+  }
+
   @Test fun calendarPreviewIsEditableAndNeverAutoSaves() {
     val before = ScheduleStore(context).use { it.all().size }
     val date = LocalDate.now().plusDays(4)
@@ -94,6 +120,7 @@ class QuickEntryActivityUiTest {
         views(activity).filterIsInstance<TextView>()
           .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
         assertTrue(texts(activity).contains("일정 확인 및 저장"))
+        assertTrue(texts(activity).contains("3 / 3 · 저장 전 확인"))
         val fields = views(activity).filterIsInstance<EditText>()
         assertTrue(fields.any { it.contentDescription == "일정 제목" })
         assertEquals(date.toString(),
