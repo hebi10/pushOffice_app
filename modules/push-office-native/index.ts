@@ -43,9 +43,11 @@ export interface NotificationSuggestion {
   packageName: string;
   excerpt: string;
   title: string;
-  startAt: number;
+  /** null means the message did not provide a verified date/time. Never synthesize a timestamp. */
+  startAt: number | null;
   receivedAt: number;
   analysis: 'on_device_ai' | 'local_rules';
+  triage: 'confirmed_candidate' | 'needs_confirmation';
 }
 export interface NotificationSuggestionStatus {
   enabled: boolean;
