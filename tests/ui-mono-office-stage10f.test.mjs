@@ -25,7 +25,7 @@ test('10-F retains all four screens and existing schedule/notification/AI action
 
 test('10-F screenshot suite covers real dark native surfaces and 57-screen responsive QA', () => {
   assert.match(capture, /assert_native_mono_surface\("11-quick-entry-dark", 100, 1000\)/);
-  assert.match(capture, /assert_native_mono_surface\("12-native-editor-dark", 100, 500\)/);
+  assert.match(capture, /assert_native_mono_surface\("12-native-editor-dark", 100, 300\)/);
   assert.match(capture, /expected = \(28, 31, 34\)/);
   assert.match(capture, /"settings", "put", "system", "font_scale", "1\.3"/);
   assert.match(capture, /"wm", "size", "1440x2160"/);
