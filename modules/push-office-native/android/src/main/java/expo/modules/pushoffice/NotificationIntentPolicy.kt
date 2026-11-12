@@ -22,7 +22,7 @@ internal object NotificationIntentPolicy {
     """예약|미팅|회의|약속|만나|만날|보자|면접|치과|병원|검진|예방접종|수업|교육|발표|식사|모임|동창회|운동|행사|기념일|공연|기차\s*출발|회식|영화\s*(?:볼|관람)|여행|상담|전화|결산"""
   )
   private val weekday = Regex("""(?:이번\s*주|다음\s*주)?\s*[월화수목금토일]요일""")
-  private val recurrenceDate = Regex("""매월\\s*\\d{1,2}일|매년\\s*\\d{1,2}월\\s*\\d{1,2}일""")
+  private val recurrenceDate = Regex("""매월\s*\d{1,2}일|매년\s*\d{1,2}월\s*\d{1,2}일""")
   private val vagueDate = Regex("""이번\s*주|다음\s*주|주말|다음\s*달|이번\s*달|퇴근하고|어제\s*말한|12월\s*중순|다음\s*번""")
 
   fun classify(title: String, text: String, now: ZonedDateTime): NotificationDecision {
