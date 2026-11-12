@@ -2,6 +2,7 @@
 
 기준: 2026-11-12 / Asia/Seoul / main=df01ed7a66a8ba1d004308d1cddb3a4f91460348
 기획 문서: https://docs.google.com/document/d/1HMLAr5KKDQ1peNKsfkCTyqFIfptxJG38K3h4B8ry9W8/edit
+신규 Drive 기준선: https://docs.google.com/document/d/1vLZpkj_y7H20-ojMU2MVkqsfqHRJG2PkI6JHsGF7OUI/edit (05_PushOffice_일정관리 폴더)
 범위: 합성 데이터 기반 Kotlin 실제 알림 필터·일정 파서 오프라인 측정. 실제 앱 기능·서명·Play 변경 없음.
 
 ## 1. 현행 구조
