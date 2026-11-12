@@ -108,7 +108,8 @@ class NotiAi00BaselineTest {
       append("\n  ]\n}\n")
     }
     val resourceFile = File(url.toURI()).canonicalFile
-    val moduleBuildDir = resourceFile.parentFile.parentFile.parentFile
+    val moduleBuildDir = generateSequence(resourceFile.parentFile) { it.parentFile }
+      .firstOrNull { it.name == "build" } ?: error("Gradle module build directory is unavailable.")
     val reportFile = File(moduleBuildDir, "reports/noti-ai-00/baseline.json")
     require(reportFile.parentFile.mkdirs() || reportFile.parentFile.isDirectory) { "Cannot make QA report folder." }
     reportFile.writeText(report, Charsets.UTF_8)
