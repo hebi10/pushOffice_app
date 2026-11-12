@@ -9,7 +9,7 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 function RowIcon({ name }: { name: IconName }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.iconBox} accessible={false}>
+    <View style={styles.iconBox}>
       <Ionicons name={name} color={colors.textSecondary} size={20} />
     </View>
   );
