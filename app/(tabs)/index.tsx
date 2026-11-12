@@ -9,6 +9,7 @@ import { useSchedules } from '@/src/features/schedules';
 import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { dayjs } from '@/src/lib/time';
+import { ENV } from '@/src/lib/env';
 import { useAppSelector } from '@/src/store/store';
 import { PushOfficeNative, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
 import { AppDialog } from '@/src/components/ui/AppDialog';
@@ -73,7 +74,16 @@ export default function HomeScreen() {
         const record = nextSchedule((schedules.data ?? []).map(toNativeSchedule), now);
         return record ? hydrateSchedule(record) : null;
     }, [schedules.data, now]);
-    const summary = schedules.isLoading ? '기기에 저장된 일정을 확인하고 있어요.' : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(', ')}.${next ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}` : '오늘 등록된 일정은 없어요. 여유 있는 하루를 계획해 보세요.';
+    const nextIsInTodayAgenda = Boolean(next?.id && todayItems.some(item =>
+        item.id === next.id && item.startAt.toMillis() === next.startAt.toMillis()));
+    const summary = schedules.isLoading ? '기기에 저장된 일정을 확인하고 있어요.'
+        : schedules.isError ? '일정을 불러오지 못했습니다. 다시 확인해 주세요.'
+        : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(', ')}.${next && !nextIsInTodayAgenda ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}`
+        : '오늘 등록된 일정은 없어요. 여유 있는 하루를 계획해 보세요.';
+    const externalTypesSelected = settings.digestTypes.weather || settings.digestTypes.news || settings.digestTypes.stocks;
+    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim());
+    const externalCanRequest = externalTypesSelected && externalServiceConfigured;
+    const externalResultForToday = externalCanRequest && external.isSuccess && external.variables?.input.dateKey === today;
     const source = JSON.stringify([today, summary, schedules.data]);
     // Ref revision changes immediately with source render, before any deferred native completion.
     request.setSource(source);
@@ -208,7 +218,9 @@ export default function HomeScreen() {
           <AssistantCard title="오늘 일정" icon="list-outline" compact>
           <View style={styles.agendaHeading}>
             <Text style={[s.caption, { color: colors.textSecondary }]}>
-              {schedules.isLoading ? '일정을 확인하고 있습니다.' : '시간순 일정 목록'}
+              {schedules.isLoading ? '일정을 확인하고 있습니다.'
+                : nextIsInTodayAgenda ? '다음 일정 1건은 위 카드에서 확인하세요.'
+                : '시간순 일정 목록'}
             </Text>
             <TouchableOpacity
               accessibilityRole="button"
@@ -228,12 +240,14 @@ export default function HomeScreen() {
             <Text style={[s.body, { color: colors.textSecondary }]}>일정 목록을 불러오는 중입니다.</Text>
           ) : todayItems.length ? (
             <View style={styles.agendaList}>
-              {todayItems.map((item, index) => (
-                <ScheduleItem
-                  key={`${item.id ?? index}-${item.startAt.toMillis()}`}
-                  schedule={item}
-                />
-              ))}
+              {todayItems.map((item, index) =>
+                nextIsInTodayAgenda && item.id === next?.id && item.startAt.toMillis() === next.startAt.toMillis()
+                  ? null
+                  : <ScheduleItem
+                      key={`${item.id ?? index}-${item.startAt.toMillis()}`}
+                      schedule={item}
+                    />
+              )}
             </View>
           ) : (
             <Text style={[s.body, { color: colors.textSecondary }]}>
@@ -292,32 +306,45 @@ export default function HomeScreen() {
         ) : null}
 
         <View style={styles.externalSection}>
-          <AssistantCard title="외부 브리핑" icon="cloud-outline">
+          <AssistantCard title="외부 브리핑" icon="cloud-outline" compact>
             <Text style={[s.caption, { color: colors.textSecondary }]}>
-              날씨·뉴스·주식은 요청할 때만 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.
+              {!externalTypesSelected
+                ? '선택 기능입니다. 설정에서 날씨·뉴스·주식을 선택해 주세요.'
+                : !externalServiceConfigured
+                  ? '외부 브리핑 서비스가 연결되지 않았습니다. 로컬 일정은 계속 사용할 수 있습니다.'
+                  : '선택한 외부 정보는 직접 요청할 때만 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.'}
             </Text>
-            <AssistantButton
-              label="외부 브리핑 불러오기"
-              icon="cloud-download-outline"
-              secondary
-              busy={external.isPending}
-              onPress={() => external.mutate({ input: {
-                ownerId: uid ?? 'local', ownerType: 'device', dateKey: today,
-                timezone: settings.timezone, types: settings.digestTypes,
-                city: settings.digestCity, stockTickers: settings.stockTickers,
-                newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage,
-                allowExternal: true,
-              }, force: true })}
-            />
-            {external.isError ? (
+            {externalCanRequest ? (
+              <AssistantButton
+                label="외부 브리핑 불러오기"
+                icon="cloud-download-outline"
+                secondary
+                busy={external.isPending}
+                onPress={() => external.mutate({ input: {
+                  ownerId: uid ?? 'local', ownerType: 'device', dateKey: today,
+                  timezone: settings.timezone, types: settings.digestTypes,
+                  city: settings.digestCity, stockTickers: settings.stockTickers,
+                  newsKeywords: settings.newsKeywords, newsLanguage: settings.newsLanguage,
+                  allowExternal: true,
+                }, force: true })}
+              />
+            ) : !externalTypesSelected ? (
+              <AssistantButton
+                label="외부 정보 설정"
+                icon="settings-outline"
+                secondary
+                onPress={() => router.push('/(tabs)/settings')}
+              />
+            ) : null}
+            {externalCanRequest && external.isError ? (
               <Text style={[s.caption, { color: colors.danger }]}>
                 외부 정보를 가져오지 못했습니다. 로컬 일정은 계속 사용할 수 있습니다.
               </Text>
             ) : null}
           </AssistantCard>
-          {external.data?.weatherData ? <BriefingWeatherCard {...external.data.weatherData} /> : null}
-          {external.data?.newsData ? <BriefingNewsCard items={external.data.newsData} /> : null}
-          {external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
+          {externalResultForToday && external.data?.weatherData ? <BriefingWeatherCard {...external.data.weatherData} /> : null}
+          {externalResultForToday && external.data?.newsData ? <BriefingNewsCard items={external.data.newsData} /> : null}
+          {externalResultForToday && external.data?.stockData ? <BriefingStockCard items={external.data.stockData} /> : null}
         </View>
       </ScrollView>
       <AppDialog
@@ -359,14 +386,15 @@ const styles = StyleSheet.create({
   },
   briefingCopy: { flex: 1, gap: uiSpacing.xxs },
   briefingHeadline: { ...uiTypography.body, fontWeight: '600' },
-  notificationSetupRow: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.sm },
-  notificationSetupCopy: { flex: 1, minWidth: 0 },
+  notificationSetupRow: { gap: uiSpacing.xxs },
+  notificationSetupCopy: { width: '100%' },
   notificationSetupLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: uiSizes.touchMinHeight,
     paddingHorizontal: uiSpacing.xs,
+    alignSelf: 'flex-end',
     gap: uiSpacing.xxs,
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.field,
