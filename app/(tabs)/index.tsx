@@ -241,7 +241,7 @@ export default function HomeScreen() {
           ) : todayItems.length ? (
             <View style={styles.agendaList}>
               {todayItems.map((item, index) =>
-                nextIsInTodayAgenda && item.id === next?.id && item.startAt.toMillis() === next.startAt.toMillis()
+                nextIsInTodayAgenda && item.id === next?.id && item.startAt.toMillis() === next?.startAt.toMillis()
                   ? null
                   : <ScheduleItem
                       key={`${item.id ?? index}-${item.startAt.toMillis()}`}
