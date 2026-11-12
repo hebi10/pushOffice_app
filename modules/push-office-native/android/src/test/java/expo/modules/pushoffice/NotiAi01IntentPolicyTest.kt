@@ -70,7 +70,9 @@ class NotiAi01IntentPolicyTest {
       "11월 18일 오후 2시 회의 취소",
       "다음 주 월요일 오후 4시 방송 생중계",
       "내일 오후 6시 배송 예정",
-      "2026-11-16 14:00 보안코드 안내"
+      "2026-11-16 14:00 보안코드 안내",
+      "지난주 금요일 오후 3시 회의",
+      "어제 오후 3시 병원 예약"
     )
     for (body in blocked) {
       val result = NotificationIntentPolicy.classify("알림", body, now)
