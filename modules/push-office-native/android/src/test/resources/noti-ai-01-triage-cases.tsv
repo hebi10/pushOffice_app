@@ -1,0 +1,61 @@
+id	group	app	title	body	expected_local_start	expected_repeat	expected_triage
+E01	complete	카카오톡	친구	내일 오후 3시 치과 예약	2026-11-13T15:00	none	confirmed_candidate
+E02	complete	SMS	예약	11월 17일 오후 3시 고객 미팅	2026-11-17T15:00	none	confirmed_candidate
+E03	complete	예약앱	예약 확인	2026-11-20 14:30 팀 회의	2026-11-20T14:30	none	confirmed_candidate
+E04	complete	카카오톡	지인	모레 오전 9시 건강검진 예약	2026-11-14T09:00	none	confirmed_candidate
+E05	complete	업무메신저	팀장	다음 주 월요일 오전 10시 회의	2026-11-16T10:00	none	confirmed_candidate
+E06	complete	업무메신저	팀장	이번 주 금요일 오전 11시 발표	2026-11-13T11:00	none	confirmed_candidate
+E07	complete	SMS	예약	11월 30일 18:00 공연 관람	2026-11-30T18:00	none	confirmed_candidate
+E08	complete	카카오톡	친구	12월 2일 오후 7시 저녁 약속	2026-12-02T19:00	none	confirmed_candidate
+E09	complete	캘린더앱	안내	매월 15일 오전 9시 정기 모임	2026-11-15T09:00	monthly	confirmed_candidate
+E10	complete	캘린더앱	안내	매년 12월 20일 오후 6시 동창회	2026-12-20T18:00	yearly	confirmed_candidate
+E11	complete	SMS	알림	11월 19일 오후 3시 30분 면접	2026-11-19T15:30	none	confirmed_candidate
+E12	complete	카카오톡	가족	내일 저녁 7시 가족 식사	2026-11-13T19:00	none	confirmed_candidate
+E13	complete	SMS	알림	오늘 오후 5시 온라인 수업	2026-11-12T17:00	none	confirmed_candidate
+E14	complete	회사앱	알림	11월 16일 09:00 사내 교육	2026-11-16T09:00	none	confirmed_candidate
+E15	complete	카카오톡	모임	다음 주 화요일 오후 2시 도서관 모임	2026-11-17T14:00	none	confirmed_candidate
+E16	complete	SMS	예약 확정	2026년 11월 21일 오후 1시 가족 행사	2026-11-21T13:00	none	confirmed_candidate
+E17	complete	병원앱	예약 확정	11월 13일 16:00 병원 예약 확정	2026-11-13T16:00	none	confirmed_candidate
+E18	complete	카카오톡	운동	11월 14일 오전 8시 운동	2026-11-14T08:00	none	confirmed_candidate
+E19	complete	카카오톡	친구	매년 2월 29일 오전 9시 기념일	2028-02-29T09:00	yearly	confirmed_candidate
+E20	complete	회사앱	재무	매월 31일 오전 9시 결산	2026-12-31T09:00	monthly	confirmed_candidate
+E21	complete	카카오톡	동료	금요일 오후 3시에 고객 미팅	2026-11-13T15:00	none	confirmed_candidate
+E22	complete	SMS	알림	2027-01-05 07:30 기차 출발	2027-01-05T07:30	none	confirmed_candidate
+E23	complete	카카오톡	모임	11월 25일 오후 1시 15분 동아리 모임	2026-11-25T13:15	none	confirmed_candidate
+E24	complete	SMS	안내	11월 22일 오전 10시 30분 예방접종	2026-11-22T10:30	none	confirmed_candidate
+I01	incomplete	카카오톡	친구	내일 치과 예약	-	none	needs_confirmation
+I02	incomplete	SMS	알림	오후 3시에 치과 예약	-	none	needs_confirmation
+I03	incomplete	카카오톡	친구	다음 주에 만나자	-	none	needs_confirmation
+I04	incomplete	카카오톡	동료	금요일 저녁에 만나자	-	none	needs_confirmation
+I05	incomplete	카카오톡	친구	퇴근하고 영화 볼래?	-	none	needs_confirmation
+I06	incomplete	회사앱	동료	다음 달 초에 회식 잡자	-	none	needs_confirmation
+I07	incomplete	카카오톡	친구	토요일 3시에 만나자	-	none	needs_confirmation
+I08	incomplete	SMS	예약 안내	11월 16일 면접	-	none	needs_confirmation
+I09	incomplete	카카오톡	친구	어제 말한 시간에 예약 확정	-	none	needs_confirmation
+I10	incomplete	카카오톡	친구	이번 주 수요일에 약속 잡자	-	none	needs_confirmation
+I11	incomplete	카카오톡	가족	12월 중순 가족 여행	-	none	needs_confirmation
+I12	incomplete	카카오톡	친구	내일 점심에 만나자	-	none	needs_confirmation
+N01	unrelated	뉴스	안내	11월 17일 오후 3시 드라마 방송 안내	-	none	discard
+N02	unrelated	쇼핑앱	알림	11월 18일 오후 1시 할인 행사 시작	-	none	discard
+N03	unrelated	뉴스	특보	11월 17일 오후 2시 날씨 특보	-	none	discard
+N04	unrelated	배송앱	배송 안내	내일 오후 3시 배송 예정입니다	-	none	discard
+N05	unrelated	뉴스	속보	금요일 오후 3시 뉴스 생중계	-	none	discard
+N06	unrelated	뉴스	기사	11월 17일 13:00 교육 기사 공유	-	none	discard
+N07	unrelated	회사앱	시스템	오늘 오후 6시 서버 점검 공지	-	none	discard
+N08	unrelated	쇼핑앱	알림	11월 18일 12:00 쿠폰 행사	-	none	discard
+N09	unrelated	업무메신저	동료	내일 오후 4시 강의 취소됐습니다	-	none	discard
+N10	unrelated	업무메신저	동료	내일 오후 2시 회의 취소	-	none	discard
+N11	unrelated	메신저	알림	새로운 알림이 도착했습니다	-	none	discard
+N12	unrelated	카카오톡	친구	사진을 보냈습니다	-	none	discard
+N13	unrelated	뉴스	기사	지난주 토요일 7시 경기 결과	-	none	discard
+N14	unrelated	뉴스	헤드라인	11월 16일 오전 9시 뉴스 헤드라인	-	none	discard
+S01	sensitive	SMS	보안	11월 17일 오후 3시 OTP 123456	-	none	discard
+S02	sensitive	SMS	금융	11월 18일 14:00 계좌 이체	-	none	discard
+S03	sensitive	은행앱	알림	11월 20일 오후 4시 결제 승인	-	none	discard
+S04	sensitive	SMS	보안	내일 오전 9시 인증번호 000000	-	none	discard
+S05	sensitive	보안앱	경고	2026-11-21 10:00 로그인 시도	-	none	discard
+S06	sensitive	SMS	예약	11월 22일 오후 3시 은행 상담 예약	-	none	discard
+S07	sensitive	쇼핑앱	홍보	11월 25일 10:00 광고 행사	-	none	discard
+S08	sensitive	보안앱	경고	11월 26일 오전 10시 비밀번호 변경 안내	-	none	discard
+S09	sensitive	SMS	보안	11월 28일 17:00 security code	-	none	discard
+S10	sensitive	SMS	보안	11월 29일 11:00 verification code	-	none	discard
