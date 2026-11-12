@@ -211,6 +211,18 @@ export default function AiModelsScreen() {
                   disabled={Boolean(busyId)||listState !== 'ready'||!sample.trim()} busy={busyId===model.id}
                   onPress={()=>{void testOne(model.id);}} />
               ) : null}
+              {result ? (
+                <View style={[styles.result,{backgroundColor:colors.inputBackground}]} accessibilityRole="summary">
+                  <Text style={[styles.selected,{color:result.success?colors.text:colors.danger}]}>
+                    {describeModelTest(result).headline}
+                  </Text>
+                  <Text style={[styles.copy,{color:colors.textSecondary}]}>
+                    {describeModelTest(result).details}
+                  </Text>
+                </View>
+              ) : ready ? (
+                <Text style={[styles.caption,{color:colors.textSecondary}]}>테스트 전 · 모델 선택 전 테스트 결과를 확인해 주세요.</Text>
+              ) : null}
               {ready && !model.selected ? (
                 <AssistantButton label="기본 모델로 사용" icon="checkmark-outline"
                   disabled={Boolean(busyId)||listState !== 'ready'||!result?.success}
@@ -237,18 +249,6 @@ export default function AiModelsScreen() {
                   <AssistantButton label="모델 출처·라이선스" icon="information-circle-outline" secondary
                     onPress={()=>{void Linking.openURL(model.sourceUrl).catch(()=>setNotice({title:'모델 출처',message:'모델 제공 페이지를 열지 못했습니다.'}));}} />
                 </View>
-              ) : null}
-              {result ? (
-                <View style={[styles.result,{backgroundColor:colors.inputBackground}]} accessibilityRole="summary">
-                  <Text style={[styles.selected,{color:result.success?colors.text:colors.danger}]}>
-                    {describeModelTest(result).headline}
-                  </Text>
-                  <Text style={[styles.copy,{color:colors.textSecondary}]}>
-                    {describeModelTest(result).details}
-                  </Text>
-                </View>
-              ) : ready ? (
-                <Text style={[styles.caption,{color:colors.textSecondary}]}>테스트 전 · 모델 선택 전 테스트 결과를 확인해 주세요.</Text>
               ) : null}
             </AssistantCard>
           );
