@@ -54,7 +54,6 @@ test('UI-12-04 marks invalid dates and keeps the original explicit save and erro
   assert.match(confirm, /accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE/);
   for (const expected of [
     '저장 기준 시간대:',
-    '원래', // omitted from final assertions below
     'manualFields.visibility',
     'button("입력으로 돌아가기")',
     'if(saving) return@button',
@@ -62,7 +61,7 @@ test('UI-12-04 marks invalid dates and keeps the original explicit save and erro
     'ScheduleRuntime.save(this,draft)',
     'error.visibility=View.VISIBLE',
     'saving=false',
-  ].filter(x => x !== '원래')) {
+  ]) {
     assert.ok(confirm.includes(expected), 'The protected save flow changed: ' + expected);
   }
 });
