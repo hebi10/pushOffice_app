@@ -7,6 +7,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { AssistantButton, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
 import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsStatusRow, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
 import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
+import { ENV } from '@/src/lib/env';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
@@ -31,12 +32,13 @@ export default function SettingsScreen() {
     const [aiProgress, setAiProgress] = useState<AiDownloadProgress | null>(null);
     const aiDownloadInFlight = useRef(false);
     const aiStatusSequence = useRef(0);
-    const [tileEnabled, setTileEnabled] = useState(true);
+    const [tileEnabled, setTileEnabled] = useState<boolean | null>(null);
     const [notificationStatus, setNotificationStatus] = useState<NotificationSuggestionStatus | null>(null);
     const [notificationDisclosure, setNotificationDisclosure] = useState<'enable' | 'access' | null>(null);
     const [refiningSuggestionId, setRefiningSuggestionId] = useState<string | null>(null);
     const [suggestions, setSuggestions] = useState<NotificationSuggestion[]>([]);
     const [suggestionsExpanded, setSuggestionsExpanded] = useState(false);
+    const [notificationHelpExpanded, setNotificationHelpExpanded] = useState(false);
     const [section, setSection] = useState<'basic' | 'advanced'>('basic');
     const [editingTime, setEditingTime] = useState(false);
     const [editingExternal, setEditingExternal] = useState(false);
@@ -70,7 +72,7 @@ export default function SettingsScreen() {
         if (requestId === aiStatusSequence.current) setAiChecking(false);
       }
     }, []);
-    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); void checkAiStatus(); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(false)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, [checkAiStatus]);
+    const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); void checkAiStatus(); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(null)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, [checkAiStatus]);
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
     useEffect(() => {
@@ -186,6 +188,9 @@ export default function SettingsScreen() {
       try { await PushOfficeNative.dismissNotificationSuggestion(id); refresh(); }
       catch (error) { showError(error, '일정 후보를 삭제하지 못했습니다.'); }
     };
+    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim());
+    const externalTypesSelected = [settings.digestTypes.weather, settings.digestTypes.news, settings.digestTypes.stocks]
+      .filter(Boolean).length;
     const pin = async (kind: 'small' | 'agenda') => { try {
         const accepted = await PushOfficeNative.requestPinWidget(kind);
         setNotice({ title: '홈 화면 위젯', message: accepted ? '런처에 추가 요청을 전달했습니다. 표시된 확인 창에서 추가를 완료해 주세요.' : '이 런처는 위젯 추가 요청을 지원하지 않습니다. 홈 화면을 길게 누른 뒤 위젯에서 Push Office를 선택해 주세요.' });
@@ -306,11 +311,28 @@ export default function SettingsScreen() {
                 title="빠른 설정과 홈 위젯"
                 icon="grid-outline"
               >
-                <SettingsToggleRow icon="grid-outline" title="빠른 설정 사용" description="끄면 타일 사용이 중단됩니다. 재활성화 후 다시 추가할 수 있습니다." value={tileEnabled} onValueChange={v => { void toggleTile(v); }} />
-                <SettingsActionRow icon="add-circle-outline" title="빠른 설정 타일 추가" description="상단 빠른 설정에 직접 배치" status={!tileEnabled ? '꺼짐' : undefined} onPress={() => { if (tileEnabled) void addTile(); else setNotice({ title: '빠른 설정', message: '먼저 빠른 설정 사용을 켜 주세요.' }); }} />
+                <SettingsToggleRow
+                  icon="grid-outline"
+                  title="빠른 설정 사용"
+                  description={tileEnabled === null ? '사용 상태를 확인하고 있습니다.' : '끄면 빠른 설정 타일이 중단됩니다.'}
+                  value={tileEnabled === true}
+                  disabled={tileEnabled === null}
+                  onValueChange={v => { void toggleTile(v); }}
+                />
+                <SettingsActionRow
+                  icon="add-circle-outline"
+                  title="빠른 설정 타일 추가"
+                  description="Android 빠른 설정에 배치"
+                  status={tileEnabled === null ? '확인 중' : tileEnabled ? undefined : '꺼짐'}
+                  busy={tileEnabled === null}
+                  onPress={() => {
+                    if (tileEnabled === true) void addTile();
+                    else setNotice({ title: '빠른 설정', message: '먼저 빠른 설정 사용을 켜 주세요.' });
+                  }}
+                />
                 <SettingsActionRow icon="calendar-outline" title="다음 일정 위젯 추가" description="가까운 일정 표시" onPress={() => { void pin('small'); }} />
                 <SettingsActionRow icon="list-outline" title="오늘 일정 위젯 추가" description="오늘 일정 목록 표시" onPress={() => { void pin('agenda'); }} />
-                <SettingsNote>위젯 추가는 Android 홈 화면에서 확인해야 할 수 있습니다.</SettingsNote>
+                <SettingsNote>위젯은 Android 홈 화면에서 실제 추가 여부를 확인하세요.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="알림에서 일정 추천" icon="calendar-outline" description="사용자가 승인한 일정만 저장합니다.">
                 <SettingsToggleRow
@@ -325,7 +347,7 @@ export default function SettingsScreen() {
                   icon="shield-checkmark-outline"
                   title="다른 앱 알림 접근 권한"
                   description="이 권한은 다른 앱 알림 내용을 볼 수 있는 민감한 권한입니다."
-                  status={notificationStatus?.accessGranted ? '허용됨' : '허용 필요'}
+                  status={notificationStatus === null ? '확인 중' : notificationStatus.accessGranted ? '허용됨' : '허용 필요'}
                   onPress={() => { setNotificationDisclosure('access'); }}
                 />
                 <SettingsActionRow
@@ -356,8 +378,20 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                 ) : null}
-                <SettingsNote>새 알림은 백그라운드에서 로컬 규칙으로 선별합니다. 기기 AI를 지원하면 앱을 연 상태에서 후보별로 AI 재분석할 수 있습니다. 알림 원문은 AI 서버로 전송하지 않습니다. 분석 가능한 날짜·시간이 있는 알림만 후보로 보관합니다. 후보는 최대 24건·48시간이며, 기능을 끄면 후보를 삭제합니다. 모든 알림을 정확히 분석한다고 보장할 수는 없습니다.</SettingsNote>
-                <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
+                <SettingsNote>후보는 최대 24건·48시간 보관하며, 사용자가 승인한 일정만 저장합니다.</SettingsNote>
+                <SettingsActionRow
+                  icon="information-circle-outline"
+                  title="알림 분석 방식·기기 제한 안내"
+                  description="로컬 처리, AI 재분석, 절전·권한 제한"
+                  expanded={notificationHelpExpanded}
+                  onPress={() => setNotificationHelpExpanded(value => !value)}
+                />
+                {notificationHelpExpanded ? (
+                  <>
+                    <SettingsNote>새 알림은 백그라운드에서 로컬 규칙으로 선별합니다. 기기 AI를 지원하면 앱을 연 상태에서 후보별로 AI 재분석할 수 있습니다. 알림 원문은 AI 서버로 전송하지 않습니다. 분석 가능한 날짜·시간이 있는 알림만 후보로 보관합니다. 후보는 최대 24건·48시간이며, 기능을 끄면 후보를 삭제합니다. 모든 알림을 정확히 분석한다고 보장할 수는 없습니다.</SettingsNote>
+                    <SettingsNote>앱을 종료해도 Android가 알림 접근 서비스를 실행할 때 새 알림을 분석합니다. 강제 종료·절전 제한·미지원 기기에서는 수집이나 AI 분석이 지연 또는 중단될 수 있습니다.</SettingsNote>
+                  </>
+                ) : null}
               </SettingsGroup>
               <SettingsGroup title="기기 내 음성과 AI" icon="mic-outline">
                 <SettingsActionRow icon="layers-outline" title="기기 AI 모델 관리"
@@ -400,7 +434,13 @@ export default function SettingsScreen() {
             </>
           ) : (
             <>
-              <SettingsGroup title="선택한 외부 정보" icon="cloud-outline" description="요청할 때만 조회 · 일정 내용은 전송하지 않음">
+              <SettingsGroup
+                title="선택한 외부 정보"
+                icon="cloud-outline"
+                description={externalServiceConfigured
+                  ? `요청할 때만 조회 · 선택 ${externalTypesSelected}종 · 일정 내용 전송 없음`
+                  : `외부 서비스 미연결 · 선택 ${externalTypesSelected}종 · 설정값만 저장`}
+              >
                 <SettingsToggleRow
                   icon="cloudy-outline"
                   title="날씨"
