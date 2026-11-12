@@ -23,6 +23,7 @@ internal object NotificationIntentPolicy {
   )
   private val weekday = Regex("""(?:이번\s*주|다음\s*주)?\s*[월화수목금토일]요일""")
   private val recurrenceDate = Regex("""매월\s*\d{1,2}일|매년\s*\d{1,2}월\s*\d{1,2}일""")
+  private val unambiguousTime = Regex("""(?:오전|오후|저녁|아침)\s*\d{1,2}시|(?<!\d)\d{1,2}:\d{2}(?!\d)|(?<!\d)(?:0\d|1[3-9]|2[0-3])시""")
   private val vagueDate = Regex("""이번\s*주|다음\s*주|주말|다음\s*달|이번\s*달|퇴근하고|어제\s*말한|12월\s*중순|다음\s*번""")
 
   fun classify(title: String, text: String, now: ZonedDateTime): NotificationDecision {
@@ -42,7 +43,7 @@ internal object NotificationIntentPolicy {
       combined
     }
 
-    if (hasDate && hasTime) {
+    if (hasDate && hasTime && unambiguousTime.containsMatchIn(combined)) {
       val parsed = ScheduleParser.parse(source, now)
       if (parsed.error == null && parsed.shiftMinutes == null && parsed.start != null &&
           parsed.title.isNotBlank() && hasIntent) {
