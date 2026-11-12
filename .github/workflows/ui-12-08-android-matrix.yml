@@ -1,0 +1,84 @@
+# QA-12-08 full integrated UI-12 baseline: main 4d532eb43a0d3d8d00755cf46019c3162b2d6db5
+# PRs #55 -> #56 -> #57 -> #58 -> #59 -> #60 merged in order.
+# QA-only PR #61; this workflow never publishes Google Play bundles.
+# API 29 is separately tested by native instrumentation and screenshots workflows.
+# API 35/36 are validated by the matrix below on the same PR head.
+# Physical Samsung One UI, real Gemini Nano/ARM64 models, and 160/200% font scaling remain unverified.
+name: Push Office UI-12-08 Android 35/36 integration QA
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/ui-12-08-android-matrix.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  android-api-matrix:
+    name: API ${{ matrix.api-level }} widget/tile instrumentation and app smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    strategy:
+      fail-fast: false
+      matrix:
+        api-level: [35, 36]
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_NO_DOTENV: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Restore checksum-verified Gradle distribution
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - name: Bootstrap Gradle from verified mirrors
+        run: bash .github/ci/bootstrap-gradle.sh
+      - name: Grant emulator KVM access
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run native instrumentation and capture installed app
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -timezone Asia/Seoul
+          disable-animations: true
+          script: |
+            bash tools/ui/run_mono_office_native_qa.sh
+            (cd android && ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleDebug --no-daemon --max-workers=2 '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' -Pkotlin.compiler.execution.strategy=in-process -PreactNativeArchitectures=x86_64)
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell pm path com.hebi96.pushOffice_app
+            mkdir -p integration-qa/api-${{ matrix.api-level }}
+            adb shell monkey -p com.hebi96.pushOffice_app 1
+            sleep 10
+            adb exec-out screencap -p > integration-qa/api-${{ matrix.api-level }}/home.png
+            python3 -c 'from pathlib import Path; import struct; p=Path("integration-qa/api-${{ matrix.api-level }}/home.png"); d=p.read_bytes(); assert d[:8] == bytes([137,80,78,71,13,10,26,10]), "no Android screenshot returned"; w,h=struct.unpack(">II", d[16:24]); assert w >= 320 and h >= 320, "Android screenshot viewport invalid"; print(f"Verified real installed Android home screenshot: {w}x{h}")'
+      - name: Preserve Android matrix evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-UI-12-08-api-${{ matrix.api-level }}
+          path: |
+            integration-qa/api-${{ matrix.api-level }}/
+            android/**/build/reports/androidTests/connected/**
+            android/**/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 14
