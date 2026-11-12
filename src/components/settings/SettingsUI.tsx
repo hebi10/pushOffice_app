@@ -9,7 +9,7 @@ type IconName = React.ComponentProps<typeof Ionicons>['name'];
 function RowIcon({ name }: { name: IconName }) {
   const { colors } = useTheme();
   return (
-    <View style={styles.iconBox}>
+    <View style={styles.iconBox} accessible={false}>
       <Ionicons name={name} color={colors.textSecondary} size={20} />
     </View>
   );
@@ -42,7 +42,7 @@ export function SettingsGroup({
       <View style={[styles.groupHeader, { backgroundColor: colors.surface }]}>
         <Ionicons name={icon} color={colors.textSecondary} size={20} />
         <View style={styles.copy}>
-          <Text style={[styles.groupTitle, { color: colors.text }]}>{title}</Text>
+          <Text accessibilityRole="header" style={[styles.groupTitle, { color: colors.text }]}>{title}</Text>
           {description ? <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text> : null}
         </View>
       </View>
@@ -73,6 +73,7 @@ export function SettingsToggleRow({
       <RowCopy title={title} description={description} />
       <Switch
         accessibilityLabel={title}
+        accessibilityHint={description}
         accessibilityState={{ disabled }}
         disabled={disabled}
         value={value}
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   groupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: uiSpacing.sm,
+    gap: uiSpacing.xs,
     paddingHorizontal: uiSpacing.sm,
     paddingVertical: uiSpacing.xs,
   },
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
   copy: { flex: 1, minWidth: 0, gap: 2 },
   rowTitle: { ...uiTypography.body, fontWeight: '600' },
   description: { ...uiTypography.caption, lineHeight: 16, flexShrink: 1 },
-  statusBadge: { minHeight: 28, maxWidth: 88, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xxs, borderRadius: uiRadii.field, alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
+  statusBadge: { minHeight: 28, maxWidth: 104, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xxs, borderRadius: uiRadii.field, alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
   status: { ...uiTypography.caption, fontWeight: '700', textAlign: 'center' },
   note: { ...uiTypography.caption, lineHeight: 18, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.xs },
 });
