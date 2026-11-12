@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { AssistantButton, AssistantCard, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
 import { uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
+import { describeModelTest, downloadPercent } from '@/src/features/ai/modelPresentation';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { PushOfficeNative, type AiModelInfo, type AiModelTestResult } from '@/modules/push-office-native';
 
@@ -24,28 +25,36 @@ function modelStatus(model: AiModelInfo) {
   return '설치 전';
 }
 function showProgress(model: AiModelInfo) {
-  if (model.totalBytes <= 0) return 'Wi-Fi 대기';
-  return Math.min(100, Math.round(100 * model.bytesDownloaded / model.totalBytes)) + '%';
+  const percent = downloadPercent(model.bytesDownloaded, model.totalBytes);
+  return percent === null ? '진행률 확인 중' : percent + '%';
 }
 
 export default function AiModelsScreen() {
   const { colors } = useTheme();
   const [models, setModels] = useState<AiModelInfo[]>([]);
+  const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [sample, setSample] = useState(sampleInput);
   const [results, setResults] = useState<Record<string, AiModelTestResult>>({});
   const [notice, setNotice] = useState<{title:string;message:string} | null>(null);
   const [removal, setRemoval] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const sampleRevision = useRef(0);
   const refreshing = useRef(false);
 
   const refresh = useCallback(async () => {
     if (refreshing.current) return;
     refreshing.current = true;
     try {
-      setModels(await PushOfficeNative.listAiModels());
+      const next = await PushOfficeNative.listAiModels();
+      setModels(next);
+      setResults(previous => {
+        const readyIds = new Set(next.filter(isReady).map(model => model.id));
+        return Object.fromEntries(Object.entries(previous).filter(([id]) => readyIds.has(id)));
+      });
+      setListState('ready');
     } catch {
-      setNotice({title:'기기 AI 상태',message:'모델 목록을 확인할 수 없습니다. Android 앱을 다시 실행해 주세요.'});
+      setListState('error');
     } finally { refreshing.current = false; }
   }, []);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
@@ -56,8 +65,14 @@ export default function AiModelsScreen() {
   }, [models,refresh]);
 
   const action = async (id:string, call:()=>Promise<unknown>, title:string) => {
-    if(busyId) return;
+    if(busyId || listState !== 'ready') return;
     setBusyId(id);
+    setResults(previous => {
+      if (!(id in previous)) return previous;
+      const next = {...previous};
+      delete next[id];
+      return next;
+    });
     try {
       const result = await call();
       if(result && typeof result === 'object' && 'message' in result) {
@@ -71,26 +86,31 @@ export default function AiModelsScreen() {
   };
 
   const testOne = async (id:string) => {
-    if(busyId || !sample.trim()) return;
+    if(busyId || listState !== 'ready' || !sample.trim()) return;
+    const revision = sampleRevision.current;
+    const input = sample.trim();
     setBusyId(id);
     try {
-      const result = await PushOfficeNative.testAiModel(id,sample);
-      setResults(old=>({...old,[id]:result}));
+      const result = await PushOfficeNative.testAiModel(id,input);
+      if (revision === sampleRevision.current) setResults(old=>({...old,[id]:result}));
     } catch {
-      setResults(old=>({...old,[id]:{modelId:id,success:false,durationMs:0,message:'이 기기에서 모델을 실행하지 못했습니다.'}}));
+      if (revision === sampleRevision.current) setResults(old=>({...old,[id]:{modelId:id,success:false,durationMs:0,message:'이 기기에서 모델을 실행하지 못했습니다.'}}));
     } finally { setBusyId(null); }
   };
 
   const compareAll = async () => {
-    if(busyId || !sample.trim()) return;
+    if(busyId || listState !== 'ready' || !sample.trim()) return;
+    const revision = sampleRevision.current;
+    const input = sample.trim();
     setBusyId('compare');
     try {
       for(const model of models.filter(isReady)) {
+        if (revision !== sampleRevision.current) break;
         try {
-          const result=await PushOfficeNative.testAiModel(model.id,sample);
-          setResults(old=>({...old,[model.id]:result}));
+          const result=await PushOfficeNative.testAiModel(model.id,input);
+          if (revision === sampleRevision.current) setResults(old=>({...old,[model.id]:result}));
         } catch {
-          setResults(old=>({...old,[model.id]:{modelId:model.id,success:false,durationMs:0,message:'모델 실행 실패'}}));
+          if (revision === sampleRevision.current) setResults(old=>({...old,[model.id]:{modelId:model.id,success:false,durationMs:0,message:'모델 실행 실패'}}));
         }
       }
     } finally { setBusyId(null); }
@@ -107,21 +127,32 @@ export default function AiModelsScreen() {
       <ScrollView style={{flex:1,backgroundColor:colors.background}} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <AssistantCard title="기기 AI 모델 비교" icon="layers-outline" compact>
           <Text style={[styles.copy,{color:colors.textSecondary}]}>
-            모델 크기는 파일 용량입니다. 실제 처리 속도와 정확도는 이 기기에서 실행한 결과로 비교합니다.
-            Gemini Nano는 AICore가 관리하고, 다른 모델은 Wi-Fi에서 사용자가 선택한 것만 설치됩니다.
+            Gemini Nano는 Android AICore가 관리합니다. 다른 4종은 사용자가 Wi-Fi에서 직접 설치합니다.
+            파일 크기는 예상 용량이며 실제 테스트 속도는 이 기기에서 측정한 값만 표시합니다.
           </Text>
+          <Text style={[styles.caption,{color:colors.textSecondary}]}>
+            {listState === 'ready' ? `사용 준비된 모델 ${models.filter(isReady).length} / ${models.length}종` : listState === 'loading' ? '모델 상태 확인 중' : '모델 상태 조회 실패 · 이전 결과일 수 있음'}
+          </Text>
+          {listState === 'error' ? (
+            <AssistantButton label="모델 목록 다시 확인" icon="refresh-outline" secondary onPress={()=>{void refresh();}} />
+          ) : null}
           <AssistantTextField label="공통 한국어 일정 테스트 문장" value={sample}
-            onChangeText={value=>{setSample(value);setResults({});}}
+            onChangeText={value=>{sampleRevision.current += 1;setSample(value);setResults({});}}
             placeholder="예: 내일 오후 3시 치과 예약" multiline />
-          <AssistantButton label="설치된 모델 모두 비교" icon="analytics-outline" secondary
-            disabled={!models.some(isReady) || Boolean(busyId) || !sample.trim()}
+          <AssistantButton label="사용 준비된 모델 모두 비교" icon="analytics-outline" secondary
+            disabled={listState !== 'ready' || !models.some(isReady) || Boolean(busyId) || !sample.trim()}
             busy={busyId==='compare'} onPress={()=>{void compareAll();}} />
           <Text style={[styles.caption,{color:colors.textSecondary}]}>
             실제 추출 결과·응답 시간만 표시합니다. 모델 테스트에서는 일정을 저장하지 않습니다.
           </Text>
         </AssistantCard>
 
-        {models.length === 0 ? <Text style={[styles.copy,{color:colors.textSecondary}]}>모델 목록을 확인하고 있습니다.</Text> : null}
+        {models.length === 0 && listState === 'loading' ? (
+          <Text style={[styles.copy,{color:colors.textSecondary}]}>모델 목록을 확인하고 있습니다.</Text>
+        ) : null}
+        {models.length === 0 && listState === 'ready' ? (
+          <Text style={[styles.copy,{color:colors.textSecondary}]}>표시할 모델이 없습니다. 기기 지원 상태를 다시 확인해 주세요.</Text>
+        ) : null}
         {models.map(model => {
           const ready=isReady(model);
           const result=results[model.id];
