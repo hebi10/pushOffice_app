@@ -134,8 +134,8 @@ object NotificationSuggestionStore {
     val current = retained(context)
     if (suggestion.id in readSeen(context)) return@synchronized false
     if (current.any { it.triage == suggestion.triage &&
-          if (start != null) it.startAt == start && it.title == suggestion.title
-          else it.packageName == suggestion.packageName && it.excerpt == suggestion.excerpt }) return@synchronized false
+          (if (start != null) it.startAt == start && it.title == suggestion.title
+           else it.packageName == suggestion.packageName && it.excerpt == suggestion.excerpt) }) return@synchronized false
     if (start != null) {
       val existing = ScheduleStore(context).use { it.all().any { row -> row.startAt == start && row.title == suggestion.title } }
       if (existing) return@synchronized false
