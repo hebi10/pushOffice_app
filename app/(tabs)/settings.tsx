@@ -364,21 +364,25 @@ export default function SettingsScreen() {
                     {suggestions.map(item => (
                       <View key={item.id} style={{ backgroundColor: colors.inputBackground, borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, borderRadius: uiRadii.field, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
                         <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{item.title}</Text>
-                        <Text style={{ color: colors.textSecondary }}>예정 시각: {new Date(item.startAt).toLocaleString('ko-KR')}</Text>
+                        <Text style={{ color: colors.textSecondary }}>
+                          {item.triage === 'needs_confirmation' || item.startAt === null
+                            ? '날짜·시간 확인 필요 · 임의의 시각을 저장하지 않습니다.'
+                            : `예정 시각: ${new Date(item.startAt).toLocaleString('ko-KR')}`}
+                        </Text>
                         <Text style={{ color: colors.textSecondary }}>{item.sourceApp} · {item.analysis === 'on_device_ai' ? '기기 AI 분석' : '기본 규칙 분석'}</Text>
                         <Text style={{ color: colors.text }}>{item.excerpt}</Text>
                         <View style={{ gap: uiSpacing.xs }}>
-                          {item.analysis === 'local_rules' && ai.status === 'available' ? (
+                          {item.triage === 'confirmed_candidate' && item.startAt !== null && item.analysis === 'local_rules' && ai.status === 'available' ? (
                             <AssistantButton label="기기 AI로 다시 분석" icon="sparkles-outline" secondary busy={refiningSuggestionId === item.id} onPress={() => { void refineSuggestion(item.id); }} />
                           ) : null}
-                          <AssistantButton label="검토 후 저장" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
+                          <AssistantButton label={item.triage === 'needs_confirmation' ? '날짜·시간 확인' : '검토 후 저장'} icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
                           <AssistantButton label="거절 · 삭제" icon="trash-outline" secondary onPress={() => { void dismissSuggestion(item.id); }} />
                         </View>
                       </View>
                     ))}
                   </View>
                 ) : null}
-                <SettingsNote>후보는 최대 24건·48시간 보관하며, 사용자가 승인한 일정만 저장합니다.</SettingsNote>
+                <SettingsNote>후보는 최대 24건·48시간 보관합니다. 시간 미정 후보는 직접 날짜·시간을 선택해야 하며, 사용자가 승인한 일정만 저장합니다.</SettingsNote>
                 <SettingsActionRow
                   icon="information-circle-outline"
                   title="알림 분석 방식·기기 제한 안내"
