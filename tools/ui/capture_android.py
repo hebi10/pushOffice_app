@@ -614,14 +614,11 @@ try:
     if find("일정 3건") is None:
         raise RuntimeError("Calendar selected day does not show three real events")
     screenshot("23b-calendar-today-three", "selected today's calendar with three local appointments")
-    adb("shell", "input", "swipe", "360", "1180", "360", "720", "380")
-    time.sleep(2)
+    # Exercise the new explicitly labelled selected-date jump, not an arbitrary swipe.
+    tap("선택 날짜 일정 목록으로 이동")
     if find("TodayQA1") is None:
-        adb("shell", "input", "swipe", "360", "1100", "360", "640", "380")
-        time.sleep(2)
-    if find("TodayQA1") is None:
-        raise RuntimeError("Populated calendar agenda rows are not reachable")
-    screenshot("23c-calendar-today-three-list", "three-item calendar agenda after scrolling")
+        raise RuntimeError("Selected-day agenda jump did not expose the first actual schedule")
+    screenshot("23c-calendar-today-three-list", "three-item calendar agenda after the selected-day jump")
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError) as exc:
     WARNINGS.append(f"Populated home fixture: {exc}")
 

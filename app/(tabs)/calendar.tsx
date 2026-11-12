@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef, useState } from 'react';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
@@ -8,6 +8,7 @@ import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useMonthSchedules } from '@/src/features/schedules';
+import { retainSelectedDayInMonth } from '@/src/features/schedules/calendarSelection';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import { dayjs } from '@/src/lib/time';
@@ -35,6 +36,14 @@ export default function CalendarScreen() {
   const now = useClock();
   const [selected, setSelected] = useState(() => dayjs(now).format('YYYY-MM-DD'));
   const [month, setMonth] = useState(() => ({ year: dayjs(now).year(), month: dayjs(now).month() + 1 }));
+  const calendarScrollRef = useRef<ScrollView>(null);
+  const agendaTop = useRef(0);
+  const scrollToSelectedAgenda = () => {
+    calendarScrollRef.current?.scrollTo({
+      y: Math.max(0, agendaTop.current - uiSizes.touchMinHeight * 2 - uiSpacing.sm),
+      animated: false,
+    });
+  };
   const schedules = useMonthSchedules(month.year, month.month);
   const monthStart = dayjs(new Date(month.year, month.month - 1, 1)).format('YYYY-MM-DD');
   const calendarTheme = useMemo(() => ({
@@ -98,6 +107,7 @@ export default function CalendarScreen() {
 
   return (
     <ScrollView
+      ref={calendarScrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={s.content}
     >
@@ -110,7 +120,7 @@ export default function CalendarScreen() {
           markingType="multi-dot"
           onMonthChange={date => {
             setMonth({ year: date.year, month: date.month });
-            setSelected(date.dateString.slice(0, 7) + '-01');
+            setSelected(previous => retainSelectedDayInMonth(previous, date.year, date.month));
           }}
           onDayPress={date => setSelected(date.dateString)}
           markedDates={marks}
@@ -118,26 +128,43 @@ export default function CalendarScreen() {
           theme={calendarTheme}
         />
         {!schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
-          <Text style={[styles.markHint, { color: colors.textSecondary }]}>
-            날짜 아래 점은 일정 개수(최대 3개)를 표시합니다. 날짜를 선택해 일정을 확인하세요.
+          <Text
+            accessibilityLabel="날짜 아래 점은 일정 개수(최대 3개)를 표시합니다. 날짜를 선택해 일정을 확인하세요."
+            numberOfLines={1}
+            style={[styles.markHint, { color: colors.textSecondary }]}
+          >
+            점은 일정 건수를 나타냅니다 (최대 3개)
           </Text>
         ) : null}
-      </View>
-      <View style={[styles.selectionPanel, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
-      <View
-        style={styles.selectionSummary}
-        accessible
-        accessibilityRole="summary"
-        accessibilityLabel={selectedLabel + ', 일정 ' + summary}
-      >
-        <Ionicons name="calendar-clear-outline" size={20} color={colors.textSecondary} />
-        <Text style={[styles.selectionTitle, { color: colors.text }]}>{selectedLabel}</Text>
-        <View style={styles.countBadge}>
-          <Text style={[styles.countText, { color: colors.textSecondary }]}>일정 {summary}</Text>
+        <View style={[styles.selectionPanel, { backgroundColor: colors.inputBackground }]}>
+          <View
+            style={styles.selectionSummary}
+            accessible
+            accessibilityRole="summary"
+            accessibilityLabel={selectedLabel + ', 일정 ' + summary}
+          >
+            <Ionicons name="calendar-clear-outline" size={20} color={colors.textSecondary} />
+            <Text style={[styles.selectionTitle, { color: colors.text }]} numberOfLines={1}>{selectedLabel}</Text>
+            <View style={styles.countBadge}>
+              <Text style={[styles.countText, { color: colors.textSecondary }]}>일정 {summary}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`선택 날짜 일정 목록으로 이동: ${selectedLabel}`}
+            accessibilityHint="현재 선택한 날짜의 일정 목록이 보이도록 스크롤합니다."
+            onPress={scrollToSelectedAgenda}
+            style={styles.agendaJumpAction}
+          >
+            <Text style={[styles.jumpText, { color: colors.primary }]}>목록</Text>
+            <Ionicons name="chevron-down" size={16} color={colors.primary} />
+          </TouchableOpacity>
         </View>
       </View>
-      </View>
-      <View style={styles.agendaSection}>
+      <View
+        style={styles.agendaSection}
+        onLayout={event => { agendaTop.current = event.nativeEvent.layout.y; }}
+      >
       <AssistantButton
         label="빠른 일정 입력"
         icon="add-circle-outline"
@@ -171,25 +198,42 @@ const styles = StyleSheet.create({
     borderRadius: uiRadii.card,
     overflow: 'hidden',
     paddingTop: 0,
-    paddingBottom: uiSpacing.xxs,
+    paddingBottom: 0,
   },
   selectionPanel: {
-    borderWidth: uiSizes.borderWidth,
-    borderRadius: uiRadii.field,
-    paddingHorizontal: uiSpacing.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: uiSpacing.xxs,
+    paddingHorizontal: uiSpacing.sm,
     paddingVertical: uiSpacing.xxs,
   },
   agendaSection: { gap: uiSpacing.xs },
-  markHint: { ...uiTypography.caption, paddingHorizontal: uiSpacing.md, paddingTop: uiSpacing.xxs },
+  markHint: {
+    ...uiTypography.caption,
+    paddingHorizontal: uiSpacing.sm,
+    paddingVertical: uiSpacing.xxs,
+  },
   selectionSummary: {
+    flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: uiSpacing.xs,
+    gap: uiSpacing.xxs,
     minHeight: uiSizes.touchMinHeight,
-    paddingHorizontal: uiSpacing.xxs,
+    paddingHorizontal: 0,
     paddingVertical: 0,
   },
   selectionTitle: { ...uiTypography.body, flex: 1, minWidth: 0, fontWeight: '700' },
+  agendaJumpAction: {
+    minHeight: uiSizes.touchMinHeight,
+    minWidth: uiSizes.touchMinHeight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: uiSpacing.xxs,
+    paddingHorizontal: uiSpacing.xxs,
+  },
+  jumpText: { ...uiTypography.caption, fontWeight: '700' },
   countBadge: {
     minWidth: 56,
     minHeight: 30,
