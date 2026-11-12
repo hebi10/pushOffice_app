@@ -57,7 +57,7 @@ test('NOTI-AI-01 requires manual review for incomplete candidates and preserves 
   assert.match(settings, /'날짜·시간 확인 필요 · 임의의 시각을 저장하지 않습니다\.'/);
   assert.match(settings, /item\.triage === 'confirmed_candidate' && item\.startAt !== null && item\.analysis === 'local_rules'/);
   assert.match(settings, /item\.triage === 'needs_confirmation' \? '날짜·시간 확인' : '검토 후 저장'/);
-  assert.match(settings, /'거절 · 삭제'/);
+  assert.match(settings, /label="거절 · 삭제"/);
   assert.doesNotMatch(settings, /new Date\(item\.startAt\s*\|\|\s*0\)/);
 });
 
