@@ -382,7 +382,8 @@ export default function SettingsScreen() {
                     ))}
                   </View>
                 ) : null}
-                <SettingsNote>후보는 최대 24건·48시간 보관합니다. 시간 미정 후보는 직접 날짜·시간을 선택해야 하며, 사용자가 승인한 일정만 저장합니다.</SettingsNote>
+                <SettingsNote>후보는 최대 24건·48시간 보관하며, 사용자가 승인한 일정만 저장합니다.</SettingsNote>
+                <SettingsNote>날짜·시간 확인이 필요한 후보는 사용자가 직접 시각을 선택해야 하며, 임의로 시간을 지정하지 않습니다.</SettingsNote>
                 <SettingsActionRow
                   icon="information-circle-outline"
                   title="알림 분석 방식·기기 제한 안내"
