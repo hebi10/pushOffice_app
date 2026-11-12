@@ -1,3 +1,9 @@
+# QA-12-08 full integrated UI-12 baseline: main 4d532eb43a0d3d8d00755cf46019c3162b2d6db5
+# PRs #55 -> #56 -> #57 -> #58 -> #59 -> #60 merged in order.
+# QA-only PR #61; this workflow never publishes Google Play bundles.
+# API 29 is separately tested by native instrumentation and screenshots workflows.
+# API 35/36 are validated by the matrix below on the same PR head.
+# Physical Samsung One UI, real Gemini Nano/ARM64 models, and 160/200% font scaling remain unverified.
 name: Push Office UI-12-08 Android 35/36 integration QA
 
 on:
