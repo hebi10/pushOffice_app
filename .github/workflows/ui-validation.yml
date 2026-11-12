@@ -76,3 +76,13 @@ jobs:
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
             -PreactNativeArchitectures=x86_64
+      - name: Verify NOTI-AI-00 synthetic recognition baseline
+        run: python3 tools/qa/verify_noti_ai_00.py
+      - name: Preserve NOTI-AI-00 fixture benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-NOTI-AI-00-baseline
+          path: modules/push-office-native/android/build/reports/noti-ai-00/baseline.json
+          if-no-files-found: warn
+          retention-days: 30
