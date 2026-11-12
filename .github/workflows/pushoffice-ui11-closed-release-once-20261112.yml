@@ -1,0 +1,52 @@
+name: Push Office UI-11 closed test one-time request (2026-11-12)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-ui11-closed-release-once-20261112.yml'
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  request-closed:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-ui11-closed-20261112]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify reviewed main has not changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          actual_sha="$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$actual_sha" != "$GITHUB_SHA" ]; then
+            echo "::error::main changed before the approved closed-test dispatch."
+            exit 1
+          fi
+
+      - name: Dispatch existing signed Google Play release to 1차 테스트 only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GH_REPO}/actions/workflows/android-release.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[mode]=deploy' \
+            -f 'inputs[target]=closed' \
+            -f 'inputs[closed_track]=1차 테스트'
+
+# One-shot: no production, alpha, or internal testing target.
+# The existing release workflow allocates Play versionCode, signs and verifies
+# AAB/APK, publishes the named closed test track, and reads it back.
+# Physical Samsung One UI, microphone, and actual AI-model inference testing
+# remains to be documented by closed-test participants.
