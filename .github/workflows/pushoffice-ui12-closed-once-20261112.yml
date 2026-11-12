@@ -1,0 +1,85 @@
+name: Push Office UI-12 closed test one-time request (2026-11-12)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pushoffice-ui12-closed-once-20261112.yml'
+
+permissions:
+  actions: write
+  checks: read
+  contents: read
+  pull-requests: read
+
+jobs:
+  request-closed:
+    if: >-
+      github.repository == 'hebi10/pushOffice_app' &&
+      github.ref == 'refs/heads/main' &&
+      github.run_attempt == 1 &&
+      contains(github.event.head_commit.message, '[pushoffice-ui12-closed-20261112]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Reject stale main or unmerged UI-12 final QA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APPROVED_QA_HEAD: 458703090ba91bd099f703e3c8e0261196ab1973
+        run: |
+          set -euo pipefail
+          current="$(gh api "repos/${GH_REPO}/git/ref/heads/main" --jq '.object.sha')"
+          if [ "$current" != "$GITHUB_SHA" ]; then
+            echo "::error::Main changed since the closed-release request."
+            exit 1
+          fi
+          qa="$(gh api "repos/${GH_REPO}/pulls/61")"
+          actual_head="$(jq -r '.head.sha' <<<"$qa")"
+          merged="$(jq -r '.merged' <<<"$qa")"
+          if [ "$merged" != true ] || [ "$actual_head" != "$APPROVED_QA_HEAD" ]; then
+            echo "::error::QA-12-08 PR #61 is not merged with the approved final UI-12 head."
+            exit 1
+          fi
+
+      - name: Require all final Android 29/35/36 QA checks to be successful
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          APPROVED_QA_HEAD: 458703090ba91bd099f703e3c8e0261196ab1973
+        run: |
+          set -euo pipefail
+          report="$(gh api "repos/${GH_REPO}/commits/${APPROVED_QA_HEAD}/check-runs?per_page=100")"
+          required=(
+            'React Native UI checks'
+            'Android Kotlin UI checks'
+            'screenshots'
+            'Android API 29 widget and quick-entry instrumentation'
+            'API 35 widget/tile instrumentation and app smoke'
+            'API 36 widget/tile instrumentation and app smoke'
+          )
+          for label in "${required[@]}"; do
+            if ! jq -e --arg label "$label" \
+              '[.check_runs[] | select(.name == $label and .status == "completed" and .conclusion == "success")] | length >= 1' \
+              <<<"$report" >/dev/null; then
+              echo "::error::Final QA is not successful: $label"
+              exit 1
+            fi
+          done
+
+      - name: Dispatch signed AAB to existing 1차 테스트 closed track only
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh api --method POST \
+            "repos/${GH_REPO}/actions/workflows/android-release.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[mode]=deploy' \
+            -f 'inputs[target]=closed' \
+            -f 'inputs[closed_track]=1차 테스트'
+
+# One-shot. No production, alpha, or internal release requested by this file.
+# Existing android-release.yml controls signing, versionCode allocation, Play
+# exact-track validation, edits.commit, and readback verification.
