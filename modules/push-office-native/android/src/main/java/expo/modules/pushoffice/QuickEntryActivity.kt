@@ -72,9 +72,12 @@ class QuickEntryActivity : Activity() {
         val suggestion = intent.getStringExtra("suggestionId")?.let { NotificationSuggestionStore.get(this, it) }
         if (suggestion == null) chooser()
         else {
-          val date = Instant.ofEpochMilli(suggestion.startAt).atZone(zone)
+          val date = suggestion.startAt?.let { Instant.ofEpochMilli(it).atZone(zone) }
+          val guidance = if (suggestion.triage == "needs_confirmation")
+            "날짜·시간이 확정되지 않은 알림입니다. 날짜와 시각을 직접 선택한 뒤 확인해 주세요."
+            else "분석 결과를 수정하거나 확인한 뒤 직접 저장해 주세요."
           form(suggestion.title, date, "none", suggestion.excerpt, null,
-            "알림 출처: ${suggestion.sourceApp}\n내용: ${suggestion.excerpt}\n분석 결과를 수정하거나 확인한 뒤 직접 저장해 주세요.")
+            "알림 출처: ${suggestion.sourceApp}\n내용: ${suggestion.excerpt}\n${guidance}")
         }
       }
       else -> chooser()

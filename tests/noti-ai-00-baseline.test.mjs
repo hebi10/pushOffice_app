@@ -6,6 +6,7 @@ const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8'
 const fixture = read('modules/push-office-native/android/src/test/resources/noti-ai-00-cases.tsv');
 const kotlin = read('modules/push-office-native/android/src/test/java/expo/modules/pushoffice/NotiAi00BaselineTest.kt');
 const listener = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleNotificationListener.kt');
+const classifier = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/NotificationIntentPolicy.kt');
 const store = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/NotificationSuggestionStore.kt');
 const verifier = read('tools/qa/verify_noti_ai_00.py');
 
@@ -35,8 +36,11 @@ test('NOTI-AI-00 measures production Kotlin gate and parser, not a copied JavaSc
   assert.match(kotlin, /assertEquals\(60, cases\.size\)/);
   assert.match(kotlin, /reportFile\.writeText\(report, Charsets\.UTF_8\)/);
   assert.match(kotlin, /assertTrue\("Sensitive synthetic alert passed the pre-AI gate\."/);
-  assert.match(listener, /NotificationSuggestionPolicy\.candidate\(title, body\)/);
-  assert.match(listener, /ScheduleParser\.parse\(source, now\)/);
+  // Preserve the original NOTI-AI-00 benchmark while NOTI-AI-01 routes live notifications
+  // through explicit three-way classification instead of the obsolete two-stage listener.
+  assert.match(listener, /NotificationIntentPolicy\.classify\(title, body, now\)/);
+  assert.match(classifier, /NotificationSuggestionPolicy\.isSensitive\(title, body\)/);
+  assert.match(classifier, /ScheduleParser\.parse\(source, now\)/);
 });
 
 test('NOTI-AI-00 keeps existing privacy, queue, opt-in and user approval guarantees unchanged', () => {
