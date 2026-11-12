@@ -39,6 +39,9 @@ test('NOTI-AI-01 exposes three-way decisions and never fills a missing date/time
   assert.match(store, /value\.optString\("triage", "confirmed_candidate"\)/);
   assert.match(store, /suggestion\.triage == "needs_confirmation" && start != null/);
   assert.match(store, /existing\.triage == "confirmed_candidate"/);
+  assert.match(store, /private const val CURRENT_CONSENT_VERSION = 2/);
+  assert.match(store, /getInt\(CONSENT_VERSION, 0\) == CURRENT_CONSENT_VERSION/);
+  assert.match(store, /putInt\(CONSENT_VERSION, CURRENT_CONSENT_VERSION\)/);
   assert.match(ts, /startAt: number \| null/);
   assert.match(ts, /triage: 'confirmed_candidate' \| 'needs_confirmation'/);
 });
