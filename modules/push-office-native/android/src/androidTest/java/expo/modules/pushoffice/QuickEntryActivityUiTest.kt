@@ -95,9 +95,9 @@ class QuickEntryActivityUiTest {
         val back = buttons.single { it.text.toString() == "뒤로" }
         val next = buttons.single { it.text.toString() == "내용 확인" }
         assertSame("Step 2 actions must stay together in a fixed footer", back.parent, next.parent)
-        assertTrue("The editor must preserve keyboard resize behavior",
-          activity.window.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST ==
-            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        assertEquals("The editor must preserve keyboard resize behavior",
+          WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE,
+          activity.window.attributes.softInputMode and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST)
         assertTrue("Back must be reachable without scrolling", back.getGlobalVisibleRect(Rect()))
         assertTrue("Confirm must be reachable without scrolling", next.getGlobalVisibleRect(Rect()))
         assertEquals("Entering text input must not request microphone access",
