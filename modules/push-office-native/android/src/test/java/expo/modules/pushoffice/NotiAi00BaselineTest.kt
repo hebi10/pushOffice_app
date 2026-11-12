@@ -61,7 +61,7 @@ class NotiAi00BaselineTest {
         parsed.start != null && parsed.title.isNotBlank()
       val exact = item.group == "complete" && accepted &&
         parsed?.start?.toLocalDateTime()?.toString() == item.expectedLocalStart &&
-        parsed.repeatType == item.expectedRepeat
+        parsed?.repeatType == item.expectedRepeat
       Observation(item, source != null, accepted, exact)
     }
 
