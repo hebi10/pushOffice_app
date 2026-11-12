@@ -182,9 +182,9 @@ class QuickEntryActivity : Activity() {
       setColorFilter(actionColor)
       scaleType=ImageView.ScaleType.FIT_CENTER
       importantForAccessibility=View.IMPORTANT_FOR_ACCESSIBILITY_NO
-    },LinearLayout.LayoutParams(dp(112),dp(80)).apply {
+    },LinearLayout.LayoutParams(dp(140),dp(106)).apply {
       gravity=Gravity.CENTER_HORIZONTAL
-      bottomMargin=dp(6)
+      bottomMargin=dp(10)
     })
     root.addView(TextView(this).apply {
       text=getString(R.string.quick_entry_title)
