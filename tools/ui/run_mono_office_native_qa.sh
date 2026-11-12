@@ -7,4 +7,4 @@ cd android
   '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
   -Pkotlin.compiler.execution.strategy=in-process \
   -PreactNativeArchitectures=x86_64 \
-  -Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.ScheduleWidgetViewsTest,expo.modules.pushoffice.QuickEntryActivityUiTest
+  -Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.ScheduleWidgetViewsTest,expo.modules.pushoffice.QuickEntryActivityUiTest,expo.modules.pushoffice.NotiAi01PersistenceTest
