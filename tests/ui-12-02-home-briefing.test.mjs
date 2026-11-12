@@ -12,7 +12,7 @@ test('UI-12-02 does not repeat the next event in the local AI prompt or today li
   assert.ok(home.includes('const nextIsInTodayAgenda = Boolean(next?.id && todayItems.some('));
   assert.ok(home.includes('item.id === next.id && item.startAt.toMillis() === next.startAt.toMillis()'));
   assert.ok(home.includes('next && !nextIsInTodayAgenda ?'));
-  assert.ok(home.includes('nextIsInTodayAgenda && item.id === next?.id && item.startAt.toMillis() === next.startAt.toMillis()'));
+  assert.ok(home.includes('nextIsInTodayAgenda && item.id === next?.id && item.startAt.toMillis() === next?.startAt.toMillis()'));
   assert.ok(home.includes('다음 일정 1건은 위 카드에서 확인하세요.'));
   assert.ok(home.includes('title="오늘 일정"'));
   assert.ok(home.includes('todayItems.map((item, index) =>'));
