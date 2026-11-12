@@ -48,6 +48,8 @@ data class NotificationSuggestion(
 object NotificationSuggestionStore {
   private const val PREF = "push_office_notification_suggestions"
   private const val ENABLED = "enabled"
+  private const val CONSENT_VERSION = "consent_version"
+  private const val CURRENT_CONSENT_VERSION = 2
   private const val ITEMS = "items"
   private const val SEEN = "seen"
   private const val LIMIT = 24
@@ -65,12 +67,16 @@ object NotificationSuggestionStore {
       allowed.split(':').any { it == component.flattenToString() }
     }
   }
-  fun enabled(context: Context): Boolean = prefs(context).getBoolean(ENABLED, false)
+  // Version 1 consent covered only explicit date+time; expanding to incomplete messages needs renewed opt-in.
+  fun enabled(context: Context): Boolean =
+    prefs(context).getBoolean(ENABLED, false) &&
+      prefs(context).getInt(CONSENT_VERSION, 0) == CURRENT_CONSENT_VERSION
 
   fun setEnabled(context: Context, enabled: Boolean) = synchronized(lock) {
     if (enabled) {
       require(accessGranted(context)) { "Android 알림 접근 권한을 먼저 허용해 주세요." }
-      check(prefs(context).edit().putBoolean(ENABLED, true).commit()) { "설정을 저장하지 못했습니다." }
+      check(prefs(context).edit().putBoolean(ENABLED, true)
+        .putInt(CONSENT_VERSION, CURRENT_CONSENT_VERSION).commit()) { "설정을 저장하지 못했습니다." }
     } else {
       // Explicit opt-out immediately removes all captured candidates and deduplication keys.
       check(prefs(context).edit().clear().commit()) { "수집 기록을 삭제하지 못했습니다." }
