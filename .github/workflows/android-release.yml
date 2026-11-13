@@ -1,26 +1,17 @@
 name: Push Office Play release
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/**'
-      - 'src/**'
-      - 'modules/**'
-      - 'plugins/**'
-      - 'assets/**'
-      - 'app.json'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'tools/ci/**'
-      - 'store-assets/release-notes-ko-KR.txt'
-      - '.github/workflows/android-release.yml'
   workflow_dispatch:
     inputs:
+      ops01_release_approved:
+        description: 'OPS-01: final planned work and QA complete; manual Play release approved'
+        required: true
+        type: boolean
+        default: false
       mode:
         description: 'deploy: build and publish; build: signed files only; check: Play connection only'
         type: choice
-        default: deploy
+        default: check
         options: [deploy, build, check]
       target:
         description: 'Internal by default; closed requires an existing closed track'
@@ -63,6 +54,14 @@ jobs:
       - name: Select release request
         id: request
         run: python3 tools/ci/release_policy.py request
+
+      - name: OPS-01 require explicit Play release approval
+        if: steps.request.outputs.mode == 'deploy'
+        env:
+          OPS01_RELEASE_APPROVED: ${{ inputs.ops01_release_approved }}
+        run: |
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$OPS01_RELEASE_APPROVED" = true
 
       - name: Test release tools
         run: python3 -m unittest discover -s tools/ci -p 'test_*.py'

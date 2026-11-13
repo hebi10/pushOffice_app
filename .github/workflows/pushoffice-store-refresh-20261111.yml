@@ -10,16 +10,6 @@ on:
       - 'store-assets/ko-KR/screenshots-refresh-20261111/**'
       - 'store-assets/ko-KR/feature-graphic-refresh-20261111.png'
       - 'store-assets/ko-KR/app-icon.png'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pushoffice-store-refresh-20261111.yml'
-      - '.github/ops/publish_play_store_refresh_20261111.py'
-      - 'store-assets/ko-KR/refresh-manifest-20261111.json'
-      - 'store-assets/ko-KR/screenshots-refresh-20261111/**'
-      - 'store-assets/ko-KR/feature-graphic-refresh-20261111.png'
-      - 'store-assets/ko-KR/app-icon.png'
-
 permissions:
   contents: read
   id-token: write
@@ -54,11 +44,14 @@ jobs:
 
   publish-images:
     if: >-
+      false &&
+      (
       github.event_name == 'push' &&
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
       contains(github.event.head_commit.message, '[push-office-store-refresh-20261111]')
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

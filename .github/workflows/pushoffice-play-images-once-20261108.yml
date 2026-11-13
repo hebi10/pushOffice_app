@@ -7,11 +7,6 @@ on:
       - 'store-assets/ko-KR/**'
       - '.github/ops/publish_play_store_images.py'
       - '.github/workflows/pushoffice-play-images-once-20261108.yml'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pushoffice-play-images-once-20261108.yml'
-
 permissions:
   contents: read
   id-token: write
@@ -45,10 +40,13 @@ jobs:
 
   publish:
     if: >-
+      false &&
+      (
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
       contains(github.event.head_commit.message, '[push-office-store-images-fix-once-20261108]')
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
