@@ -43,7 +43,7 @@ jobs:
       EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
       BATCH_ID: ${{ inputs.batch_id }}
       FINAL_BATCH_APPROVED: ${{ inputs.final_batch_approved }}
-      REQUIRED_CI_JSON: '[]'
+      REQUIRED_CI_JSON: '["Push Office UI validation"]'
       RELEASE_TAG: ${{ inputs.release_tag }}
       VERSION_CODE: ${{ inputs.version_code }}
       BUILD_WORKFLOW: 'android-release.yml'
