@@ -348,7 +348,8 @@ class QuotedStepControlRegressionTests(unittest.TestCase):
             "      - name: Verify immutable approved batch\n",
             '      - "if": false\n        name: Verify immutable approved batch\n')
         issues = self.findings_for_store(source)
-        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+        self.assertTrue(any(issue.startswith(("STORE_OPTIONAL:", "STORE_GUARD:"))
+                            for issue in issues), issues)
 
     def test_quoted_ignore_errors_cannot_bypass_approval(self):
         source = store_workflow().replace(
@@ -356,7 +357,8 @@ class QuotedStepControlRegressionTests(unittest.TestCase):
             '      - "continue-on-error": true\n'
             '        name: Verify immutable approved batch\n')
         issues = self.findings_for_store(source)
-        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+        self.assertTrue(any(issue.startswith(("STORE_OPTIONAL:", "STORE_GUARD:"))
+                            for issue in issues), issues)
 
     def test_and_list_cannot_mask_approval_failure(self):
         source = store_workflow(
@@ -364,7 +366,8 @@ class QuotedStepControlRegressionTests(unittest.TestCase):
                       "          python3 scripts/ops06/store_gate.py apply && echo approved\n"
                       "          echo success")
         issues = self.findings_for_store(source)
-        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+        self.assertTrue(any(issue.startswith(("STORE_OPTIONAL:", "STORE_GUARD:"))
+                            for issue in issues), issues)
 
 
 if __name__ == "__main__":
