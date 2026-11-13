@@ -522,6 +522,46 @@ def findings():
         mandatory = "inputs.ops01_release_approved == true"
         if publisher is None or mandatory not in _guaranteed_atoms(job_condition(publisher)):
             problems.append("APPROVAL: Push Office store publisher lacks mandatory OPS-01 approval")
+        store_steps = _workflow_steps(publisher or "")
+        store_guards = [step for step in store_steps if re.search(
+            r"(?m)^[ \t]*(?:-[ \t]+)?run:[ \t]*python3[ \t]+scripts/ops06/store_gate\.py[ \t]+apply[ \t]*(?:#.*)?$",
+            step)]
+        if len(store_guards) != 1:
+            problems.append("STORE_BINDING: Push Office requires exactly one effective OPS-06 gate")
+        else:
+            for key, field in (("OPS06_STORE_APPROVED", "ops06_store_approved"),
+                               ("OPS06_CONFIRMATION", "ops06_confirmation"),
+                               ("OPS06_EXPECTED_MAIN_SHA", "ops06_expected_main_sha"),
+                               ("OPS06_BATCH_ID", "ops06_batch_id")):
+                expression = "$" + "{{ inputs." + field + " }}"
+                values = re.findall(r"(?m)^[ \t]+" + re.escape(key)
+                                    + r":[ \t]*([^\n#]+)", store_guards[0])
+                if len(values) != 1 or values[0].strip() != expression:
+                    problems.append("STORE_BINDING: Push Office " + key
+                                    + " must use its manual dispatch input")
+        android = read(".github/workflows/android-release.yml")
+        release = jobs(android).get("release") if android is not None else None
+        release_steps = _workflow_steps(release or "")
+        release_guards = [(i, step) for i, step in enumerate(release_steps)
+                          if "OPS-01 require explicit Play release approval" in step]
+        if len(release_guards) != 1:
+            problems.append("ANDROID_APPROVAL: Push Office release must have one OPS-01 approval gate")
+        else:
+            index, gate = release_guards[0]
+            binding = "OPS01_RELEASE_APPROVED: " + "$" + "{{ inputs.ops01_release_approved }}"
+            if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
+                    or binding not in gate
+                    or 'test "$OPS01_RELEASE_APPROVED" = true' not in gate
+                    or 'test "$GITHUB_EVENT_NAME" = workflow_dispatch' not in gate
+                    or re.search(r"(?m)^[ \t]+(?:-[ \t]+)?continue-on-error:[ \t]*true\b", gate)):
+                problems.append("ANDROID_APPROVAL: Push Office OPS-01 guard must enforce user approval")
+            for i, step in enumerate(release_steps):
+                if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
+                    if i <= index or re.search(
+                            r"\b(?:always|failure|cancelled)\s*\(|!\s*success\s*\(",
+                            _step_condition(step)):
+                        problems.append("ANDROID_APPROVAL: Play publication must stop after rejected OPS-01 approval")
+                        break
         old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")
         legacy = jobs(old).get("publish") if old is not None else None
         if legacy is not None and not is_disabled(job_condition(legacy)):
