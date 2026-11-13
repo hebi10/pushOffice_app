@@ -422,5 +422,29 @@ class EffectivePushOfficeApprovalRegressionTests(unittest.TestCase):
                          findings)
 
 
+class AndroidApprovalFailurePropagationTests(unittest.TestCase):
+    def test_android_approval_must_not_mask_rejection(self):
+        read_file = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = read_file(path)
+        test = 'test "$OPS01_RELEASE_APPROVED" = true'
+        self.assertIn(test, source)
+        approval = "      - name: OPS-01 require explicit Play release approval\n"
+        self.assertIn(approval, source)
+        unsafe_cases = (
+            source.replace(test, test + " || true", 1),
+            source.replace(approval,
+                           approval + "        continue-on-error: " + "$" + "{{ true }}\n", 1),
+            source.replace(approval, approval + "        shell: bash {0}\n", 1),
+        )
+        for modified in unsafe_cases:
+            with self.subTest(variant=modified != source):
+                with patch.object(audit, "read", side_effect=lambda name:
+                                  modified if name == path else read_file(name)):
+                    issues = audit.findings()
+                self.assertTrue(any("ANDROID_APPROVAL: Push Office OPS-01 guard" in issue
+                                    for issue in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
