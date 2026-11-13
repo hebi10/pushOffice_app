@@ -318,7 +318,7 @@ def _workflow_steps(body):
 
 
 def _step_condition(body):
-    match = re.search(r"(?m)^([ \t]+)(-[ \t]+)?if:[ \t]*([^\n]+)", body)
+    match = re.search(r"(?m)^([ \t]+)(-[ \t]+)?(?:if|['\"]if['\"]):[ \t]*([^\n]+)", body)
     if not match:
         return ""
     condition = match.group(3).strip().split(" #", 1)[0].strip()
@@ -336,12 +336,12 @@ def _step_condition(body):
 
 
 def _safe_store_step(guard_step, mutation_steps, body, filename):
-    if re.search(r"(?m)^[ \t]+(?:-[ \t]+)?continue-on-error[ \t]*:[ \t]*(?!false[ \t]*(?:#.*)?$)[^\n]+", guard_step):
+    if re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*(?!false[ \t]*(?:#.*)?$)[^\n]+""", guard_step):
         return False
     guard_command = r"(?m)^[ \t]*(?:-[ \t]+)?(?:run:[ \t]*)?python(?:3)?\s+scripts/ops06/store_gate\.py\s+apply"
     if not re.search(guard_command + r"(?:\s|$)", guard_step):
         return False
-    if re.search(guard_command + r"[^\n]*(?:\|\||;[ \t]*true\b|\|(?!\|))", guard_step):
+    if re.search(guard_command + r"[^\n]*(?:&&|\|\||;[ \t]*true\b|\|(?!\|))", guard_step):
         return False
     if re.search(r"(?m)^[ \t]*(?:run:[ \t]*)?set[ \t]+\+e\b", guard_step):
         return False
@@ -499,8 +499,8 @@ def findings():
                 problems.append("PROVENANCE: OPS-04 " + stage + " requires an executable signed-source guard")
                 continue
             index, guard = guards[0]
-            if (_step_condition(guard) or re.search(r"(?m)^[ \t]+(?:-[ \t]+)?continue-on-error[ \t]*:", guard)
-                    or re.search(guard_command + r"[^\n]*(?:\|\||;[ \t]*true\b|\|(?!\|))", guard)
+            if (_step_condition(guard) or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*""", guard)
+                    or re.search(guard_command + r"[^\n]*(?:&&|\|\||;[ \t]*true\b|\|(?!\|))", guard)
                     or re.search(r"(?m)^[ \t]*(?:run:[ \t]*)?set[ \t]+\+e\b", guard)):
                 problems.append("PROVENANCE: OPS-04 " + stage + " guard must run and stop on failure")
             if any("actions/download-artifact@" in step or "google-github-actions/auth@" in step
