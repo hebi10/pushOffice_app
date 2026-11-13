@@ -40,6 +40,18 @@ class HardeningTests(unittest.TestCase):
             ), [],
         )
 
+    def test_negated_nonblocking_status_does_not_erase_manual_gate(self):
+        source = publisher("!cancelled() && " + MANUAL + " && inputs.approved == true")
+        self.assertEqual(audit.automatic_mutations("play-release.yml", source), [])
+
+    def test_quoted_step_keys_are_inventory_boundaries(self):
+        steps = ("    steps:\n"
+                 "      - \"if\": false\n"
+                 "        run: python3 scripts/ops06/store_gate.py apply\n"
+                 "      - uses: google-github-actions/auth@v3\n"
+                 "      - run: python3 scripts/play/listing_images.py --apply\n")
+        self.assertEqual(len(audit._workflow_steps(steps)), 3)
+
     def test_disabled_job_is_not_publisher(self):
         self.assertEqual(
             audit.automatic_mutations("play-release.yml", publisher("false && inputs.approved == true")), [],
