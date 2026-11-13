@@ -289,5 +289,27 @@ class PushOfficeReleaseGateRegressionTests(unittest.TestCase):
         self.assertTrue(any("FROZEN: Push Office" in item for item in issues), issues)
 
 
+
+class InterpreterOptionsRegressionTests(unittest.TestCase):
+    def test_unbuffered_python_publisher_is_not_exempt(self):
+        workflow = publish_on(
+            "on:\n  push:",
+            "python3 -u scripts/play/publisher.py deploy --bundle release.aab")
+        self.assertTrue(audit.automatic_mutations("custom.yml", workflow))
+
+    def test_unbuffered_store_publisher_requires_approval(self):
+        workflow = store_workflow(guard=False).replace(
+            "python3 scripts/play/listing_images.py --mode upload",
+            "python3 -u scripts/play/listing_images.py --mode upload")
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            folder = root / ".github/workflows"
+            folder.mkdir(parents=True)
+            (folder / "renamed-assets.yml").write_text(workflow, encoding="utf-8")
+            with patch.object(audit, "ROOT", root):
+                issues = audit.store_guard_findings()
+        self.assertTrue(any("STORE_GUARD" in item for item in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
