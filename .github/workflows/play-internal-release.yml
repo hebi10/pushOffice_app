@@ -99,6 +99,7 @@ jobs:
       - name: Independently verify AAB identity, signer and source digest
         id: verify
         env:
+          GH_TOKEN: ${{ github.token }}
           BUNDLETOOL_JAR: ${{ runner.temp }}/bundletool.jar
         run: python3 scripts/ops04/internal.py verify
       - uses: actions/upload-artifact@v4
@@ -143,6 +144,7 @@ jobs:
       - name: Verify identical signer, package and AAB SHA-256 again
         id: verified
         env:
+          GH_TOKEN: ${{ github.token }}
           BUNDLETOOL_JAR: ${{ runner.temp }}/bundletool.jar
         run: python3 scripts/ops04/internal.py verify
       - name: Require existing app-scoped Play WIF
