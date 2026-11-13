@@ -188,7 +188,7 @@ def _unwrap(expr):
 
 def _guaranteed_atoms(condition):
     expr = _unwrap(condition.replace("$" + "{{", "").replace("}}", "").strip())
-    if not expr or expr.startswith("!") or re.match(r"^not\b", expr):
+    if not expr:
         return set()
     alternatives = _split_boolean(expr, "||")
     if len(alternatives) > 1:
@@ -196,6 +196,8 @@ def _guaranteed_atoms(condition):
     conjuncts = _split_boolean(expr, "&&")
     if len(conjuncts) > 1:
         return set().union(*(_guaranteed_atoms(part) for part in conjuncts))
+    if expr.startswith("!") or re.match(r"^not\b", expr):
+        return set()
     return {expr.replace('"', "'").strip()}
 
 
@@ -308,7 +310,7 @@ def _store_mutating_command(body):
 
 
 def _workflow_steps(body):
-    found = list(re.finditer(r"(?m)^( +)- [A-Za-z][\w-]*:", body))
+    found = list(re.finditer(r"""(?m)^( +)- (?:[A-Za-z][\w-]*|['"][A-Za-z][\w-]*['"]):""", body))
     if not found:
         return []
     depth = min(len(item.group(1)) for item in found)
@@ -336,6 +338,8 @@ def _step_condition(body):
 
 
 def _safe_store_step(guard_step, mutation_steps, body, filename):
+    if re.search(r"(?m)^[ \t]+shell:[ \t]*['\"]?bash[ \t]+\{0\}['\"]?[ \t]*(?:#.*)?$", guard_step):
+        return False
     if re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*(?!false[ \t]*(?:#.*)?$)[^\n]+""", guard_step):
         return False
     guard_command = r"(?m)^[ \t]*(?:-[ \t]+)?(?:run:[ \t]*)?python(?:3)?\s+scripts/ops06/store_gate\.py\s+apply"
