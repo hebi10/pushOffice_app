@@ -510,6 +510,16 @@ def findings():
         promote = jobs(read(".github/workflows/play-promote.yml")).get("promote")
         if not promote or "inputs.final_release_confirmed == true" not in _guaranteed_atoms(job_condition(promote)):
             problems.append("APPROVAL: TripCanvas legacy closed promotion lacks mandatory final approval")
+    if REPOSITORY == "hebi10/pushOffice_app":
+        refresh = read(".github/workflows/pushoffice-store-refresh-20261111.yml")
+        publisher = jobs(refresh).get("publish-images") if refresh is not None else None
+        mandatory = "inputs.ops01_release_approved == true"
+        if publisher is None or mandatory not in _guaranteed_atoms(job_condition(publisher)):
+            problems.append("APPROVAL: Push Office store publisher lacks mandatory OPS-01 approval")
+        old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")
+        legacy = jobs(old).get("publish") if old is not None else None
+        if legacy is not None and not is_disabled(job_condition(legacy)):
+            problems.append("FROZEN: Push Office legacy inline image publisher must remain disabled")
     if REPOSITORY == "hebi10/PetWorld":
         closed = read(".github/workflows/play-closed-release.yml") or ""
         if re.search(r"(?i)publisher[.]py\s+deploy[^\n]*--bundle", closed):
