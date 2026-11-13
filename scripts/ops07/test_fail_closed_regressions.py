@@ -332,5 +332,40 @@ class FlexibleJobConditionRegressionTests(unittest.TestCase):
         self.assertTrue(audit.automatic_mutations("play.yml", unsafe))
 
 
+class QuotedStepControlRegressionTests(unittest.TestCase):
+    def findings_for_store(self, source):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workflows = root / ".github/workflows"
+            workflows.mkdir(parents=True)
+            (workflows / "pushoffice-store-refresh-20261111.yml").write_text(
+                source, encoding="utf-8")
+            with patch.object(audit, "ROOT", root):
+                return audit.store_guard_findings()
+
+    def test_quoted_false_condition_cannot_skip_approval(self):
+        source = store_workflow().replace(
+            "      - name: Verify immutable approved batch\n",
+            '      - "if": false\n        name: Verify immutable approved batch\n')
+        issues = self.findings_for_store(source)
+        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+
+    def test_quoted_ignore_errors_cannot_bypass_approval(self):
+        source = store_workflow().replace(
+            "      - name: Verify immutable approved batch\n",
+            '      - "continue-on-error": true\n'
+            '        name: Verify immutable approved batch\n')
+        issues = self.findings_for_store(source)
+        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+
+    def test_and_list_cannot_mask_approval_failure(self):
+        source = store_workflow(
+            guard_run="|\n"
+                      "          python3 scripts/ops06/store_gate.py apply && echo approved\n"
+                      "          echo success")
+        issues = self.findings_for_store(source)
+        self.assertTrue(any("STORE_OPTIONAL" in issue for issue in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
