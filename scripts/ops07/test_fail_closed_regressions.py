@@ -370,5 +370,57 @@ class QuotedStepControlRegressionTests(unittest.TestCase):
                             for issue in issues), issues)
 
 
+class EffectivePushOfficeApprovalRegressionTests(unittest.TestCase):
+    def test_store_approved_source_cannot_be_self_approved(self):
+        read_file = audit.read
+        path = ".github/workflows/pushoffice-store-refresh-20261111.yml"
+        source = read_file(path)
+        original = "OPS06_EXPECTED_MAIN_SHA: ${{ inputs.ops06_expected_main_sha }}"
+        self.assertIn(original, source)
+        changed = source.replace(original, "OPS06_EXPECTED_MAIN_SHA: ${{ github.sha }}")
+        with patch.object(audit, "read", side_effect=lambda name:
+                          changed if name == path else read_file(name)):
+            findings = audit.findings()
+        self.assertTrue(any("STORE_BINDING: Push Office OPS06_EXPECTED_MAIN_SHA"
+                            in problem for problem in findings), findings)
+
+    def test_store_confirmation_must_come_from_dispatch_input(self):
+        read_file = audit.read
+        path = ".github/workflows/pushoffice-store-refresh-20261111.yml"
+        source = read_file(path)
+        original = "OPS06_CONFIRMATION: ${{ inputs.ops06_confirmation }}"
+        self.assertIn(original, source)
+        changed = source.replace(original, "OPS06_CONFIRMATION: APPLY_VERIFIED_PLAY_STORE_ASSETS")
+        with patch.object(audit, "read", side_effect=lambda name:
+                          changed if name == path else read_file(name)):
+            findings = audit.findings()
+        self.assertTrue(any("STORE_BINDING: Push Office OPS06_CONFIRMATION"
+                            in problem for problem in findings), findings)
+
+    def test_android_deploy_cannot_skip_release_approval(self):
+        read_file = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = read_file(path)
+        gate = ("      - name: OPS-01 require explicit Play release approval\n"
+                "        if: steps.request.outputs.mode == 'deploy'\n"
+                "        env:\n"
+                "          OPS01_RELEASE_APPROVED: ${{ inputs.ops01_release_approved }}\n"
+                "        run: |\n"
+                "          test \"$GITHUB_EVENT_NAME\" = workflow_dispatch\n"
+                "          test \"$OPS01_RELEASE_APPROVED\" = true\n")
+        self.assertIn(gate, source)
+        forged = source.replace(gate, "")
+        with patch.object(audit, "read", side_effect=lambda name:
+                          forged if name == path else read_file(name)):
+            findings = audit.findings()
+        self.assertTrue(any("ANDROID_APPROVAL: Push Office release" in problem
+                            for problem in findings), findings)
+
+    def test_existing_android_release_gate_is_accepted(self):
+        findings = audit.findings()
+        self.assertFalse(any("ANDROID_APPROVAL" in problem for problem in findings),
+                         findings)
+
+
 if __name__ == "__main__":
     unittest.main()
