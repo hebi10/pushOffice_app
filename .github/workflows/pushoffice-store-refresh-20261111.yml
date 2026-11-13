@@ -10,6 +10,37 @@ on:
       - 'store-assets/ko-KR/screenshots-refresh-20261111/**'
       - 'store-assets/ko-KR/feature-graphic-refresh-20261111.png'
       - 'store-assets/ko-KR/app-icon.png'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'check validates approved assets, publish updates ko-KR icons/screenshots only'
+        required: true
+        default: check
+        type: choice
+        options: [check, publish]
+      ops01_release_approved:
+        description: 'All planned work and QA complete for a manual Play change'
+        type: boolean
+        required: true
+        default: false
+      ops06_store_approved:
+        description: 'Separately approve this exact Play store assets change'
+        type: boolean
+        required: true
+        default: false
+      ops06_confirmation:
+        description: 'For publish type APPLY_VERIFIED_PLAY_STORE_ASSETS'
+        type: string
+        required: false
+      ops06_expected_main_sha:
+        description: 'Exact approved current main source SHA'
+        type: string
+        required: false
+      ops06_batch_id:
+        description: 'KST release batch YYYY-MM-DD-pushoffice'
+        type: string
+        required: false
+
 permissions:
   contents: read
   id-token: write
@@ -20,7 +51,7 @@ concurrency:
 
 jobs:
   validate-images:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -44,14 +75,9 @@ jobs:
 
   publish-images:
     if: >-
-      false &&
-      (
-      github.event_name == 'push' &&
-      github.repository == 'hebi10/pushOffice_app' &&
-      github.ref == 'refs/heads/main' &&
-      github.run_attempt == 1 &&
-      contains(github.event.head_commit.message, '[push-office-store-refresh-20261111]')
-      )
+      github.repository == 'hebi10/pushOffice_app' && github.ref == 'refs/heads/main' &&
+      github.event_name == 'workflow_dispatch' && inputs.mode == 'publish' &&
+      inputs.ops01_release_approved == true && inputs.ops06_store_approved == true
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
@@ -70,6 +96,14 @@ jobs:
           PY
       - name: Run regression tests for transactional Play edits
         run: python3 -m unittest discover -s .github/ops -p 'test_publish_play_store_images.py'
+      - name: OPS-06 gate exact SHA, KST batch and separate store approval
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OPS06_STORE_APPROVED: ${{ inputs.ops06_store_approved }}
+          OPS06_CONFIRMATION: ${{ inputs.ops06_confirmation }}
+          OPS06_EXPECTED_MAIN_SHA: ${{ inputs.ops06_expected_main_sha }}
+          OPS06_BATCH_ID: ${{ inputs.ops06_batch_id }}
+        run: python3 scripts/ops06/store_gate.py apply
       - name: Authenticate the existing app-scoped Play service account
         uses: google-github-actions/auth@v3
         id: auth
