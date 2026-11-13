@@ -264,5 +264,30 @@ class FailureBoundaryRegressionTests(unittest.TestCase):
         self.assertTrue(any("PROVENANCE_BYPASS" in item for item in issues), issues)
 
 
+
+class PushOfficeReleaseGateRegressionTests(unittest.TestCase):
+    def test_refresh_requires_manual_full_release_approval(self):
+        read_file = audit.read
+        path = ".github/workflows/pushoffice-store-refresh-20261111.yml"
+        workflow = read_file(path)
+        self.assertIn("inputs.ops01_release_approved == true", workflow)
+        unsafe = workflow.replace("inputs.ops01_release_approved == true", "true")
+        with patch.object(audit, "read", side_effect=lambda name:
+                          unsafe if name == path else read_file(name)):
+            issues = audit.findings()
+        self.assertTrue(any("APPROVAL: Push Office" in item for item in issues), issues)
+
+    def test_frozen_inline_publisher_cannot_be_reactivated(self):
+        read_file = audit.read
+        path = ".github/workflows/pushoffice-play-images-once-20261108.yml"
+        workflow = read_file(path)
+        self.assertIn("false &&", workflow)
+        unsafe = workflow.replace("false &&", "true &&", 1)
+        with patch.object(audit, "read", side_effect=lambda name:
+                          unsafe if name == path else read_file(name)):
+            issues = audit.findings()
+        self.assertTrue(any("FROZEN: Push Office" in item for item in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
