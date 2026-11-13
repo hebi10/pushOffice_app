@@ -38,6 +38,16 @@ class StoreWiringTests(unittest.TestCase):
     def test_valid_store_gate_precedes_authentication(self):
         self.assertEqual(self.findings(store_workflow()), [])
 
+    def test_custom_shell_cannot_ignore_failed_approval(self):
+        example = store_workflow().replace(
+            "        run: python3 scripts/ops06/store_gate.py apply\n",
+            "        shell: bash {0}\n"
+            "        run: |\n"
+            "          python3 scripts/ops06/store_gate.py apply\n"
+            "          echo finished\n", 1)
+        self.assertTrue(any("STORE_OPTIONAL:" in item for item in self.findings(example)),
+                        self.findings(example))
+
     def test_missing_store_gate_blocks(self):
         source = store_workflow().replace(
             "      - name: OPS-06 separate store approval\n"
