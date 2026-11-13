@@ -131,8 +131,21 @@ def verify():
             "Original Push Office signed AAB verification does not match")
     sys.path.insert(0, "tools/ci")
     import play_publish as publisher
+    source_config = json.loads(Path("app.json").read_text(encoding="utf-8"))
+    base_code = source_config["expo"]["android"]["versionCode"]
+    require(type(base_code) is int and 0 < base_code <= 2100000000,
+            "Invalid committed versionCode")
+    build = github("repos/" + env["GITHUB_REPOSITORY"] + "/actions/runs/" + env["BUILD_RUN_ID"])
+    build_number = build.get("run_number")
+    require(type(build_number) is int and build_number > 0
+            and base_code + build_number == int(env["VERSION_CODE"]),
+            "Signed AAB versionCode is not the approved build-only allocation")
+    source_config["expo"]["android"]["versionCode"] = int(env["VERSION_CODE"])
+    OUT.mkdir(exist_ok=True)
+    effective_config = OUT / "effective-build-config.json"
+    effective_config.write_text(json.dumps(source_config), encoding="utf-8")
     publisher.load_inputs(aab, report_path, Path("store-assets/release-notes-ko-KR.txt"),
-                          app_config=Path("app.json"), source_commit=env["EXPECTED_MAIN_SHA"])
+                          app_config=effective_config, source_commit=env["EXPECTED_MAIN_SHA"])
     OUT.mkdir(exist_ok=True)
     evidence = {"schema": "ops04-verified-aab-v1", "source_sha": env["EXPECTED_MAIN_SHA"],
                 "batch_id": env["BATCH_ID"], "build_run_id": env["BUILD_RUN_ID"],
