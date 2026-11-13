@@ -1,10 +1,7 @@
 name: Push Office Stage36 closed testing one-time request (2026-11-08)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pushoffice-closed-stage36-once-20261108.yml'
+  workflow_dispatch:
 
 permissions:
   actions: write
@@ -13,10 +10,13 @@ permissions:
 jobs:
   request-closed-alpha:
     if: >-
+      false &&
+      (
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
       contains(github.event.head_commit.message, '[pushoffice-closed-stage36-once-20261108]')
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 85
     steps:

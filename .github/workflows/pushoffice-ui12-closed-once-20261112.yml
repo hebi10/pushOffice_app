@@ -1,10 +1,7 @@
 name: Push Office UI-12 closed test one-time request (2026-11-12)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pushoffice-ui12-closed-once-20261112.yml'
+  workflow_dispatch:
 
 permissions:
   actions: write
@@ -15,10 +12,13 @@ permissions:
 jobs:
   request-closed:
     if: >-
+      false &&
+      (
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
       contains(github.event.head_commit.message, '[pushoffice-ui12-closed-20261112]')
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 7
     steps:

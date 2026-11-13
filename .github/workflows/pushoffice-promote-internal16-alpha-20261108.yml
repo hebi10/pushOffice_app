@@ -1,10 +1,7 @@
 name: Push Office promote verified internal 16 to closed alpha (2026-11-08)
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/pushoffice-promote-internal16-alpha-20261108.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,10 +9,13 @@ permissions:
 jobs:
   promote:
     if: >-
+      false &&
+      (
       github.repository == 'hebi10/pushOffice_app' &&
       github.ref == 'refs/heads/main' &&
       github.run_attempt == 1 &&
       contains(github.event.head_commit.message, '[pushoffice-promote-internal16-alpha-20261108]')
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     permissions:
