@@ -176,7 +176,7 @@ jobs:
           test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$EXPECTED_MAIN_SHA"
           test "$FINAL_RELEASE_APPROVED" = true
           test "$APPROVAL_PHRASE" = PUBLISH_VERIFIED_INTERNAL_AAB
-          python3 tools/ci/play_publish.py publish --target internal --bundle "$VERIFIED_AAB" --verification "$(dirname "$VERIFIED_AAB")/$(basename "${VERIFIED_AAB%.aab}").verification.json" --report ops04-verified/play-release.json
+          python3 tools/ci/play_publish.py publish --target internal --app-config ops04-verified/effective-build-config.json --bundle "$VERIFIED_AAB" --verification "$(dirname "$VERIFIED_AAB")/$(basename "${VERIFIED_AAB%.aab}").verification.json" --report ops04-verified/play-release.json
           echo 'Play API accepted and track readback completed; Console review and tester installation remain separate.' >> "$GITHUB_STEP_SUMMARY"
       - name: Preserve sanitized publisher receipt
         if: always()
