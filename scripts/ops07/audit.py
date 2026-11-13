@@ -549,11 +549,93 @@ def findings():
         else:
             index, gate = release_guards[0]
             binding = "OPS01_RELEASE_APPROVED: " + "$" + "{{ inputs.ops01_release_approved }}"
+            approval_test = r'(?m)^[ \t]+test "\$OPS01_RELEASE_APPROVED" = true[ \t]*(?:#.*)?
+            for i, step in enumerate(release_steps):
+                if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
+                    if i <= index or re.search(
+                            r"\b(?:always|failure|cancelled)\s*\(|!\s*success\s*\(",
+                            _step_condition(step)):
+                        problems.append("ANDROID_APPROVAL: Play publication must stop after rejected OPS-01 approval")
+                        break
+        old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")
+        legacy = jobs(old).get("publish") if old is not None else None
+        if legacy is not None and not is_disabled(job_condition(legacy)):
+            problems.append("FROZEN: Push Office legacy inline image publisher must remain disabled")
+    if REPOSITORY == "hebi10/PetWorld":
+        closed = read(".github/workflows/play-closed-release.yml") or ""
+        if re.search(r"(?i)publisher[.]py\s+deploy[^\n]*--bundle", closed):
+            problems.append("CLOSED: PetWorld promotion must not upload a new binary")
+    return problems
+
+
+def report():
+    issues = findings()
+    return {"schema": "ops07-policy-audit-v1", "repository": REPOSITORY,
+            "package_id": PACKAGE, "status": "pass" if not issues else "blocked",
+            "blockers": issues, "real_play_api_called": False}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report", default="ops07-policy-report.json")
+    opt = parser.parse_args()
+    data = report()
+    dest = Path(opt.report)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("OPS-07:", data["status"], "blockers:", len(data["blockers"]))
+    for item in data["blockers"]:
+        print(" -", item)
+
+            event_test = r'(?m)^[ \t]+test "\$GITHUB_EVENT_NAME" = workflow_dispatch[ \t]*(?:#.*)?
+            for i, step in enumerate(release_steps):
+                if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
+                    if i <= index or re.search(
+                            r"\b(?:always|failure|cancelled)\s*\(|!\s*success\s*\(",
+                            _step_condition(step)):
+                        problems.append("ANDROID_APPROVAL: Play publication must stop after rejected OPS-01 approval")
+                        break
+        old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")
+        legacy = jobs(old).get("publish") if old is not None else None
+        if legacy is not None and not is_disabled(job_condition(legacy)):
+            problems.append("FROZEN: Push Office legacy inline image publisher must remain disabled")
+    if REPOSITORY == "hebi10/PetWorld":
+        closed = read(".github/workflows/play-closed-release.yml") or ""
+        if re.search(r"(?i)publisher[.]py\s+deploy[^\n]*--bundle", closed):
+            problems.append("CLOSED: PetWorld promotion must not upload a new binary")
+    return problems
+
+
+def report():
+    issues = findings()
+    return {"schema": "ops07-policy-audit-v1", "repository": REPOSITORY,
+            "package_id": PACKAGE, "status": "pass" if not issues else "blocked",
+            "blockers": issues, "real_play_api_called": False}
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--report", default="ops07-policy-report.json")
+    opt = parser.parse_args()
+    data = report()
+    dest = Path(opt.report)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print("OPS-07:", data["status"], "blockers:", len(data["blockers"]))
+    for item in data["blockers"]:
+        print(" -", item)
+
+            ignored_failure = re.search(
+                r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*(?!false[ \t]*(?:#.*)?$)[^\n]+""",
+                gate)
+            shell_override = re.search(r"(?m)^[ \t]+shell:[ \t]*bash[ \t]+\{0\}[ \t]*(?:#.*)?$", gate)
             if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
                     or binding not in gate
-                    or 'test "$OPS01_RELEASE_APPROVED" = true' not in gate
-                    or 'test "$GITHUB_EVENT_NAME" = workflow_dispatch' not in gate
-                    or re.search(r"(?m)^[ \t]+(?:-[ \t]+)?continue-on-error:[ \t]*true\b", gate)):
+                    or not re.search(approval_test, gate)
+                    or not re.search(event_test, gate)
+                    or ignored_failure
+                    or shell_override
+                    or re.search(r"(?m)^[ \t]*(?:run:[ \t]*)?set[ \t]+\+e\b", gate)):
                 problems.append("ANDROID_APPROVAL: Push Office OPS-01 guard must enforce user approval")
             for i, step in enumerate(release_steps):
                 if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
