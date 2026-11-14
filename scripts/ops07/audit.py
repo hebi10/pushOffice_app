@@ -144,6 +144,20 @@ def job_condition(body):
     return ""
 
 
+def _normalized_condition(condition):
+    """Normalize the YAML scalar and optional Actions expression wrapper."""
+    value = condition.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        quote = value[0]
+        value = value[1:-1]
+        if quote == "'":
+            value = value.replace("''", "'")
+        value = value.strip()
+    if value.startswith("$" + "{{") and value.endswith("}}"):
+        value = value[3:-2].strip()
+    return value
+
+
 def _split_boolean(expr, op):
     parts, depth, quote, start = [], 0, None, 0
     for i, char in enumerate(expr):
@@ -593,7 +607,7 @@ def findings():
                         break
                     if not line.lstrip().startswith("#"):
                         script_after_run.append(line.strip())
-            if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
+            if (_normalized_condition(_step_condition(gate)) != "steps.request.outputs.mode == 'deploy'"
                     or binding not in gate
                     or script_after_run != list(required_tests)
                     or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["'])[ \t]*:""", gate)
