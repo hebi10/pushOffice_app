@@ -568,6 +568,43 @@ class AndroidApprovalFailurePropagationTests(unittest.TestCase):
         self.assertFalse(any("ANDROID_APPROVAL:" in issue for issue in issues), issues)
 
 
+    def test_android_gate_accepts_equivalent_yaml_conditions(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        literal = "        if: steps.request.outputs.mode == 'deploy'\n"
+        self.assertIn(literal, source)
+        accepted = (
+            "        if: " + "$" + "{{ steps.request.outputs.mode == 'deploy' }}\n",
+            '        if: "steps.request.outputs.mode == \'deploy\'"\n',
+            '        if: "' + "$" + "{{ steps.request.outputs.mode == 'deploy' }}" + '"\n',
+            "        if: 'steps.request.outputs.mode == ''deploy'''\n",
+            '        "if": ' + "$" + "{{ steps.request.outputs.mode == 'deploy' }}\n",
+        )
+        for replacement in accepted:
+            with self.subTest(replacement=replacement):
+                changed = source.replace(literal, replacement, 1)
+                with patch.object(audit, "read", side_effect=lambda name:
+                                  changed if name == path else original_read(name)):
+                    issues = audit.findings()
+                self.assertFalse(any("ANDROID_APPROVAL: Push Office OPS-01 guard"
+                                     in issue for issue in issues), issues)
+
+    def test_android_gate_rejects_yaml_expression_with_bypass_branch(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        literal = "        if: steps.request.outputs.mode == 'deploy'\n"
+        unsafe = (
+            "        if: " + "$" + "{{ steps.request.outputs.mode == 'deploy' || true }}\n"
+        )
+        changed = source.replace(literal, unsafe, 1)
+        with patch.object(audit, "read", side_effect=lambda name:
+                          changed if name == path else original_read(name)):
+            issues = audit.findings()
+        self.assertTrue(any("ANDROID_APPROVAL: Push Office OPS-01 guard"
+                            in issue for issue in issues), issues)
+
 
 if __name__ == "__main__":
     unittest.main()
