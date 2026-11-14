@@ -236,7 +236,7 @@ def _publishing_command(body):
             continue
         script, args = match.group(1).lower(), match.group(2).lower()
         # These existing publisher entrypoints mutate by default, even without --publish.
-        if re.search(r"(?:^|/)(?:store_icon|images_only|publish-mobile-play|publish_mobile_play)[.]py$", script):
+        if re.search(r"(?:^|/)(?:store_icon|images_only|publish-mobile-play|publish_mobile_play|publish_play_store_images)[.]py$", script):
             return True
         if not re.search(script_names, script):
             continue
@@ -296,7 +296,7 @@ def _store_mutating_command(body):
         script, args = match.group(1).lower(), match.group(2).lower()
         if script.endswith("/ops06/store_gate.py"):
             continue
-        if re.search(r"(?:^|/)(?:store_icon|images_only)[.]py$", script):
+        if re.search(r"(?:^|/)(?:store_icon|images_only|publish_play_store_images)[.]py$", script):
             return True
         if "publish_play_store_refresh" in script:
             return True
