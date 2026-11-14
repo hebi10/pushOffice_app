@@ -332,6 +332,37 @@ class FlexibleJobConditionRegressionTests(unittest.TestCase):
         self.assertTrue(audit.automatic_mutations("play.yml", unsafe))
 
 
+    def test_quoted_job_if_preserves_manual_release_gate(self):
+        example = (
+            "on:\n  push:\n  workflow_dispatch:\njobs:\n"
+            "  deliver:\n"
+            "    \"if\": github.event_name == 'workflow_dispatch'\n"
+            "    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: python3 tools/ci/play_publish.py publish\n"
+        )
+        self.assertEqual(audit.automatic_mutations("play-release.yml", example), [])
+        unsafe = example.replace(
+            "github.event_name == 'workflow_dispatch'",
+            "github.event_name == 'workflow_dispatch' || github.event_name == 'push'")
+        self.assertTrue(audit.automatic_mutations("play-release.yml", unsafe))
+
+    def test_existing_store_publisher_accepts_quoted_job_if(self):
+        original_read = audit.read
+        path = ".github/workflows/pushoffice-store-refresh-20261111.yml"
+        source = original_read(path)
+        self.assertEqual(source.count("    if: >-\n"), 1)
+        for quoted in ('    "if": >-\n', "    'if': >-\n"):
+            with self.subTest(quoted=quoted):
+                changed = source.replace("    if: >-\n", quoted, 1)
+                with patch.object(audit, "read", side_effect=lambda name:
+                                  changed if name == path else original_read(name)):
+                    issues = audit.findings()
+                self.assertFalse(any("APPROVAL: Push Office" in item for item in issues),
+                                 issues)
+
+
+
 class QuotedStepControlRegressionTests(unittest.TestCase):
     def findings_for_store(self, source):
         with tempfile.TemporaryDirectory() as directory:
@@ -509,6 +540,33 @@ class AndroidApprovalFailurePropagationTests(unittest.TestCase):
                             for issue in issues),
                         issues,
                     )
+
+
+    def test_android_approval_accepts_env_after_yaml_run_block(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        current = (
+            "        env:\n"
+            "          OPS01_RELEASE_APPROVED: $" + "{{ inputs.ops01_release_approved }}\n"
+            "        run: |\n"
+            "          test \"$GITHUB_EVENT_NAME\" = workflow_dispatch\n"
+            "          test \"$OPS01_RELEASE_APPROVED\" = true\n"
+        )
+        reordered = (
+            "        run: |\n"
+            "          test \"$GITHUB_EVENT_NAME\" = workflow_dispatch\n"
+            "          test \"$OPS01_RELEASE_APPROVED\" = true\n"
+            "        env:\n"
+            "          OPS01_RELEASE_APPROVED: $" + "{{ inputs.ops01_release_approved }}\n"
+        )
+        self.assertIn(current, source)
+        changed = source.replace(current, reordered, 1)
+        with patch.object(audit, "read", side_effect=lambda name:
+                          changed if name == path else original_read(name)):
+            issues = audit.findings()
+        self.assertFalse(any("ANDROID_APPROVAL:" in issue for issue in issues), issues)
+
 
 
 if __name__ == "__main__":

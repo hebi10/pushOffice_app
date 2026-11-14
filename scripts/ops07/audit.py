@@ -125,7 +125,7 @@ def job_condition(body):
     for index, line in enumerate(lines):
         if len(line) - len(line.lstrip()) != key_indent:
             continue
-        match = re.match(r"^\s+if\s*:\s*(.*)$", line)
+        match = re.match(r"^\s+(?:if|['\"]if['\"])\s*:\s*(.*)$", line)
         if match is None:
             continue
         value = match.group(1).strip()
@@ -580,9 +580,19 @@ def findings():
                 'test "$OPS01_RELEASE_APPROVED" = true',
             )
             script_after_run = []
-            if "run: |" in lines:
-                script_after_run = [line for line in lines[lines.index("run: |") + 1:]
-                                    if line and not line.startswith("#")]
+            script = re.search(
+                r"""(?m)^([ \t]+)(?:run|['"]run['"]):[ \t]*\|[ \t]*$""", gate
+            )
+            if script:
+                run_indent = len(script.group(1))
+                for line in gate[script.end():].splitlines():
+                    if not line.strip():
+                        continue
+                    indent = len(line) - len(line.lstrip())
+                    if indent <= run_indent:
+                        break
+                    if not line.lstrip().startswith("#"):
+                        script_after_run.append(line.strip())
             if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
                     or binding not in gate
                     or script_after_run != list(required_tests)
