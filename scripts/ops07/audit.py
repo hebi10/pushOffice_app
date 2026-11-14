@@ -565,9 +565,9 @@ def findings():
             if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
                     or binding not in gate
                     or script_after_run != list(required_tests)
+                    or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["'])[ \t]*:""", gate)
                     or any(token in gate for token in (
-                        "continue-on-error:", "set +e", "if false; then",
-                        "shell: bash {0}"))):
+                        "set +e", "if false; then", "shell: bash {0}"))):
                 problems.append("ANDROID_APPROVAL: Push Office OPS-01 guard must enforce user approval")
             for i, step in enumerate(release_steps):
                 if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
