@@ -337,8 +337,29 @@ def _step_condition(body):
     return " ".join(parts) if parts else "__unparsed_condition__"
 
 
+
+def _unsafe_guard_shell(step):
+    """A custom Actions shell can discard a failed approval command; fail closed."""
+    shell = re.search(
+        r"""(?m)^[ \t]+(?:-[ \t]+)?(?:shell|['"]shell['"]):[ \t]*([^\n#]+)""",
+        step,
+    )
+    if shell is None:
+        return False
+    value = shell.group(1).strip().strip("'\"").strip()
+    # GitHub's named bash/sh shells use fail-fast defaults. A custom {0}
+    # template can omit -e, so release approvals do not accept templates.
+    return value not in {"bash", "sh"}
+
+
+def _bypasses_failed_guard(condition):
+    """Status checks disable Actions' implicit success() dependency."""
+    if not re.search(r"\b(?:success|always|failure|cancelled)\s*\(", condition):
+        return False
+    return "success()" not in _guaranteed_atoms(condition)
+
 def _safe_store_step(guard_step, mutation_steps, body, filename):
-    if re.search(r"(?m)^[ \t]+shell:[ \t]*['\"]?bash[ \t]+\{0\}['\"]?[ \t]*(?:#.*)?$", guard_step):
+    if _unsafe_guard_shell(guard_step):
         return False
     if re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*(?!false[ \t]*(?:#.*)?$)[^\n]+""", guard_step):
         return False
@@ -403,7 +424,7 @@ def store_guard_findings():
             for downstream in steps[index + 1:]:
                 if not (_store_mutating_command(downstream) or "google-github-actions/auth@" in downstream):
                     continue
-                if re.search(r"\b(?:always|failure|cancelled)\s*\(", _step_condition(downstream)):
+                if _bypasses_failed_guard(_step_condition(downstream)):
                     problems.append("STORE_BYPASS: " + filename + ": publication may continue after rejected approval")
                     break
             if any("google-github-actions/auth@" in step for step in steps[:index]):
@@ -503,7 +524,7 @@ def findings():
                 problems.append("PROVENANCE: OPS-04 " + stage + " requires an executable signed-source guard")
                 continue
             index, guard = guards[0]
-            if (_step_condition(guard) or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*""", guard)
+            if (_step_condition(guard) or _unsafe_guard_shell(guard) or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["']):[ \t]*""", guard)
                     or re.search(guard_command + r"[^\n]*(?:&&|\|\||;[ \t]*true\b|\|(?!\|))", guard)
                     or re.search(r"(?m)^[ \t]*(?:run:[ \t]*)?set[ \t]+\+e\b", guard)):
                 problems.append("PROVENANCE: OPS-04 " + stage + " guard must run and stop on failure")
@@ -566,14 +587,13 @@ def findings():
                     or binding not in gate
                     or script_after_run != list(required_tests)
                     or re.search(r"""(?m)^[ \t]+(?:-[ \t]+)?(?:continue-on-error|["']continue-on-error["'])[ \t]*:""", gate)
+                    or _unsafe_guard_shell(gate)
                     or any(token in gate for token in (
-                        "set +e", "if false; then", "shell: bash {0}"))):
+                        "set +e", "if false; then"))):
                 problems.append("ANDROID_APPROVAL: Push Office OPS-01 guard must enforce user approval")
             for i, step in enumerate(release_steps):
                 if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
-                    if i <= index or re.search(
-                            r"\b(?:always|failure|cancelled)\s*\(|!\s*success\s*\(",
-                            _step_condition(step)):
+                    if i <= index or _bypasses_failed_guard(_step_condition(step)):
                         problems.append("ANDROID_APPROVAL: Play publication must stop after rejected OPS-01 approval")
                         break
         old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")

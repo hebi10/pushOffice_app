@@ -86,5 +86,37 @@ class StoreWiringTests(unittest.TestCase):
         self.assertTrue(any("STORE_ORDER" in p for p in self.findings(source)))
 
 
+    def test_custom_shells_cannot_swallow_failed_store_approval(self):
+        for declaration in ("shell: sh {0}", '"shell": bash {0}',
+                            "shell: bash --noprofile --norc {0}"):
+            with self.subTest(shell=declaration):
+                example = store_workflow().replace(
+                    "        run: python3 scripts/ops06/store_gate.py apply",
+                    "        " + declaration + "\n"
+                    "        run: python3 scripts/ops06/store_gate.py apply", 1)
+                self.assertTrue(
+                    any("STORE_OPTIONAL:" in item for item in self.findings(example)),
+                    self.findings(example))
+
+    def test_status_checks_cannot_publish_after_rejected_store_approval(self):
+        for condition in ("!success()", "success() == false",
+                          "success() || inputs.force == true", "!cancelled()"):
+            with self.subTest(condition=condition):
+                example = store_workflow().replace(
+                    "      - uses: google-github-actions/auth@v3",
+                    "      - if: " + condition + "\n"
+                    "        uses: google-github-actions/auth@v3", 1)
+                self.assertTrue(
+                    any("STORE_BYPASS:" in item for item in self.findings(example)),
+                    self.findings(example))
+
+    def test_explicit_success_dependency_is_safe(self):
+        example = store_workflow().replace(
+            "      - uses: google-github-actions/auth@v3",
+            "      - if: success() && inputs.mode == 'publish'\n"
+            "        uses: google-github-actions/auth@v3", 1)
+        self.assertEqual(self.findings(example), [])
+
+
 if __name__ == "__main__":
     unittest.main()

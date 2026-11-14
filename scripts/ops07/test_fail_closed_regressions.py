@@ -446,5 +446,37 @@ class AndroidApprovalFailurePropagationTests(unittest.TestCase):
                                     for issue in issues), issues)
 
 
+    def test_android_custom_shell_cannot_ignore_rejected_approval(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        marker = "      - name: OPS-01 require explicit Play release approval\n"
+        self.assertIn(marker, source)
+        for declaration in ("shell: sh {0}", '"shell": bash {0}'):
+            with self.subTest(shell=declaration):
+                unsafe = source.replace(marker,
+                                        marker + "        " + declaration + "\n", 1)
+                with patch.object(audit, "read", side_effect=lambda name:
+                                  unsafe if name == path else original_read(name)):
+                    issues = audit.findings()
+                self.assertTrue(any("ANDROID_APPROVAL: Push Office OPS-01 guard"
+                                    in item for item in issues), issues)
+
+    def test_android_play_auth_must_depend_on_success(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        safe = "        if: steps.request.outputs.mode == 'deploy' && steps.activation.outputs.allowed == 'true'"
+        self.assertIn(safe, source)
+        for condition in ("!success()", "success() || inputs.force == true"):
+            with self.subTest(condition=condition):
+                unsafe = source.replace(safe, "        if: " + condition, 1)
+                with patch.object(audit, "read", side_effect=lambda name:
+                                  unsafe if name == path else original_read(name)):
+                    issues = audit.findings()
+                self.assertTrue(any("ANDROID_APPROVAL: Play publication must stop"
+                                    in item for item in issues), issues)
+
+
 if __name__ == "__main__":
     unittest.main()
