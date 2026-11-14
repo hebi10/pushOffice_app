@@ -478,5 +478,38 @@ class AndroidApprovalFailurePropagationTests(unittest.TestCase):
                                     in item for item in issues), issues)
 
 
+    def test_android_publisher_must_imply_release_approval_mode(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        approved = ("        if: steps.request.outputs.mode == 'deploy' "
+                    "&& steps.activation.outputs.allowed == 'true'")
+        self.assertEqual(source.count(approved), 2)
+        unauthorized = (
+            "steps.request.outputs.mode != 'check'",
+            "steps.request.outputs.mode == 'build'",
+            "steps.request.outputs.mode == 'deploy' || steps.request.outputs.mode == 'build'",
+            "inputs.ops01_release_approved == true",
+        )
+        for replacement in unauthorized:
+            for index in (0, 1):
+                with self.subTest(condition=replacement, downstream_step=index):
+                    start = 0
+                    for _ in range(index + 1):
+                        position = source.find(approved, start)
+                        self.assertNotEqual(position, -1)
+                        start = position + len(approved)
+                    modified = (source[:position] + "        if: " + replacement
+                                + source[position + len(approved):])
+                    with patch.object(audit, "read", side_effect=lambda name:
+                                      modified if name == path else original_read(name)):
+                        issues = audit.findings()
+                    self.assertTrue(
+                        any("ANDROID_APPROVAL: Play publication must stop" in issue
+                            for issue in issues),
+                        issues,
+                    )
+
+
 if __name__ == "__main__":
     unittest.main()

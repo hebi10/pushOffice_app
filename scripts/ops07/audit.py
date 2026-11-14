@@ -593,8 +593,19 @@ def findings():
                 problems.append("ANDROID_APPROVAL: Push Office OPS-01 guard must enforce user approval")
             for i, step in enumerate(release_steps):
                 if "tools/ci/play_publish.py publish" in step or "id: auth_publish" in step:
-                    if i <= index or _bypasses_failed_guard(_step_condition(step)):
-                        problems.append("ANDROID_APPROVAL: Play publication must stop after rejected OPS-01 approval")
+                    condition = _step_condition(step)
+                    # Every binary mutation must require the mode that executes
+                    # the OPS-01 approval step. A build-only dispatch is not approval.
+                    requires_approval = (
+                        "steps.request.outputs.mode == 'deploy'"
+                        in _guaranteed_atoms(condition)
+                    )
+                    if (i <= index or _bypasses_failed_guard(condition)
+                            or not requires_approval):
+                        problems.append(
+                            "ANDROID_APPROVAL: Play publication must stop after rejected "
+                            "OPS-01 approval or non-deploy request"
+                        )
                         break
         old = read(".github/workflows/pushoffice-play-images-once-20261108.yml")
         legacy = jobs(old).get("publish") if old is not None else None
