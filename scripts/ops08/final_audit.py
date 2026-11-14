@@ -54,6 +54,44 @@ def verified_head():
     return sha
 
 
+
+def final_workflow_issues(text):
+    """Fail closed if the final read-only audit could skip main or use Play credentials."""
+    issues = []
+    if not re.search(r"(?m)^permissions:\s*\n  contents:\s*read\s*$", text):
+        issues.append("OPS-08 workflow must use read-only contents permissions")
+    forbidden = ("id-token: write", "google-github-actions/auth@",
+                 "PLAY_ACCESS_TOKEN", "PLAY_SERVICE_ACCOUNT",
+                 "androidpublisher.googleapis.com", "play_publish.py publish",
+                 "--mode deploy")
+    if any(item in text for item in forbidden):
+        issues.append("OPS-08 workflow must never access Play publishing credentials or commands")
+
+    lines = text.splitlines()
+    top = next((i for i, line in enumerate(lines)
+                if re.fullmatch(r"on:\s*", line)), None)
+    events = []
+    if top is not None:
+        for line in lines[top + 1:]:
+            if line.strip() and not line[0].isspace() and not line.lstrip().startswith("#"):
+                break
+            events.append(line)
+    push = next((i for i, line in enumerate(events)
+                 if re.fullmatch(r"  push:\s*", line)), None)
+    if push is None:
+        issues.append("OPS-08 must run after every main push")
+    else:
+        config = []
+        for line in events[push + 1:]:
+            if line.strip() and not line.lstrip().startswith("#"):
+                if len(line) - len(line.lstrip()) <= 2:
+                    break
+                config.append(line)
+        if config != ["    branches: [main]"]:
+            issues.append("OPS-08 main push must have only the main branch filter; no path or tag filters")
+    return issues
+
+
 def audit():
     issues = []
     files = sorted((ROOT / ".github/workflows").glob("*.yml"))
@@ -72,11 +110,7 @@ def audit():
             issues.append("OPS-07 PR audit has an unsafe path filter")
     native = ROOT / ".github/workflows/ops08-final-policy.yml"
     if native.is_file():
-        text = native.read_text(encoding="utf-8")
-        if "id-token: write" in text or "androidpublisher.googleapis.com" in text:
-            issues.append("OPS-08 workflow must never access Play publishing credentials")
-        if "  push:" not in text or "branches: [main]" not in text:
-            issues.append("OPS-08 must independently verify merged main")
+        issues.extend(final_workflow_issues(native.read_text(encoding="utf-8")))
     if os.getenv("GITHUB_REPOSITORY") and os.environ["GITHUB_REPOSITORY"] != REPOSITORY:
         issues.append("Repository identity mismatch")
     if (ROOT / "scripts/ops07/audit.py").is_file():
@@ -91,7 +125,7 @@ def audit():
             manifest[file] = hashlib.sha256(path.read_bytes()).hexdigest()
     return {"schema": "ops08-final-main-policy-v1",
             "repository": REPOSITORY, "source_sha": verified_head(),
-            "main_verified": os.getenv("GITHUB_REF") == "refs/heads/main",
+            "main_verified": os.getenv("GITHUB_REF") == "refs/heads/main" and not issues,
             "event": os.getenv("GITHUB_EVENT_NAME", "local"),
             "workflow_count": len(files), "policy_hashes_sha256": manifest,
             "issues": issues, "status": "pass" if not issues else "blocked",

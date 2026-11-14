@@ -50,5 +50,42 @@ class FinalPolicyTests(unittest.TestCase):
         self.assertTrue(isinstance(result["policy_hashes_sha256"], dict))
 
 
+    def test_final_workflow_runs_on_every_main_push(self):
+        source = (ROOT / ".github/workflows/ops08-final-policy.yml").read_text(
+            encoding="utf-8")
+        self.assertEqual(audit.final_workflow_issues(source), [])
+        original = "  push:\n    branches: [main]\n"
+        self.assertIn(original, source)
+        unsafe = (
+            source.replace(original,
+                           "  push:\n    branches: [main]\n    paths: [scripts/ops08/**]\n", 1),
+            source.replace(original, "  push:\n    paths: [scripts/ops08/**]\n", 1),
+            source.replace(original, "  # push:\n    branches: [main]\n", 1),
+        )
+        for changed in unsafe:
+            with self.subTest(index=unsafe.index(changed)):
+                self.assertTrue(any("OPS-08 main push" in issue
+                                    or "OPS-08 must run after every main" in issue
+                                    for issue in audit.final_workflow_issues(changed)))
+
+    def test_mismatched_checked_out_commit_is_rejected(self):
+        actual = audit.verified_head()
+        mismatched = ("0" if actual[0] != "0" else "1") + actual[1:]
+        with patch.dict(os.environ, {"GITHUB_SHA": mismatched}):
+            with self.assertRaisesRegex(RuntimeError, "differs from checkout"):
+                audit.verified_head()
+
+    def test_main_verified_never_claims_success_if_policy_is_blocked(self):
+        from unittest.mock import Mock
+        simulated = Mock()
+        simulated.findings.return_value = ["sample OPS-07 fail-closed blocker"]
+        with patch.object(audit, "ops07", return_value=simulated):
+            with patch.dict(os.environ, {"GITHUB_REF": "refs/heads/main"}):
+                report = audit.audit()
+        self.assertEqual(report["status"], "blocked")
+        self.assertFalse(report["main_verified"])
+        self.assertIn("sample OPS-07 fail-closed blocker", report["issues"])
+
+
 if __name__ == "__main__":
     unittest.main()
