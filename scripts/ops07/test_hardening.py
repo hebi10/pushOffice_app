@@ -74,6 +74,11 @@ class HardeningTests(unittest.TestCase):
             command="python3 .github/ops/publish_play_store_images.py")
         self.assertTrue(audit.automatic_mutations("ci.yml", example))
 
+    def test_quoted_default_image_publisher_is_not_hidden(self):
+        command = 'python3 ".github/ops/publish_play_store_images.py"'
+        self.assertTrue(audit.automatic_mutations(
+            "ci.yml", publisher("true", job="deliver", command=command)))
+
     def test_unsigned_smoke_is_not_play_publication(self):
         smoke = publisher("true", job="release-smoke", command="./gradlew assembleDebug")
         self.assertEqual(audit.automatic_mutations("play-preflight.yml", smoke), [])
