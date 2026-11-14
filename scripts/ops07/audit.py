@@ -125,7 +125,7 @@ def job_condition(body):
     for index, line in enumerate(lines):
         if len(line) - len(line.lstrip()) != key_indent:
             continue
-        match = re.match(r"^\s+if\s*:\s*(.*)$", line)
+        match = re.match(r"^\s+(?:if|['\"]if['\"])\s*:\s*(.*)$", line)
         if match is None:
             continue
         value = match.group(1).strip()
