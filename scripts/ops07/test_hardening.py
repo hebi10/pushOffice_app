@@ -68,6 +68,12 @@ class HardeningTests(unittest.TestCase):
             "misc.yml", publisher("true", job="closed",
                                   command="curl -X POST https://androidpublisher.googleapis.com/androidpublisher/v3/applications/example")))
 
+    def test_default_play_image_publisher_is_a_mutation_without_flags(self):
+        example = publisher(
+            "true", job="build",
+            command="python3 .github/ops/publish_play_store_images.py")
+        self.assertTrue(audit.automatic_mutations("ci.yml", example))
+
     def test_unsigned_smoke_is_not_play_publication(self):
         smoke = publisher("true", job="release-smoke", command="./gradlew assembleDebug")
         self.assertEqual(audit.automatic_mutations("play-preflight.yml", smoke), [])
