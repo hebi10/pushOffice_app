@@ -234,7 +234,7 @@ def _publishing_command(body):
         match = re.search(r"\b(?:python(?:3(?:\.\d+)?)?|node|bash|sh)\s+(?:(?:-[uBIESOqv]+|--unbuffered)\s+)*([^\s;|]+)([^\n]*)", line)
         if not match:
             continue
-        script, args = match.group(1).lower(), match.group(2).lower()
+        script, args = match.group(1).strip("'\u0022").lower(), match.group(2).lower()
         # These existing publisher entrypoints mutate by default, even without --publish.
         if re.search(r"(?:^|/)(?:store_icon|images_only|publish-mobile-play|publish_mobile_play|publish_play_store_images)[.]py$", script):
             return True
@@ -293,7 +293,7 @@ def _store_mutating_command(body):
         match = re.search(r"\b(?:python(?:3(?:\.\d+)?)?|node)\s+(?:(?:-[uBIESOqv]+|--unbuffered)\s+)*([^\s;|]+)([^\n]*)", line)
         if not match:
             continue
-        script, args = match.group(1).lower(), match.group(2).lower()
+        script, args = match.group(1).strip("'\u0022").lower(), match.group(2).lower()
         if script.endswith("/ops06/store_gate.py"):
             continue
         if re.search(r"(?:^|/)(?:store_icon|images_only|publish_play_store_images)[.]py$", script):
@@ -558,9 +558,13 @@ def findings():
                 'test "$GITHUB_EVENT_NAME" = workflow_dispatch',
                 'test "$OPS01_RELEASE_APPROVED" = true',
             )
+            script_after_run = []
+            if "run: |" in lines:
+                script_after_run = [line for line in lines[lines.index("run: |") + 1:]
+                                    if line and not line.startswith("#")]
             if (_step_condition(gate) != "steps.request.outputs.mode == 'deploy'"
                     or binding not in gate
-                    or any(test not in lines for test in required_tests)
+                    or script_after_run != list(required_tests)
                     or any(token in gate for token in (
                         "continue-on-error:", "set +e", "if false; then",
                         "shell: bash {0}"))):
