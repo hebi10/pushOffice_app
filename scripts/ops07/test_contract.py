@@ -101,6 +101,39 @@ class AppContracts(unittest.TestCase):
         with self.assertRaises(mod.Stop):
             mod.make_plan(tracks,[{"versionCode":19,"sha256":"b"*64}],req)
 
+    def test_android_release_approval_must_run_not_hide_in_shell_branch(self):
+        path = ".github/workflows/android-release.yml"
+        original_read = audit.read
+        original = original_read(path)
+        direct = ('        run: |\n'
+                  '          test "$GITHUB_EVENT_NAME" = workflow_dispatch\n'
+                  '          test "$OPS01_RELEASE_APPROVED" = true\n')
+        self.assertIn(direct, original)
+        changed = original.replace(
+            direct,
+            '        run: |\n'
+            '          if [ "$GITHUB_EVENT_NAME" = push ]; then\n'
+            '            test "$GITHUB_EVENT_NAME" = workflow_dispatch\n'
+            '            test "$OPS01_RELEASE_APPROVED" = true\n'
+            '          fi\n', 1)
+        with patch.object(audit, "read", side_effect=lambda target:
+                          changed if target == path else original_read(target)):
+            issues = audit.findings()
+        self.assertTrue(any("ANDROID_APPROVAL:" in item for item in issues), issues)
+
+    def test_android_release_must_not_tolerate_quoted_approval_failures(self):
+        path = ".github/workflows/android-release.yml"
+        original_read = audit.read
+        original = original_read(path)
+        step = "      - name: OPS-01 require explicit Play release approval\n"
+        self.assertIn(step, original)
+        changed = original.replace(
+            step, step + '        "continue-on-error": ' + "$" + "{{ true }}\n", 1)
+        with patch.object(audit, "read", side_effect=lambda target:
+                          changed if target == path else original_read(target)):
+            blockers = audit.findings()
+        self.assertTrue(any("ANDROID_APPROVAL:" in item for item in blockers), blockers)
+
     def test_missing_existing_aab_cannot_be_published(self):
         mod=module("scripts/ops04/internal.py")
         self.assertIsNotNone(mod, "OPS-04 immutable AAB guard missing")

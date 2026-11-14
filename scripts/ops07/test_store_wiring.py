@@ -38,6 +38,38 @@ class StoreWiringTests(unittest.TestCase):
     def test_valid_store_gate_precedes_authentication(self):
         self.assertEqual(self.findings(store_workflow()), [])
 
+    def test_custom_shell_cannot_ignore_failed_approval(self):
+        example = store_workflow().replace(
+            "        run: python3 scripts/ops06/store_gate.py apply\n",
+            "        shell: bash {0}\n"
+            "        run: |\n"
+            "          python3 scripts/ops06/store_gate.py apply\n"
+            "          echo finished\n", 1)
+        self.assertTrue(any("STORE_OPTIONAL:" in item for item in self.findings(example)),
+                        self.findings(example))
+
+    def test_unflagged_default_image_publisher_requires_store_approval(self):
+        example = store_workflow().replace(
+            "python3 scripts/play/listing_images.py --apply",
+            "python3 .github/ops/publish_play_store_images.py", 1)
+        self.assertEqual(self.findings(example), [])
+        changed = example.replace(
+            "      - name: OPS-06 separate store approval\n"
+            "        run: python3 scripts/ops06/store_gate.py apply\n", "", 1)
+        self.assertTrue(any("STORE_GUARD:" in issue for issue in self.findings(changed)),
+                        self.findings(changed))
+
+    def test_quoted_default_image_publisher_needs_approval(self):
+        source = store_workflow().replace(
+            "python3 scripts/play/listing_images.py --apply",
+            'python3 ".github/ops/publish_play_store_images.py"', 1)
+        self.assertEqual(self.findings(source), [])
+        without_gate = source.replace(
+            "      - name: OPS-06 separate store approval\n"
+            "        run: python3 scripts/ops06/store_gate.py apply\n", "", 1)
+        self.assertTrue(any("STORE_GUARD:" in issue for issue in self.findings(without_gate)),
+                        self.findings(without_gate))
+
     def test_missing_store_gate_blocks(self):
         source = store_workflow().replace(
             "      - name: OPS-06 separate store approval\n"
@@ -52,6 +84,38 @@ class StoreWiringTests(unittest.TestCase):
             "      - uses: google-github-actions/auth@v3\n"
             "      - name: OPS-06 separate store approval\n")
         self.assertTrue(any("STORE_ORDER" in p for p in self.findings(source)))
+
+
+    def test_custom_shells_cannot_swallow_failed_store_approval(self):
+        for declaration in ("shell: sh {0}", '"shell": bash {0}',
+                            "shell: bash --noprofile --norc {0}"):
+            with self.subTest(shell=declaration):
+                example = store_workflow().replace(
+                    "        run: python3 scripts/ops06/store_gate.py apply",
+                    "        " + declaration + "\n"
+                    "        run: python3 scripts/ops06/store_gate.py apply", 1)
+                self.assertTrue(
+                    any("STORE_OPTIONAL:" in item for item in self.findings(example)),
+                    self.findings(example))
+
+    def test_status_checks_cannot_publish_after_rejected_store_approval(self):
+        for condition in ("!success()", "success() == false",
+                          "success() || inputs.force == true", "!cancelled()"):
+            with self.subTest(condition=condition):
+                example = store_workflow().replace(
+                    "      - uses: google-github-actions/auth@v3",
+                    "      - if: " + condition + "\n"
+                    "        uses: google-github-actions/auth@v3", 1)
+                self.assertTrue(
+                    any("STORE_BYPASS:" in item for item in self.findings(example)),
+                    self.findings(example))
+
+    def test_explicit_success_dependency_is_safe(self):
+        example = store_workflow().replace(
+            "      - uses: google-github-actions/auth@v3",
+            "      - if: success() && inputs.mode == 'publish'\n"
+            "        uses: google-github-actions/auth@v3", 1)
+        self.assertEqual(self.findings(example), [])
 
 
 if __name__ == "__main__":
