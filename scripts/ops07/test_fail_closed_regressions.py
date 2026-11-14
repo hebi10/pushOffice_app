@@ -511,5 +511,32 @@ class AndroidApprovalFailurePropagationTests(unittest.TestCase):
                     )
 
 
+    def test_android_approval_accepts_env_after_yaml_run_block(self):
+        original_read = audit.read
+        path = ".github/workflows/android-release.yml"
+        source = original_read(path)
+        current = (
+            "        env:\n"
+            "          OPS01_RELEASE_APPROVED: $" + "{{ inputs.ops01_release_approved }}\n"
+            "        run: |\n"
+            "          test \"$GITHUB_EVENT_NAME\" = workflow_dispatch\n"
+            "          test \"$OPS01_RELEASE_APPROVED\" = true\n"
+        )
+        reordered = (
+            "        run: |\n"
+            "          test \"$GITHUB_EVENT_NAME\" = workflow_dispatch\n"
+            "          test \"$OPS01_RELEASE_APPROVED\" = true\n"
+            "        env:\n"
+            "          OPS01_RELEASE_APPROVED: $" + "{{ inputs.ops01_release_approved }}\n"
+        )
+        self.assertIn(current, source)
+        changed = source.replace(current, reordered, 1)
+        with patch.object(audit, "read", side_effect=lambda name:
+                          changed if name == path else original_read(name)):
+            issues = audit.findings()
+        self.assertFalse(any("ANDROID_APPROVAL:" in issue for issue in issues), issues)
+
+
+
 if __name__ == "__main__":
     unittest.main()
