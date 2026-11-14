@@ -59,6 +59,17 @@ class StoreWiringTests(unittest.TestCase):
         self.assertTrue(any("STORE_GUARD:" in issue for issue in self.findings(changed)),
                         self.findings(changed))
 
+    def test_quoted_default_image_publisher_needs_approval(self):
+        source = store_workflow().replace(
+            "python3 scripts/play/listing_images.py --apply",
+            'python3 ".github/ops/publish_play_store_images.py"', 1)
+        self.assertEqual(self.findings(source), [])
+        without_gate = source.replace(
+            "      - name: OPS-06 separate store approval\n"
+            "        run: python3 scripts/ops06/store_gate.py apply\n", "", 1)
+        self.assertTrue(any("STORE_GUARD:" in issue for issue in self.findings(without_gate)),
+                        self.findings(without_gate))
+
     def test_missing_store_gate_blocks(self):
         source = store_workflow().replace(
             "      - name: OPS-06 separate store approval\n"
