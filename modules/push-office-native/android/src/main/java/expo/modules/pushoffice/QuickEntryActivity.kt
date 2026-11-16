@@ -40,6 +40,9 @@ class QuickEntryActivity : Activity() {
   private val session=CaptureSession()
   private var applyingSpeech=false
   private var modelJob: Job?=null
+  private val calendarDate: LocalDate? by lazy {
+    runCatching { CalendarQuickEntryDate.parse(intent.getStringExtra(CalendarQuickEntryDate.EXTRA_DATE)) }.getOrNull()
+  }
   private val isDark: Boolean get() = when(
     getSharedPreferences("push_office_ui", MODE_PRIVATE).getString("themeMode","system")
   ) {
@@ -180,6 +183,14 @@ class QuickEntryActivity : Activity() {
     },LinearLayout.LayoutParams(dp(48),dp(48)))
     root.addView(heading)
     stepHint(1,"입력 방식 선택")
+    calendarDate?.let { selected ->
+      root.addView(TextView(this).apply {
+        text="캘린더 선택일: ${selected.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN))}"
+        textSize=13f
+        setTextColor(secondary)
+        setPadding(dp(2),0,dp(2),dp(6))
+      })
+    }
     root.addView(ImageView(this).apply {
       setImageResource(R.drawable.quick_entry_mono)
       setColorFilter(actionColor)
@@ -294,6 +305,15 @@ class QuickEntryActivity : Activity() {
   private fun editor(voice: Boolean) {
     page("일정 입력", "텍스트나 음성으로 기록하고 저장 전에 확인하세요.")
     stepHint(2,"일정 내용 작성")
+    calendarDate?.let { selected ->
+      root.addView(TextView(this).apply {
+        text="선택한 ${selected.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일", Locale.KOREAN))}을 기본 날짜로 사용합니다. 문장에 날짜가 있다면 문장 날짜가 우선입니다."
+        contentDescription=text
+        textSize=13f
+        setTextColor(secondary)
+        setPadding(dp(2),0,dp(2),dp(6))
+      })
+    }
     root.addView(TextView(this).apply {
       text="예: 내일 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
       textSize=13f
@@ -344,9 +364,10 @@ class QuickEntryActivity : Activity() {
           ensureActive(); if(!current()) return@launch
           status.text=(availability["message"] as? String) ?: "기기 AI 상태를 확인할 수 없습니다."
           if(availability["status"]=="available") {
-            val basic=ScheduleParser.parse(request.source,ZonedDateTime.now(zone))
+            val now=ZonedDateTime.now(zone)
+            val basic=ScheduleParser.parse(request.source,now,calendarDate)
             val parsed=if(basic.shiftMinutes!=null) basic else AiModelRunner.parse(
-              this@QuickEntryActivity,selectedModel,request.source,ZonedDateTime.now(zone))
+              this@QuickEntryActivity,selectedModel,request.source,now,calendarDate=calendarDate)
             ensureActive(); if(current()) preview(parsed,request.source)
           }
         } catch(e: CancellationException) { throw e } catch(e: Exception) {
@@ -384,7 +405,7 @@ class QuickEntryActivity : Activity() {
     sectionLabel("직접 지정", "문장에서 날짜나 시간을 찾기 어려울 때 선택하세요.")
     button("직접 날짜와 시간 지정") { val source=transcript.text.toString(); preview(ParsedSchedule(title=source),source) }
     button("뒤로") { chooser() }
-    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone)),source) }
+    button("내용 확인") { val source=transcript.text.toString(); preview(ScheduleParser.parse(source,ZonedDateTime.now(zone),calendarDate),source) }
     if(voice) status.text="음성 입력 시작을 누르면 기기 내 한국어 인식을 확인합니다."
   }
   private fun preview(parsed: ParsedSchedule, source: String) {
@@ -408,6 +429,7 @@ class QuickEntryActivity : Activity() {
   }
   private fun form(title: String, dateTime: ZonedDateTime?, repeat: String, source: String, original: ScheduleRecord?, message: String) {
     val formZone=original?.let(::eventZone) ?: dateTime?.zone ?: zone
+    val preferredDate=if(original == null && dateTime == null && !ScheduleParser.mentionsDate(source)) calendarDate else null
     page(
       if(original==null) "일정 확인 및 저장" else "변경 내용 확인",
       "제목, 날짜, 시간, 반복을 확인한 뒤 저장하세요."
@@ -478,7 +500,9 @@ class QuickEntryActivity : Activity() {
     }
     sectionLabel("일정 정보")
     val localizedSummary=TextView(this).apply {
-      text=dateTime?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) ?: "날짜와 시간을 선택해 주세요."
+      text=dateTime?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN))
+        ?: preferredDate?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E)",Locale.KOREAN))?.plus(" · 시간 선택 필요")
+        ?: "날짜와 시간을 선택해 주세요."
       textSize=15f
       setTextColor(foregroundColor)
       setTypeface(null,Typeface.BOLD)
@@ -487,7 +511,7 @@ class QuickEntryActivity : Activity() {
     }
     root.addView(localizedSummary)
     val titleField=field("일정 제목","일정 제목",title,compact=true)
-    val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString().orEmpty(),compact=true)
+    val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString() ?: preferredDate?.toString().orEmpty(),compact=true)
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(),compact=true)
     val manualDateCard=dateField.parent as View
     val manualTimeCard=timeField.parent as View
@@ -533,7 +557,7 @@ class QuickEntryActivity : Activity() {
     }
     pickerButton("날짜 선택") {
       val initial=runCatching { LocalDate.parse(dateField.text.toString().trim()) }
-        .getOrDefault(dateTime?.toLocalDate() ?: LocalDate.now(formZone))
+        .getOrDefault(dateTime?.toLocalDate() ?: preferredDate ?: LocalDate.now(formZone))
       DatePickerDialog(this@QuickEntryActivity, { _,year,month,day ->
         dateField.setText(LocalDate.of(year,month+1,day).toString())
       },initial.year,initial.monthValue-1,initial.dayOfMonth).show()
