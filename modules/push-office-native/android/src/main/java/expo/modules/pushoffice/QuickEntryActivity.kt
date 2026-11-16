@@ -596,6 +596,90 @@ class QuickEntryActivity : Activity() {
       }
     },LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(6) })
     root.addView(manualFields)
+
+    val initialEnd = original?.endAt?.let { end ->
+      val shift = (dateTime?.toInstant()?.toEpochMilli() ?: original.startAt) - original.startAt
+      Instant.ofEpochMilli(end + shift).atZone(formZone)
+    }
+    var endEdited = false
+    val endDateField = field("종료 날짜 (YYYY-MM-DD)", "비우면 시작 날짜", initialEnd?.toLocalDate()?.toString().orEmpty(), compact=true)
+    val endTimeField = field("종료 시간 (HH:mm)", "종료 시각을 선택하세요", initialEnd?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(), compact=true)
+    val endDateCard = endDateField.parent as View
+    val endTimeCard = endTimeField.parent as View
+    root.removeView(endDateCard)
+    root.removeView(endTimeCard)
+    val endFields = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      visibility = if (initialEnd == null) View.GONE else View.VISIBLE
+      addView(endDateCard)
+      addView(endTimeCard)
+    }
+    val endWatcher = object: TextWatcher {
+      override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+      override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { endEdited = true }
+      override fun afterTextChanged(s: Editable?) {}
+    }
+    endDateField.addTextChangedListener(endWatcher)
+    endTimeField.addTextChangedListener(endWatcher)
+    sectionLabel("종료 시간 (선택)", "종료 시각이 필요하면 지정하세요. 비워 두면 시작 시각만 저장됩니다.")
+    root.addView(Button(this).apply {
+      text = if (initialEnd == null) "종료 시간 지정" else "종료 시간 제거"
+      contentDescription = text
+      isAllCaps = false
+      minimumHeight = dp(48)
+      setTextColor(actionColor)
+      stateListAnimator = null
+      background = GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius = dp(8).toFloat()
+        setStroke(dp(1), inputBorder)
+      }
+      setOnClickListener {
+        if (endFields.visibility == View.VISIBLE) {
+          endTimeField.setText("")
+          endDateField.setText("")
+          endFields.visibility = View.GONE
+          text = "종료 시간 지정"
+        } else {
+          endFields.visibility = View.VISIBLE
+          text = "종료 시간 제거"
+        }
+        contentDescription = text
+      }
+    }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+    val endPickerRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+    fun endPickerButton(label: String, action: () -> Unit) {
+      endPickerRow.addView(Button(this).apply {
+        text = label
+        contentDescription = label
+        isAllCaps = false
+        minimumHeight = dp(48)
+        setTextColor(actionColor)
+        stateListAnimator = null
+        background = GradientDrawable().apply {
+          setColor(surface)
+          cornerRadius = dp(8).toFloat()
+          setStroke(dp(1), inputBorder)
+        }
+        setOnClickListener { action() }
+      }, LinearLayout.LayoutParams(0, -2, 1f).apply { setMargins(dp(4), dp(6), dp(4), 0) })
+    }
+    endPickerButton("종료 날짜 선택") {
+      val selectedDate = runCatching { LocalDate.parse(endDateField.text.toString().trim()) }
+        .getOrElse { runCatching { LocalDate.parse(dateField.text.toString().trim()) }.getOrDefault(LocalDate.now(formZone)) }
+      DatePickerDialog(this@QuickEntryActivity, { _, year, month, day ->
+        endDateField.setText(LocalDate.of(year, month + 1, day).toString())
+      }, selectedDate.year, selectedDate.monthValue - 1, selectedDate.dayOfMonth).show()
+    }
+    endPickerButton("종료 시간 선택") {
+      val fallback = runCatching { LocalTime.parse(timeField.text.toString().trim()).plusHours(1) }.getOrDefault(LocalTime.of(10, 0))
+      val selectedTime = runCatching { LocalTime.parse(endTimeField.text.toString().trim()) }.getOrDefault(fallback)
+      TimePickerDialog(this@QuickEntryActivity, { _, hour, minute ->
+        endTimeField.setText(String.format(Locale.ROOT, "%02d:%02d", hour, minute))
+      }, selectedTime.hour, selectedTime.minute, true).show()
+    }
+    endFields.addView(endPickerRow)
+    root.addView(endFields)
     val repeatCard=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(10),dp(8),dp(10),dp(10))
@@ -612,8 +696,8 @@ class QuickEntryActivity : Activity() {
       setTextColor(foregroundColor)
       setPadding(dp(2),0,0,dp(5))
     })
-    val repeats=listOf("none","monthly","yearly")
-    val repeatLabels=listOf("반복 없음","매월","매년")
+    val repeats=listOf("none","daily","weekly","monthly","yearly")
+    val repeatLabels=listOf("반복 없음","매일","매주","매월","매년")
     val spinner=Spinner(this).apply {
       contentDescription="반복 설정"
       adapter=object: ArrayAdapter<String>(
@@ -664,17 +748,32 @@ class QuickEntryActivity : Activity() {
     titleField.addTextChangedListener(clearErrorOnEdit)
     dateField.addTextChangedListener(clearErrorOnEdit)
     timeField.addTextChangedListener(clearErrorOnEdit)
+    endDateField.addTextChangedListener(clearErrorOnEdit)
+    endTimeField.addTextChangedListener(clearErrorOnEdit)
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
     var saving=false
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
       if(saving) return@button
       saving=true
       try {
-        val start=LocalDate.parse(dateField.text.toString().trim()).atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
+        val startDate=LocalDate.parse(dateField.text.toString().trim())
+        val start=startDate.atTime(LocalTime.parse(timeField.text.toString().trim())).atZone(formZone).toInstant().toEpochMilli()
+        val endDateText = endDateField.text.toString().trim()
+        val endTimeText = endTimeField.text.toString().trim()
+        val endAt = if (!endEdited && original?.endAt != null) {
+          original.endAt + (start - original.startAt)
+        } else if (endDateText.isBlank() && endTimeText.isBlank()) {
+          null
+        } else {
+          require(endTimeText.isNotBlank()) { "종료 시간을 선택해 주세요." }
+          val finishDate = if (endDateText.isBlank()) startDate else LocalDate.parse(endDateText)
+          finishDate.atTime(LocalTime.parse(endTimeText)).atZone(formZone).toInstant().toEpochMilli()
+        }
+        require(endAt == null || endAt > start) { "종료 시간은 시작 시간 이후여야 합니다. 다시 확인해 주세요." }
         val now=System.currentTimeMillis()
         val draft=original?.copy(title=titleField.text.toString().trim(), startAt=start,
-          endAt=original.endAt?.let { it+(start-original.startAt) },repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now)
-          ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id)
+          endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now)
+          ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id)
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
