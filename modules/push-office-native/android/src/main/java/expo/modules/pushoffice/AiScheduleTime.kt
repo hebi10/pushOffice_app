@@ -7,7 +7,7 @@ import java.time.ZonedDateTime
 /** Device computes epoch. Model only extracts human-readable local date and time. */
 internal object AiScheduleTime {
   fun validated(text: String, now: ZonedDateTime, title: String, date: String,
-                time: String, repeat: String): ParsedSchedule {
+                time: String, repeat: String, calendarDate: LocalDate? = null): ParsedSchedule {
     require(title.isNotBlank()) { "일정 제목을 다시 확인해 주세요." }
     require(date.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
       "AI 날짜는 YYYY-MM-DD 형식이어야 합니다."
@@ -27,7 +27,7 @@ internal object AiScheduleTime {
     require(start.toInstant().isAfter(now.toInstant())) {
       "미래 날짜와 시간을 지정해 주세요."
     }
-    val ground = ScheduleParser.parse(text, now)
+    val ground = ScheduleParser.parse(text, now, calendarDate)
     require(ground.error == null && ground.start != null && ground.shiftMinutes == null) {
       "원문 날짜와 시간을 안전하게 확인하지 못했습니다. 기본 해석이나 직접 입력을 이용해 주세요."
     }
