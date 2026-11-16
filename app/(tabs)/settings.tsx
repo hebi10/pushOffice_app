@@ -603,7 +603,8 @@ export default function SettingsScreen() {
                 <SettingsChoiceRow icon="phone-portrait-outline" title="시스템 테마" selected={settings.themeMode === 'system'} onPress={() => { void save({ themeMode: 'system' }); }} />
                 <SettingsChoiceRow icon="sunny-outline" title="밝은 테마" selected={settings.themeMode === 'light'} onPress={() => { void save({ themeMode: 'light' }); }} />
                 <SettingsChoiceRow icon="moon-outline" title="어두운 테마" selected={settings.themeMode === 'dark'} onPress={() => { void save({ themeMode: 'dark' }); }} />
-                <SettingsNote>일정은 기기에 저장됩니다. 앱 삭제 전 고급 설정에서 파일로 백업해 주세요. Android 자동 백업은 사용하지 않습니다.</SettingsNote>
+                <SettingsNote>일정은 기기에 저장됩니다. 앱 삭제 시 로컬 일정도 삭제되며 Android 자동 백업은 사용하지 않습니다.</SettingsNote>
+                <SettingsNote>앱 삭제 전 고급 설정에서 일정·설정을 파일로 백업해 주세요.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="개인정보와 지원" icon="shield-checkmark-outline">
                 <SettingsNote>기기 AI 상태 확인 시 ML Kit가 식별자와 진단 정보를 처리할 수 있습니다.</SettingsNote>
