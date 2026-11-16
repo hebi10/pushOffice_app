@@ -88,15 +88,15 @@ function optionalScheduleExtra(value, field, max) {
   if (value === null) return null;
   const cleaned = value.trim();
   if (field === 'location') {
-    valid(!/[\\r\\n\\x00-\\x1f\\x7f]/.test(cleaned), '백업의 장소에 잘못된 문자가 있습니다.');
+    valid(!/[\r\n\x00-\x1f\x7f]/.test(cleaned), '백업의 장소에 잘못된 문자가 있습니다.');
   } else if (field === 'notes') {
-    valid(!/[\\x00-\\x08\\x0b\\x0c\\x0e-\\x1f\\x7f]/.test(cleaned), '백업의 메모에 잘못된 문자가 있습니다.');
+    valid(!/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(cleaned), '백업의 메모에 잘못된 문자가 있습니다.');
   } else if (field === 'meetingUrl' && cleaned) {
     let safe = false;
     try {
       const uri = new URL(cleaned);
       safe = uri.protocol.toLowerCase() === 'https:' && !!uri.hostname &&
-        !uri.username && !uri.password && !/\\s/.test(cleaned);
+        !uri.username && !uri.password && !/\s/.test(cleaned);
     } catch {}
     valid(safe, '백업의 회의 링크가 올바르지 않습니다.');
   }
