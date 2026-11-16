@@ -56,9 +56,13 @@ def parse_request(env):
     internal = env.get("INTERNAL_TRACK", "")
     closed = env.get("CLOSED_TRACK", "")
     require(internal in ("internal", "qa"), "The exact Play internal/qa track must be selected")
-    require(bool(re.fullmatch(r"[a-z][a-z0-9._-]{0,49}", closed))
+    # Custom Play closed-track identifiers can contain Korean letters and spaces.
+    # The strict character allowlist blocks URL separators and control characters;
+    # make_plan() must additionally match this exact name in the Play API inventory.
+    require(isinstance(closed, str) and closed == closed.strip()
+            and bool(re.fullmatch(r"[a-z0-9가-힣][a-z0-9가-힣._ -]{0,49}", closed))
             and closed not in FORBIDDEN_TRACKS and closed != internal,
-            "Only an existing non-production closed testing track is allowed")
+            "Only an exact existing non-production closed testing track is allowed")
     code = release_code(env.get("VERSION_CODE", ""))
     digest = env.get("AAB_SHA256", "")
     require(bool(re.fullmatch("[a-f0-9]{64}", digest)), "Exact uploaded AAB SHA-256 is required")
