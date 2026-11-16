@@ -14,7 +14,10 @@ data class ScheduleRecord(
   val sourceText: String = "",
   val createdAt: Long,
   val updatedAt: Long,
-  val anchorZone: String? = null
+  val anchorZone: String? = null,
+  val location: String? = null,
+  val meetingUrl: String? = null,
+  val notes: String? = null
 ) {
   companion object {
     fun fromMap(value: Map<String, Any?>): ScheduleRecord {
@@ -30,7 +33,10 @@ data class ScheduleRecord(
         if (value["endAt"] == null) null else epoch("endAt"), boolean("isAllDay"), string("repeatType"),
         boolean("notificationEnabled"), value["notificationId"] as? String, value["sourceText"] as? String ?: "",
         epoch("createdAt"), epoch("updatedAt"),
-        if(value.containsKey("anchorZone")) ScheduleZone.validate(string("anchorZone")) else null)
+        if(value.containsKey("anchorZone") && value["anchorZone"] != null) ScheduleZone.validate(string("anchorZone")) else null,
+        ScheduleExtras.fromMap(value, "location"),
+        ScheduleExtras.fromMap(value, "meetingUrl"),
+        ScheduleExtras.fromMap(value, "notes"))
     }
   }
 }
