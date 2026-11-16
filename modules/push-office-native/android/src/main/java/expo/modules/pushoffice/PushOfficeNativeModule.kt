@@ -1,5 +1,6 @@
 package expo.modules.pushoffice
 
+import android.app.Activity
 import android.app.StatusBarManager
 import android.provider.Settings
 import android.appwidget.AppWidgetManager
@@ -12,15 +13,98 @@ import expo.modules.kotlin.functions.Coroutine
 import android.os.Build
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 class PushOfficeNativeModule : Module() {
   private val context get() = appContext.reactContext ?: error("앱 컨텍스트가 준비되지 않았습니다.")
   private val listener: () -> Unit = { sendEvent("schedulesChanged", emptyMap<String, Any>()) }
+  private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+  private var backupPromise: Promise? = null
+  private var pendingExport: String? = null
+
+  private fun launchLocalBackupDocument(create: Boolean, text: String?, promise: Promise) {
+    val activity = appContext.currentActivity
+    if (activity == null) {
+      promise.reject("BACKUP_ACTIVITY", "앱 설정 화면에서 파일을 선택해 주세요.", null)
+      return
+    }
+    activity.runOnUiThread {
+      if (backupPromise != null) {
+        promise.reject("BACKUP_BUSY", "이전 파일 선택 작업을 완료해 주세요.", null)
+        return@runOnUiThread
+      }
+      try {
+        if (create) require(text != null && text.length <= LocalBackupDocuments.MAX_BYTES) {
+          "백업 데이터가 너무 큽니다."
+        }
+        val intent = Intent(if (create) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
+          .addCategory(Intent.CATEGORY_OPENABLE)
+          .setType(if (create) "application/json" else "*/*")
+        if (create) intent.putExtra(Intent.EXTRA_TITLE,
+          "PushOffice-" + java.time.LocalDate.now().toString() + ".json")
+        backupPromise = promise
+        pendingExport = text
+        activity.startActivityForResult(intent, if (create) 59301 else 59302)
+      } catch (_: Exception) {
+        backupPromise = null
+        pendingExport = null
+        promise.reject("BACKUP_PICKER", "Android 파일 선택창을 열지 못했습니다.", null)
+      }
+    }
+  }
   override fun definition() = ModuleDefinition {
     Name("PushOfficeNative")
     Events("schedulesChanged", "aiDownloadProgress")
     OnCreate { ScheduleStore.addListener(listener) }
-    OnDestroy { ScheduleStore.removeListener(listener) }
+    OnDestroy {
+      ScheduleStore.removeListener(listener)
+      backupPromise?.reject("BACKUP_INTERRUPTED", "백업 파일 작업이 중단되었습니다.", null)
+      backupPromise = null
+      pendingExport = null
+      backupScope.cancel()
+    }
+    OnActivityResult { activity, payload ->
+      if (payload.requestCode == 59301 || payload.requestCode == 59302) {
+        val operation = backupPromise
+        val content = pendingExport
+        backupPromise = null
+        pendingExport = null
+        if (operation != null) {
+          if (payload.resultCode == Activity.RESULT_CANCELED) {
+            operation.resolve(if (payload.requestCode == 59301) false else null)
+          } else {
+            val uri = payload.data?.data
+            if (payload.resultCode != Activity.RESULT_OK || uri == null) {
+              operation.reject("BACKUP_DOCUMENT", "파일 선택 결과가 올바르지 않습니다.", null)
+            } else {
+              backupScope.launch {
+                try {
+                  if (payload.requestCode == 59301) {
+                    LocalBackupDocuments.write(activity.applicationContext, uri, content
+                      ?: throw IllegalStateException("백업 정보가 없습니다."))
+                    operation.resolve(true)
+                  } else {
+                    operation.resolve(LocalBackupDocuments.read(activity.applicationContext, uri))
+                  }
+                } catch (_: Exception) {
+                  operation.reject("BACKUP_DOCUMENT_IO", "파일을 읽거나 저장하지 못했습니다. 용량과 접근 권한을 확인해 주세요.", null)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    AsyncFunction("createLocalBackupDocument") { text: String, promise: Promise ->
+      launchLocalBackupDocument(true, text, promise)
+    }
+    AsyncFunction("pickLocalBackupDocument") { promise: Promise ->
+      launchLocalBackupDocument(false, null, promise)
+    }
     AsyncFunction("openQuickEntry") { promise: Promise ->
       val activity=appContext.currentActivity
       if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 빠른 입력을 열어 주세요.",null)
