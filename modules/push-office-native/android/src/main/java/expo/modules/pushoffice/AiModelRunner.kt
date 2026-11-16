@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZonedDateTime
 
 /** One native model at a time. Engine and conversations are always closed. */
@@ -65,9 +66,9 @@ internal object AiModelRunner {
   }
 
   suspend fun parse(context: Context, id: String, text: String, now: ZonedDateTime,
-    onRawSchedule: ((String) -> Unit)? = null): ParsedSchedule {
-    if (id == "gemini-nano") return NanoClient.parse(text, now)
-    val ground = ScheduleParser.parse(text, now)
+    onRawSchedule: ((String) -> Unit)? = null, calendarDate: LocalDate? = null): ParsedSchedule {
+    if (id == "gemini-nano") return NanoClient.parse(text, now, calendarDate)
+    val ground = ScheduleParser.parse(text, now, calendarDate)
     require(ground.error == null && ground.start != null && ground.shiftMinutes == null) {
       ground.error ?: "원문에서 날짜와 시각을 확인할 수 없습니다. 직접 입력해 주세요."
     }
@@ -92,7 +93,7 @@ internal object AiModelRunner {
     }
     return AiScheduleTime.validated(text, now, AiModelFields.text(data, "title", "제목", "eventTitle"),
       data.optString("localDate"), data.optString("localTime"),
-      data.optString("repeatType"))
+      data.optString("repeatType"), calendarDate)
   }
 
   suspend fun briefing(context: Context, id: String, prompt: String,
