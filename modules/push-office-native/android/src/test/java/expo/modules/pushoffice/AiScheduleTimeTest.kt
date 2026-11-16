@@ -80,6 +80,16 @@ class AiScheduleTimeTest {
     }
   }
 
+  @Test fun newRecurrenceValuesRequireGroundedWeekdayAndDate() {
+    val daily = AiScheduleTime.validated("매일 오후 3시 운동", now, "운동", "2026-11-09", "15:00", "daily")
+    assertEquals("daily", daily.repeatType)
+    val weekly = AiScheduleTime.validated("매주 수요일 오후 3시 운동", now, "운동", "2026-11-11", "15:00", "weekly")
+    assertEquals("weekly", weekly.repeatType)
+    assertThrows(IllegalArgumentException::class.java) {
+      AiScheduleTime.validated("매주 수요일 오후 3시 운동", now, "운동", "2026-11-11", "15:00", "daily")
+    }
+  }
+
   @Test fun repeatHallucinationAndImpossibleDateAreRejected() {
     assertThrows(IllegalArgumentException::class.java) {
       AiScheduleTime.validated(text, now, "치과 예약", "2026-11-17", "15:00", "yearly")

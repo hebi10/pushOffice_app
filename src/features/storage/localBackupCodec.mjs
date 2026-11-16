@@ -88,7 +88,7 @@ function normalizeSchedule(value) {
     integerTime(value.startAt) && integerTime(value.createdAt) && integerTime(value.updatedAt) &&
     (value.endAt === null || (integerTime(value.endAt) && value.endAt >= value.startAt)) &&
     typeof value.isAllDay === 'boolean' &&
-    ['none', 'monthly', 'yearly'].includes(value.repeatType) &&
+    ['none', 'daily', 'weekly', 'monthly', 'yearly'].includes(value.repeatType) &&
     typeof value.notificationEnabled === 'boolean' &&
     (value.notificationId === null || limitedText(value.notificationId, 256)) &&
     limitedText(value.sourceText, 12000),

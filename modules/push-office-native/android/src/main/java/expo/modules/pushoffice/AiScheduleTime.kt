@@ -15,7 +15,7 @@ internal object AiScheduleTime {
     require(time.matches(Regex("""\d{2}:\d{2}"""))) {
       "AI 시각은 HH:mm 형식이어야 합니다."
     }
-    require(repeat in listOf("none", "monthly", "yearly")) {
+    require(repeat in listOf("none", "daily", "weekly", "monthly", "yearly")) {
       "반복 설정을 다시 확인해 주세요."
     }
     val localDateTime = LocalDate.parse(date).atTime(LocalTime.parse(time))

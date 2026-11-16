@@ -30,8 +30,8 @@ test('UI-12-05 keeps repetition edit compact and readable without enabling unsup
   assert.match(detail, /minHeight: uiSizes\.controlMinHeight/);
   assert.match(detail, /accessibilityRole="radio"/);
   assert.match(detail, /accessibilityState=\{\{ checked: repeat === key \}\}/);
-  assert.match(detail, /\['none', '반복 안 함'\], \['monthly', '매월 반복'\], \['yearly', '매년 반복'\]/);
-  assert.doesNotMatch(detail, /\['daily', '매일'\]|\['weekly', '매주'\]/);
+  assert.match(detail, /\['none', '반복 안 함'\], \['daily', '매일 반복'\], \['weekly', '매주 반복'\], \['monthly', '매월 반복'\], \['yearly', '매년 반복'\]/);
+  assert.doesNotMatch(detail, /\['hourly', '매시간'\]|\['quarterly', '매분기'\]/);
 });
 
 test('UI-12-05 keeps save first and separates non-destructive snooze from irreversible deletion', () => {
@@ -74,7 +74,7 @@ test('UI-12-05 preserves date pickers, all-day, recurrence and SQLite update bou
     'setPendingDialog(\'invalid-time\')',
     'keyboardShouldPersistTaps="handled"',
   ]) assert.ok(detail.includes(expression), 'Missing original schedule operation: ' + expression);
-  assert.doesNotMatch(detail, /"meetingUrl"|"location"|"notes"|'daily'|'weekly'/);
+  assert.doesNotMatch(detail, /"meetingUrl"|"location"|"notes"/);
   for (const name of [
     '11-schedule-detail', '12-schedule-date-modal', '13-schedule-time-modal',
     '12a-schedule-end-date-modal', '13a-schedule-end-time-modal',

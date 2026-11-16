@@ -49,6 +49,10 @@ function zonedFields(epochMs: number, zone: string): WallTime {
     const parts = Object.fromEntries(format.formatToParts(epochMs).map(p => [p.type, p.value]));
     return { year: Number(parts.year), month: Number(parts.month), day: Number(parts.day), hour: Number(parts.hour), minute: Number(parts.minute), second: Number(parts.second), millisecond: ((epochMs % 1000) + 1000) % 1000 };
 }
+/** Civil-day math avoids device timezone and daylight-saving offsets. */
+function civilDay(wall: WallTime): number {
+    return Math.floor(Date.UTC(wall.year, wall.month - 1, wall.day) / 86400000);
+}
 function wallEpoch(wall: WallTime): number {
     return Date.UTC(wall.year, wall.month - 1, wall.day, wall.hour, wall.minute, wall.second, wall.millisecond);
 }
@@ -83,6 +87,26 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
         const anchor = zonedFields(record.startAt, zone);
         const first = zonedFields(from, zone);
         const last = zonedFields(until, zone);
+        if (record.repeatType === 'daily' || record.repeatType === 'weekly') {
+            const anchorDay = civilDay(anchor);
+            const firstDay = Math.max(anchorDay, civilDay(first) - 1);
+            const lastDay = civilDay(last) + 1;
+            for (let day = firstDay; day <= lastDay; day++) {
+                if (record.repeatType === 'weekly' && (day - anchorDay) % 7 !== 0) continue;
+                const candidateDay = new Date(day * 86400000);
+                const occurrence = zonedEpoch({
+                    ...anchor,
+                    year: candidateDay.getUTCFullYear(),
+                    month: candidateDay.getUTCMonth() + 1,
+                    day: candidateDay.getUTCDate(),
+                }, zone);
+                if (occurrence >= record.startAt && occurrence >= from && occurrence < until) {
+                    result.push({ ...record, startAt: occurrence,
+                        endAt: record.endAt == null ? null : occurrence + record.endAt - record.startAt });
+                }
+            }
+            continue;
+        }
         const firstMonth = first.year * 12 + first.month - 1;
         const lastMonth = last.year * 12 + last.month - 1;
         for (let index = firstMonth; index <= lastMonth; index++) {
@@ -105,6 +129,19 @@ export function nextOccurrence(record: NativeSchedule, now: number): NativeSched
     const zone = record.anchorZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const anchor = zonedFields(record.startAt, zone);
     const reference = zonedFields(now, zone);
+    if (record.repeatType === 'daily' || record.repeatType === 'weekly') {
+        const daysPerStep = record.repeatType === 'weekly' ? 7 : 1;
+        const anchorDay = civilDay(anchor);
+        let step = Math.max(0, Math.floor((civilDay(reference) - anchorDay) / daysPerStep));
+        for (;;) {
+            const candidateDay = new Date((anchorDay + step * daysPerStep) * 86400000);
+            const startAt = zonedEpoch({ ...anchor, year: candidateDay.getUTCFullYear(),
+                month: candidateDay.getUTCMonth() + 1, day: candidateDay.getUTCDate() }, zone);
+            if (startAt >= now) return { ...record, startAt,
+                endAt: record.endAt == null ? null : startAt + record.endAt - record.startAt };
+            step++;
+        }
+    }
     let monthIndex = record.repeatType === 'yearly' ? reference.year * 12 + anchor.month - 1 : reference.year * 12 + reference.month - 1;
     const step = record.repeatType === 'yearly' ? 12 : 1;
     for (;;) {

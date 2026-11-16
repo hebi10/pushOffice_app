@@ -182,7 +182,7 @@ export default function HomeScreen() {
                 <Text style={[styles.nextDate, { color: colors.textSecondary }]}>
                   {dayjs(nextAt).format('M월 D일 (ddd)')}
                   {nextEndLabel && !nextEndSameDay ? ` · ${nextEndLabel}` : ''}
-                  {next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
+                  {next.repeatType === 'daily' ? ' · 매일 반복' : next.repeatType === 'weekly' ? ' · 매주 반복' : next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
                 </Text>
               </View>
               {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}

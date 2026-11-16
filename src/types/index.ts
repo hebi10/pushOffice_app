@@ -43,7 +43,7 @@ export interface DigestTypes {
   news: boolean;
 }
 
-export type RepeatType = 'none' | 'monthly' | 'yearly';
+export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface ScheduleDoc {
   /** Native canonical IANA zone of the immutable recurrence anchor. */

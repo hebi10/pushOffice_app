@@ -264,6 +264,44 @@ class QuickEntryActivityUiTest {
     assertEquals(before, ScheduleStore(context).use { it.all().size })
   }
 
+  @Test fun optionalEndTimeAndFiveRecurrencesRequireUserSaveAndRejectInvalidRange() {
+    val before = ScheduleStore(context).use { it.all().size }
+    val selected = LocalDate.now().plusDays(8)
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java).putExtra("entryMode", "text")
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        val source = "${selected.year}년 ${selected.monthValue}월 ${selected.dayOfMonth}일 오후 3시 회의"
+        views(activity).filterIsInstance<EditText>().first().setText(source)
+        views(activity).filterIsInstance<TextView>()
+          .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
+        assertTrue(texts(activity).contains("종료 시간 지정"))
+        val end = views(activity).filterIsInstance<EditText>()
+          .single { it.contentDescription == "종료 시간 (HH:mm)" }
+        assertEquals("", end.text.toString())
+        assertEquals(View.GONE, (end.parent.parent as View).visibility)
+        views(activity).filterIsInstance<Button>()
+          .single { it.text.toString() == "종료 시간 지정" }.performClick()
+        assertEquals(View.VISIBLE, (end.parent.parent as View).visibility)
+        assertTrue(texts(activity).contains("종료 날짜 선택"))
+        assertTrue(texts(activity).contains("종료 시간 선택"))
+        val repeat = views(activity).filterIsInstance<android.widget.Spinner>()
+          .single { it.contentDescription == "반복 설정" }
+        assertEquals(5, repeat.adapter.count)
+        repeat.setSelection(1)
+        assertEquals("매일", repeat.selectedItem.toString())
+        end.setText("14:00")
+        views(activity).filterIsInstance<Button>()
+          .single { it.text.toString() == "일정 저장" }.performClick()
+        assertTrue(texts(activity).any { it.contains("종료 시간은 시작 시간 이후") })
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+        repeat.setSelection(2)
+        assertEquals("매주", repeat.selectedItem.toString())
+      }
+    }
+    assertEquals(before, ScheduleStore(context).use { it.all().size })
+  }
+
   private fun visibleError(activity: QuickEntryActivity): Boolean =
     views(activity).filterIsInstance<TextView>().any {
       it.visibility == View.VISIBLE && it.text.toString().contains("날짜와 시간을 다시 확인")
