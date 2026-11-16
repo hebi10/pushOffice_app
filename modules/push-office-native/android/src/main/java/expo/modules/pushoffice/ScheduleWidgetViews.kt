@@ -20,7 +20,7 @@ import android.widget.TextView
 import kotlin.math.max
 import kotlin.math.roundToInt
 
-internal data class WidgetEvent(val id: String, val time: String, val title: String)
+internal data class WidgetEvent(val id: String, val time: String, val title: String, val location: String? = null)
 
 internal object ScheduleWidgetViews {
   fun create(context: Context, agenda: Boolean, events: List<WidgetEvent>, options: Bundle): RemoteViews {
@@ -82,7 +82,7 @@ internal object ScheduleWidgetViews {
         setViewPadding(row, 0, dp(context, rowPadding), 0, dp(context, rowPadding))
         setTextViewTextSize(row, TypedValue.COMPLEX_UNIT_SP, eventSize)
         setTextViewText(row, event?.let { eventText(it, agenda, accent) } ?: empty)
-        setContentDescription(row, event?.let { "${it.time}, ${it.title}" } ?: if (agenda) "오늘 예정된 일정이 없습니다." else "예정된 일정이 없습니다.")
+        setContentDescription(row, event?.let { "${it.time}, ${it.title}${it.location?.let { place -> ", 장소 $place" } ?: ""}" } ?: if (agenda) "오늘 예정된 일정이 없습니다." else "예정된 일정이 없습니다.")
         setOnClickPendingIntent(row, when {
           event != null -> pending(context, eventIntent(context, event.id))
           visible -> pending(context, entryIntent(context, "chooser"))
@@ -105,7 +105,7 @@ internal object ScheduleWidgetViews {
       .putExtra("entryMode", mode)
       .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-  private fun eventText(event: WidgetEvent, agenda: Boolean, accent: Int): CharSequence = SpannableString("${event.time}${if (agenda) "  " else "\n"}${event.title}").apply {
+  private fun eventText(event: WidgetEvent, agenda: Boolean, accent: Int): CharSequence = SpannableString("${event.time}${if (agenda) "  " else "\n"}${event.title}${event.location?.let { " · $it" } ?: ""}").apply {
     setSpan(ForegroundColorSpan(accent), 0, event.time.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     setSpan(StyleSpan(Typeface.BOLD), 0, event.time.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
     if (!agenda) setSpan(RelativeSizeSpan(.8f), 0, event.time.length + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
