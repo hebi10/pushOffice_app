@@ -94,6 +94,8 @@ export type PushOfficeNativeEvents = {
 };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
+  /** Calendar-only civil date (YYYY-MM-DD); original tile/widget/voice entries are unaffected. */
+  openQuickEntryForDate(date: string): Promise<void>;
   /** Android SAF: user chooses the location. A cancelled picker returns false. */
   createLocalBackupDocument(text: string): Promise<boolean>;
   /** Android SAF: user chooses the file. A cancelled picker returns null. */
@@ -146,6 +148,7 @@ const unavailable = async (): Promise<never> => {
 /** Import-safe fallback; never silently claims a save or alarm was successful. */
 export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
+  openQuickEntryForDate: unavailable,
   createLocalBackupDocument: unavailable,
   pickLocalBackupDocument: unavailable,
   importBackupSchedules: unavailable,
