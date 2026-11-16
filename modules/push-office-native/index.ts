@@ -11,6 +11,9 @@ export interface NativeSchedule {
   /** Canonical IANA recurrence zone returned by native storage; optional for legacy/new input. */
   anchorZone?: string;
   endAt: number | null;
+  location?: string | null;
+  meetingUrl?: string | null;
+  notes?: string | null;
   isAllDay: boolean;
   repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   notificationEnabled: boolean;
