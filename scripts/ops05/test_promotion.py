@@ -56,6 +56,34 @@ class PromotionTests(unittest.TestCase):
                 with self.assertRaises(p.Stop):
                     p.parse_request(env)
 
+    def test_existing_korean_closed_track_accepted_but_still_requires_exact_play_inventory(self):
+        env = self.env("check")
+        env["CLOSED_TRACK"] = "1차 테스트"
+        req = p.parse_request(env)
+        self.assertEqual(req["closed"], "1차 테스트")
+        tracks, bundles = self.snapshot()
+        tracks[1]["track"] = "1차 테스트"
+        self.assertEqual(p.make_plan(tracks, bundles, req)["state"], "ready")
+        tracks[1]["track"] = "alpha"
+        with self.assertRaises(p.Stop):
+            p.make_plan(tracks, bundles, req)
+
+    def test_korean_track_does_not_allow_url_injection_or_protected_destination(self):
+        for candidate in ("1차 테스트/../../production", "1차 테스트\\nX", " 1차 테스트",
+                          "1차 테스트 ", "/1차 테스트", "../alpha",
+                          "production", "internal", "qa", "1차\\r테스트", "✨새트랙"):
+            with self.subTest(candidate=candidate):
+                env = self.env("check")
+                env["CLOSED_TRACK"] = candidate
+                with self.assertRaises(p.Stop):
+                    p.parse_request(env)
+
+    def test_workflow_defaults_to_existing_korean_closed_track_not_unconfigured_alpha(self):
+        workflow = (ROOT / ".github/workflows/play-closed-release.yml").read_text(encoding="utf-8")
+        self.assertIn("default: '1차 테스트'", workflow)
+        self.assertNotIn("default: alpha", workflow)
+        self.assertIn("ERROR_IF_IN_REVIEW", (ROOT / "scripts/ops05/promotion.py").read_text(encoding="utf-8"))
+
     def test_valid_exact_bundle_and_completed_internal(self):
         req = p.parse_request(self.env())
         tracks, bundles = self.snapshot()
