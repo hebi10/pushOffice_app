@@ -8,7 +8,7 @@ type TestResult = {
   success: boolean;
   title?: string;
   startAt?: number;
-  repeatType?: 'none' | 'monthly' | 'yearly';
+  repeatType?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   durationMs: number;
   message?: string;
 };
@@ -27,7 +27,9 @@ export function describeModelTest(result: TestResult): { headline: string; detai
   const dateLabel = hasValidDate
     ? new Date(timestamp).toLocaleString('ko-KR')
     : '날짜·시간 미확인';
-  const repeatLabel = result.repeatType === 'monthly' ? '매월 반복'
+  const repeatLabel = result.repeatType === 'daily' ? '매일 반복'
+    : result.repeatType === 'weekly' ? '매주 반복'
+    : result.repeatType === 'monthly' ? '매월 반복'
     : result.repeatType === 'yearly' ? '매년 반복'
     : result.repeatType === 'none' ? '반복 없음' : '반복 확인 필요';
 
