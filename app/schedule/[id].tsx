@@ -225,7 +225,7 @@ export default function ScheduleDetail() {
         <AssistantCard title="반복과 알림" icon="repeat-outline" subtitle={detail.data.repeatType !== 'none' || repeat !== 'none' ? '반복 일정은 전체 회차에 적용됩니다.' : undefined}>
           <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>반복 주기</Text>
           <View style={styles.repeatOptions}>
-            {([['none', '반복 안 함'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
+            {([['none', '반복 안 함'], ['daily', '매일 반복'], ['weekly', '매주 반복'], ['monthly', '매월 반복'], ['yearly', '매년 반복']] as const).map(([key, label]) => (
               <TouchableOpacity
                 key={key}
                 accessibilityRole="radio"
