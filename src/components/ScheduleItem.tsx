@@ -9,6 +9,8 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 const REPEAT_LABEL: Record<string, string> = {
   none: '',
+  daily: '매일 반복',
+  weekly: '매주 반복',
   monthly: '매월 반복',
   yearly: '매년 반복',
 };
