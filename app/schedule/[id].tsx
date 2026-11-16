@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SchedulePickerDialog } from '@/src/components/schedule/SchedulePickerDialog';
 import { SchedulePickerField } from '@/src/components/schedule/SchedulePickerField';
 import { EmptyState } from '@/src/components/EmptyState';
@@ -17,6 +17,7 @@ import { PushOfficeNative } from '@/modules/push-office-native';
 import { dayjs } from '@/src/lib/time';
 import { showError, showToast } from '@/src/components/ui/toast';
 import type { RepeatType } from '@/src/types';
+import { isSafeMeetingUrl, normalizeScheduleExtras } from '@/src/features/schedules/scheduleExtras';
 
 LocaleConfig.locales.ko = {
   monthNames: Array.from({ length: 12 }, (_, i) => `${i + 1}월`),
@@ -37,6 +38,9 @@ export default function ScheduleDetail() {
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [end, setEnd] = useState('');
+  const [location, setLocation] = useState('');
+  const [meetingUrl, setMeetingUrl] = useState('');
+  const [notes, setNotes] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [notification, setNotification] = useState(true);
   const [repeat, setRepeat] = useState<RepeatType>('none');
@@ -54,6 +58,9 @@ export default function ScheduleDetail() {
     setDate(dayjs(record.startAt.toDate()).format('YYYY-MM-DD'));
     setTime(dayjs(record.startAt.toDate()).format('HH:mm'));
     setEnd(record.endAt ? dayjs(record.endAt.toDate()).format('YYYY-MM-DD HH:mm') : '');
+    setLocation(record.location ?? '');
+    setMeetingUrl(record.meetingUrl ?? '');
+    setNotes(record.notes ?? '');
     setAllDay(!!record.isAllDay);
     setNotification(record.notificationEnabled);
     setRepeat(record.repeatType);
@@ -74,18 +81,29 @@ export default function ScheduleDetail() {
     try {
       const start = parse(`${date} ${allDay ? '00:00' : time}`);
       const finish = end.trim() ? parse(end.trim()) : null;
+      const extras = normalizeScheduleExtras({ location, meetingUrl, notes });
       await update.mutateAsync({
         id,
         data: {
           title, startAt: Timestamp.fromDate(start),
           endAt: finish ? Timestamp.fromDate(finish) : null,
           isAllDay: allDay, repeatType: repeat, notificationEnabled: notification,
+          ...extras,
         },
       });
       showToast('일정을 수정했습니다.');
     } catch (error) {
       showError(error, '저장하지 못했습니다.');
     }
+  };
+
+  const openSavedMeetingUrl = () => {
+    const url = detail.data?.meetingUrl;
+    if (!url || !isSafeMeetingUrl(url)) {
+      showError(new Error('회의 링크 주소를 확인해 주세요.'), '회의 링크를 열지 못했습니다.');
+      return;
+    }
+    void Linking.openURL(url).catch(error => showError(error, '회의 링크를 열지 못했습니다.'));
   };
 
   const confirmSave = () => {
@@ -219,6 +237,18 @@ export default function ScheduleDetail() {
           </View>
           {end ? (
             <AssistantButton label="종료 시간 제거" icon="close-circle-outline" secondary onPress={() => setEnd('')} />
+          ) : null}
+        </AssistantCard>
+
+        <AssistantCard title="장소·회의 링크·메모" icon="location-outline" subtitle="선택 사항 · 일정과 함께 기기에 보관합니다.">
+          <AssistantTextField label="장소" value={location} onChangeText={setLocation}
+            placeholder="예: 3층 회의실" maxLength={160} />
+          <AssistantTextField label="회의 링크 (HTTPS)" value={meetingUrl} onChangeText={setMeetingUrl}
+            placeholder="https://…" keyboardType="url" autoCapitalize="none" maxLength={2048} />
+          <AssistantTextField label="메모" value={notes} onChangeText={setNotes}
+            placeholder="추가 내용을 입력하세요." multiline maxLength={2000} />
+          {detail.data.meetingUrl && isSafeMeetingUrl(detail.data.meetingUrl) ? (
+            <AssistantButton label="저장된 회의 링크 열기" icon="open-outline" secondary onPress={openSavedMeetingUrl} />
           ) : null}
         </AssistantCard>
 
