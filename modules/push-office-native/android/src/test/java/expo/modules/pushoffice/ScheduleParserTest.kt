@@ -30,6 +30,34 @@ class ScheduleParserTest {
     assertEquals("yearly", yearly.repeatType)
     assertEquals(LocalDate.of(2028,2,29), yearly.start?.toLocalDate())
   }
+  @Test fun dailyRuleChoosesNextFutureOccurrenceWithoutGuessingTime() {
+    val daily = parse("매일 오후 3시 운동")
+    assertEquals("daily", daily.repeatType)
+    assertEquals(LocalDateTime.of(2026,11,3,15,0), daily.start?.toLocalDateTime())
+    assertEquals("운동", daily.title)
+    val after = ScheduleParser.parse("매일 오전 9시 운동", now)
+    assertEquals(LocalDateTime.of(2026,11,4,9,0), after.start?.toLocalDateTime())
+    assertNotNull(parse("매일 운동").error)
+  }
+
+  @Test fun weeklyRuleUsesExplicitWeekdayOrCalendarAnchor() {
+    val weekly = parse("매주 금요일 오전 9시 회의")
+    assertEquals("weekly", weekly.repeatType)
+    assertEquals("회의", weekly.title)
+    assertEquals(LocalDateTime.of(2026,11,6,9,0), weekly.start?.toLocalDateTime())
+    val calendar = ScheduleParser.parse("매주 오후 2시 점검", now, LocalDate.of(2026,11,5))
+    assertEquals("weekly", calendar.repeatType)
+    assertEquals(LocalDate.of(2026,11,5), calendar.start?.toLocalDate())
+    assertNotNull(parse("매주 오후 2시 점검").error)
+  }
+
+  @Test fun explicitDateCanAnchorDailyWithoutChangingTitle() {
+    val daily = parse("매일 내일 오후 3시 고객 미팅")
+    assertEquals("daily", daily.repeatType)
+    assertEquals(LocalDate.of(2026,11,4), daily.start?.toLocalDate())
+    assertEquals("고객 미팅", daily.title)
+  }
+
   @Test fun shiftKeepsAllMatchingTargetsForUserChoice() {
     val result = parse("고객 미팅 한 시간 늦춰")
     assertEquals(60, result.shiftMinutes)
