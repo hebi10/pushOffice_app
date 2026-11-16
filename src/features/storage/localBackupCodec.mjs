@@ -84,7 +84,8 @@ function normalizeSettings(value) {
 function optionalScheduleExtra(value, field, max) {
   if (value === undefined) return undefined;
   valid(value === null || typeof value === 'string' && value.length <= max,
-    '백업의 ' + field + ' 항목이 올바르지 않습니다.');
+    '백업의 ' + ({ location: '장소', meetingUrl: '회의 링크', notes: '메모' }[field] || field) +
+      ' 항목이 올바르지 않습니다.');
   if (value === null) return null;
   const cleaned = value.trim();
   if (field === 'location') {
