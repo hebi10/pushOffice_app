@@ -77,6 +77,14 @@ test('foreign app, unsupported version and mismatched checksums are rejected', a
   await assert.rejects(parseLocalBackup(JSON.stringify(invalid), sha256), /손상/);
 });
 
+test('daily/weekly reminders and selected end times round-trip without changing IDs or local zones', async () => {
+  const daily = { ...appointment, id: 'daily-anchor', repeatType: 'daily', endAt: appointment.startAt + 5400000 };
+  const weekly = { ...appointment, id: 'weekly-anchor', repeatType: 'weekly', endAt: null };
+  const output = await createLocalBackup([daily, weekly], settings, sha256, now);
+  const restored = await parseLocalBackup(output, sha256);
+  assert.deepEqual(restored.schedules, [daily, weekly]);
+});
+
 test('duplicate IDs and invalid schedules never proceed to restore', async () => {
   await assert.rejects(
     createLocalBackup([appointment, { ...appointment, title: '중복' }], settings, sha256, now),
@@ -87,7 +95,7 @@ test('duplicate IDs and invalid schedules never proceed to restore', async () =>
     /일정 데이터/,
   );
   await assert.rejects(
-    createLocalBackup([{ ...appointment, repeatType: 'weekly' }], settings, sha256, now),
+    createLocalBackup([{ ...appointment, repeatType: 'hourly' }], settings, sha256, now),
     /일정 데이터/,
   );
   await assert.rejects(
