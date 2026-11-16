@@ -74,7 +74,9 @@ test('UI-12-05 preserves date pickers, all-day, recurrence and SQLite update bou
     'setPendingDialog(\'invalid-time\')',
     'keyboardShouldPersistTaps="handled"',
   ]) assert.ok(detail.includes(expression), 'Missing original schedule operation: ' + expression);
-  assert.doesNotMatch(detail, /"meetingUrl"|"location"|"notes"/);
+  assert.match(detail, /title="장소·회의 링크·메모"/);
+  assert.match(detail, /normalizeScheduleExtras\(/);
+  assert.match(detail, /저장된 회의 링크 열기/);
   for (const name of [
     '11-schedule-detail', '12-schedule-date-modal', '13-schedule-time-modal',
     '12a-schedule-end-date-modal', '13a-schedule-end-time-modal',
