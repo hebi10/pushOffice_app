@@ -94,6 +94,12 @@ export type PushOfficeNativeEvents = {
 };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
   openQuickEntry(): Promise<void>;
+  /** Android SAF: user chooses the location. A cancelled picker returns false. */
+  createLocalBackupDocument(text: string): Promise<boolean>;
+  /** Android SAF: user chooses the file. A cancelled picker returns null. */
+  pickLocalBackupDocument(): Promise<string | null>;
+  /** Atomic, existing IDs are never overwritten; alarm refresh failure is reported separately. */
+  importBackupSchedules(records: NativeSchedule[]): Promise<{ imported: number; alarmsReady: boolean }>;
   getNotificationSuggestionStatus(): Promise<NotificationSuggestionStatus>;
   setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
   openNotificationAccessSettings(): Promise<void>;
@@ -140,6 +146,9 @@ const unavailable = async (): Promise<never> => {
 /** Import-safe fallback; never silently claims a save or alarm was successful. */
 export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
+  createLocalBackupDocument: unavailable,
+  pickLocalBackupDocument: unavailable,
+  importBackupSchedules: unavailable,
   getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
   setNotificationCaptureEnabled: unavailable,
   openNotificationAccessSettings: unavailable,

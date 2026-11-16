@@ -11,6 +11,7 @@ import { ENV } from '@/src/lib/env';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
+import { chooseLocalBackup, exportLocalBackup, restoreLocalBackup, type LocalBackupPreview } from '@/src/features/storage/localBackupService';
 import { requestNotificationPermission } from '@/src/features/notifications/permission';
 import { reminderCapabilities } from '@/src/features/notifications/useNativeAssistant';
 import { PushOfficeNative, type AiStatus, type AiDownloadProgress, type ReminderCapabilities, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
@@ -26,6 +27,10 @@ export default function SettingsScreen() {
     const [cap, setCap] = useState<ReminderCapabilities | null>(null);
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
     const [recovering, setRecovering] = useState(false);
+    const [backupBusy, setBackupBusy] = useState(false);
+    const [backupPreview, setBackupPreview] = useState<LocalBackupPreview | null>(null);
+    const [restoreSchedules, setRestoreSchedules] = useState(true);
+    const [restoreSettings, setRestoreSettings] = useState(false);
     const [ai, setAi] = useState<AiStatus>({ status: 'error', message: '기기 지원 상태를 확인하고 있습니다.' });
     const [aiDownloading, setAiDownloading] = useState(false);
     const [aiChecking, setAiChecking] = useState(false);
@@ -116,6 +121,46 @@ export default function SettingsScreen() {
       } catch (error) { showError(error, '빠른 설정 사용 여부를 변경하지 못했습니다.'); }
     };
     const retryImport = async () => { setRecovering(true); try { setLegacy(await retryLegacyRecovery()); } catch (error) { showError(error, '이전 일정 원본을 보존하고 있어요. 다시 시도해 주세요.'); } finally { setRecovering(false); } };
+    const backupFailure = (error: unknown) => {
+      setNotice({ title: '백업·복원 오류', message: error instanceof Error ? error.message : '파일을 처리하지 못했습니다. 다시 확인해 주세요.' });
+    };
+    const saveBackupFile = async () => {
+      if (backupBusy) return;
+      setBackupBusy(true);
+      try {
+        const result = await exportLocalBackup();
+        if (result.saved) setNotice({ title: '백업 저장 완료', message: '일정 ' + result.count + '건과 사용자 설정을 선택한 파일에 저장했습니다. 파일은 암호화되지 않으므로 안전한 위치에 보관해 주세요.' });
+      } catch (error) { backupFailure(error); }
+      finally { setBackupBusy(false); }
+    };
+    const chooseBackupFile = async () => {
+      if (backupBusy) return;
+      setBackupBusy(true);
+      setBackupPreview(null);
+      try {
+        const preview = await chooseLocalBackup();
+        if (preview) {
+          setBackupPreview(preview);
+          setRestoreSchedules(true);
+          setRestoreSettings(false);
+        }
+      } catch (error) { backupFailure(error); }
+      finally { setBackupBusy(false); }
+    };
+    const applyBackupFile = async () => {
+      if (!backupPreview || backupBusy) return;
+      setBackupBusy(true);
+      try {
+        const result = await restoreLocalBackup(backupPreview, { schedules: restoreSchedules, settings: restoreSettings });
+        setBackupPreview(null);
+        refresh();
+        const details = '새 일정 ' + result.imported + '건 복원 · 기존 ID ' + result.skipped +
+          '건 건너뜀 · 설정 ' + (result.settingsRestored ? '적용' : '유지');
+        setNotice({ title: '백업 복원 결과', message: details +
+          (result.alarmsReady ? '' : '\n알림 재예약을 확인하지 못했습니다. 알림 권한과 예약 상태를 다시 확인해 주세요.') });
+      } catch (error) { backupFailure(error); }
+      finally { setBackupBusy(false); }
+    };
     const save = async (patch: Partial<UserSettings>, success?: string): Promise<boolean> => {
         setSaveFeedback(null);
         try {
@@ -497,6 +542,53 @@ export default function SettingsScreen() {
                   </View>
                 ) : null}
               </SettingsGroup>
+              <SettingsGroup title="로컬 백업과 복원" icon="save-outline" description="일정·설정 파일 직접 관리">
+                <SettingsActionRow
+                  icon="download-outline"
+                  title="일정·설정 파일로 백업"
+                  description="기기에서 JSON 파일 저장 위치 선택"
+                  busy={backupBusy}
+                  onPress={() => { void saveBackupFile(); }}
+                />
+                <SettingsActionRow
+                  icon="folder-open-outline"
+                  title="백업 파일 선택 및 복원"
+                  description="내용과 중복 일정 확인 후 복원"
+                  busy={backupBusy}
+                  onPress={() => { void chooseBackupFile(); }}
+                />
+                <SettingsNote>사용자가 파일을 저장한 경우에만 백업됩니다. 파일은 암호화되지 않으며 일정 제목·시각·설정이 포함됩니다. 로그인 정보·미승인 알림 후보·AI 모델은 제외됩니다. 승인된 일정의 원본 입력 문장은 포함됩니다.</SettingsNote>
+                {backupPreview ? (
+                  <View style={{ gap: uiSpacing.xs, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm }}>
+                    <SettingsNote>백업 날짜: {new Date(backupPreview.payload.exportedAt).toLocaleString('ko-KR')}</SettingsNote>
+                    <SettingsNote>파일 일정 {backupPreview.payload.schedules.length}건 · 신규 {backupPreview.newCount}건 · 기존 ID 중복 {backupPreview.existingCount}건</SettingsNote>
+                    <SettingsToggleRow
+                      icon="calendar-outline"
+                      title="일정 복원"
+                      description="같은 ID는 덮어쓰지 않고 건너뜁니다."
+                      value={restoreSchedules}
+                      disabled={backupBusy}
+                      onValueChange={setRestoreSchedules}
+                    />
+                    <SettingsToggleRow
+                      icon="options-outline"
+                      title="설정 적용"
+                      description="현재 알림·테마·외부 정보 설정을 변경합니다."
+                      value={restoreSettings}
+                      disabled={backupBusy}
+                      onValueChange={setRestoreSettings}
+                    />
+                    <AssistantButton
+                      label="선택한 항목 복원"
+                      icon="checkmark-outline"
+                      busy={backupBusy}
+                      disabled={!restoreSchedules && !restoreSettings}
+                      onPress={() => { void applyBackupFile(); }}
+                    />
+                    <AssistantButton label="복원 취소" icon="close-outline" secondary disabled={backupBusy} onPress={() => setBackupPreview(null)} />
+                  </View>
+                ) : null}
+              </SettingsGroup>
               <SettingsGroup title="이전 일정 가져오기" icon="cloud-download-outline">
                 <SettingsNote>{legacy?.message ?? '이전에 사용하던 Firebase 계정의 일정을 가져올 수 있습니다.'}</SettingsNote>
                 <SettingsActionRow
@@ -512,6 +604,7 @@ export default function SettingsScreen() {
                 <SettingsChoiceRow icon="sunny-outline" title="밝은 테마" selected={settings.themeMode === 'light'} onPress={() => { void save({ themeMode: 'light' }); }} />
                 <SettingsChoiceRow icon="moon-outline" title="어두운 테마" selected={settings.themeMode === 'dark'} onPress={() => { void save({ themeMode: 'dark' }); }} />
                 <SettingsNote>일정은 기기에 저장됩니다. 앱 삭제 시 로컬 일정도 삭제되며 Android 자동 백업은 사용하지 않습니다.</SettingsNote>
+                <SettingsNote>앱 삭제 전 고급 설정에서 일정·설정을 파일로 백업해 주세요.</SettingsNote>
               </SettingsGroup>
               <SettingsGroup title="개인정보와 지원" icon="shield-checkmark-outline">
                 <SettingsNote>기기 AI 상태 확인 시 ML Kit가 식별자와 진단 정보를 처리할 수 있습니다.</SettingsNote>

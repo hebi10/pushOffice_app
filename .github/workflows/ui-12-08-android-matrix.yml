@@ -11,6 +11,8 @@ on:
     branches: [main]
     paths:
       - ".github/workflows/ui-12-08-android-matrix.yml"
+      - "modules/push-office-native/**"
+      - "tools/ui/run_mono_office_native_qa.sh"
 
 permissions:
   contents: read

@@ -48,6 +48,28 @@ class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationCont
     notifyChanged()
     records.size
   }
+  /** Backup-only restore: strict validation, no overwrite, and all inserts in one SQLite transaction. */
+  fun importBackupRecords(records: List<ScheduleRecord>): Int = ScheduleSerial.withLock {
+    require(records.size <= 10000 && records.map { it.id }.toSet().size == records.size) {
+      "백업의 일정 수 또는 ID가 올바르지 않습니다."
+    }
+    val now = System.currentTimeMillis()
+    records.forEach { ScheduleTime.validate(it, now, true) }
+    val db = writableDatabase
+    var imported = 0
+    db.beginTransaction()
+    try {
+      records.forEach { record ->
+        if (get(record.id) == null) {
+          write(record, true, null)
+          imported++
+        }
+      }
+      db.setTransactionSuccessful()
+    } finally { db.endTransaction() }
+    if (imported > 0) notifyChanged()
+    imported
+  }
   /** Caller holds ScheduleSerial; notifications belong after an entire mutation commits. */
   private fun write(record: ScheduleRecord, allowPast: Boolean, zone: ZoneId?): ScheduleRecord {
     val previous = get(record.id)
