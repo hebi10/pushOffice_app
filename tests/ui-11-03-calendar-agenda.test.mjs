@@ -26,7 +26,7 @@ test('UI-11-03 preserves genuine date selection, count, multi-dot and schedule n
     'variant="calendar"',
     'schedules.isLoading',
     'schedules.isError',
-    'PushOfficeNative.openQuickEntry()',
+    'PushOfficeNative.openQuickEntryForDate(selected)',
   ]) assert.ok(source.includes(value), value);
   assert.match(source, /\.sort\(\(a, b\) => a\.startAt\.toMillis\(\) - b\.startAt\.toMillis\(\)\)/);
   assert.match(row, /endAt\.getTime\(\) > startAt\.getTime\(\)/);

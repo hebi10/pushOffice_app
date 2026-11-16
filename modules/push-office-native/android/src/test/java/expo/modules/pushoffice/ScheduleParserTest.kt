@@ -40,5 +40,35 @@ class ScheduleParserTest {
     assertEquals("가을",parse("가을 한 시간 당겨").title)
     assertEquals(-60,parse("가을 한 시간 당겨").shiftMinutes)
   }
+  @Test fun selectedCalendarDayFillsOnlyMissingDate() {
+    val selected = LocalDate.of(2026, 11, 20)
+    val parsed = ScheduleParser.parse("오후 3시 치과 예약", now, selected)
+    assertNull(parsed.error)
+    assertEquals(LocalDateTime.of(2026, 11, 20, 15, 0), parsed.start?.toLocalDateTime())
+    assertEquals("치과 예약", parsed.title)
+    assertEquals("none", parsed.repeatType)
+  }
+
+  @Test fun explicitRelativeAndAbsoluteDatesOverrideCalendarSelection() {
+    val selected = LocalDate.of(2026, 11, 20)
+    val explicit = ScheduleParser.parse("2026년 11월 18일 오후 5시 회의", now, selected)
+    assertEquals(LocalDate.of(2026, 11, 18), explicit.start?.toLocalDate())
+    val tomorrow = ScheduleParser.parse("내일 오전 9시 회의", now, selected)
+    assertEquals(LocalDate.of(2026, 11, 4), tomorrow.start?.toLocalDate())
+    val monthly = ScheduleParser.parse("매월 29일 오후 2시 점검", now, selected)
+    assertEquals("monthly", monthly.repeatType)
+    assertEquals(LocalDate.of(2026, 11, 29), monthly.start?.toLocalDate())
+  }
+
+  @Test fun missingTimeAndInvalidExplicitDatesNeverBecomeAutoScheduled() {
+    val selected = LocalDate.of(2026, 11, 20)
+    assertNotNull(ScheduleParser.parse("치과 예약", now, selected).error)
+    assertNotNull(ScheduleParser.parse("11월 20일 회의", now, selected).error)
+    assertNotNull(ScheduleParser.parse("2026년 2월 30일 오후 3시 회의", now, selected).error)
+    assertNotNull(ScheduleParser.parse("오후 3시 회의", now, null).error)
+    assertTrue(ScheduleParser.mentionsDate("2026년 2월 30일 오후 3시 회의"))
+    assertFalse(ScheduleParser.mentionsDate("오후 3시 회의"))
+  }
+
   private fun record(id: String, title: String) = ScheduleRecord(id,"local","event",title,now.plusDays(1).toInstant().toEpochMilli(),createdAt=1,updatedAt=1)
 }

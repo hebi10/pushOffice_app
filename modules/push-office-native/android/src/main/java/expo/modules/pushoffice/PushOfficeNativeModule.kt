@@ -113,6 +113,20 @@ class PushOfficeNativeModule : Module() {
         catch(e: Exception) { promise.reject("OPEN_ENTRY",e.message,e) }
       }
     }
+    AsyncFunction("openQuickEntryForDate") { selectedDate: String, promise: Promise ->
+      val activity = appContext.currentActivity
+      if (activity == null) promise.reject("NO_ACTIVITY", "앱 화면에서 빠른 입력을 열어 주세요.", null)
+      else activity.runOnUiThread {
+        try {
+          val date = requireNotNull(CalendarQuickEntryDate.parse(selectedDate))
+          activity.startActivity(Intent(activity, QuickEntryActivity::class.java)
+            .putExtra(CalendarQuickEntryDate.EXTRA_DATE, date.toString()))
+          promise.resolve(null)
+        } catch (_: Exception) {
+          promise.reject("OPEN_ENTRY_DATE", "선택한 날짜를 확인하고 다시 시도해 주세요.", null)
+        }
+      }
+    }
     AsyncFunction("openVoiceQuickEntry") { promise: Promise ->
       val activity=appContext.currentActivity
       if(activity==null) promise.reject("NO_ACTIVITY","앱 화면에서 음성 입력을 열어 주세요.",null)

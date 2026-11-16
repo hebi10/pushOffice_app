@@ -43,7 +43,7 @@ test('PO-UI-05 selected day does not confuse loading, errors, empty and real occ
   assert.match(calendar, /items\.length/);
   assert.match(calendar, /<EmptyState message=/);
   assert.match(calendar, /variant="calendar"/);
-  assert.match(calendar, /PushOfficeNative\.openQuickEntry\(\)/);
+  assert.match(calendar, /PushOfficeNative\.openQuickEntryForDate\(selected\)/);
   assert.doesNotMatch(calendar, /회의실 A|Zoom|강남구/);
 });
 

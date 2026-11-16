@@ -49,6 +49,23 @@ class AiScheduleTimeTest {
     }
   }
 
+  @Test fun calendarSelectedDateIsVerifiedAgainstAIGeneratedValues() {
+    val selected = java.time.LocalDate.of(2026, 11, 17)
+    val source = "오후 3시에 치과 예약"
+    val accepted = AiScheduleTime.validated(source, now, "치과 예약", "2026-11-17", "15:00", "none", selected)
+    assertEquals(selected, accepted.start?.toLocalDate())
+    assertThrows(IllegalArgumentException::class.java) {
+      AiScheduleTime.validated(source, now, "치과 예약", "2026-11-18", "15:00", "none", selected)
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      AiScheduleTime.validated("2026년 11월 18일 오후 3시에 치과 예약", now,
+        "치과 예약", "2026-11-17", "15:00", "none", selected)
+    }
+    assertThrows(IllegalArgumentException::class.java) {
+      AiScheduleTime.validated("치과 예약", now, "치과 예약", "2026-11-17", "15:00", "none", selected)
+    }
+  }
+
   @Test fun daylightSavingGapsAndOverlapsAreRejected() {
     val ny = ZoneId.of("America/New_York")
     val springNow = ZonedDateTime.of(2026, 3, 1, 12, 0, 0, 0, ny)

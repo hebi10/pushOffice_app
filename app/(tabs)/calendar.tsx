@@ -168,7 +168,7 @@ export default function CalendarScreen() {
       <AssistantButton
         label="빠른 일정 입력"
         icon="add-circle-outline"
-        onPress={() => PushOfficeNative.openQuickEntry().catch(e => showError(e, '입력 창을 열 수 없습니다.'))}
+        onPress={() => PushOfficeNative.openQuickEntryForDate(selected).catch(e => showError(e, '입력 창을 열 수 없습니다.'))}
       />
       <AssistantCard title="해당 날짜의 일정" icon="list-outline" flat>
         {schedules.isLoading ? (

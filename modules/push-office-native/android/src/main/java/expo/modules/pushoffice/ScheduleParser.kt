@@ -7,7 +7,10 @@ data class ParsedSchedule(val title: String = "", val start: ZonedDateTime? = nu
 
 /** Conservative local Korean grammar. Unknown/missing dates never acquire an implicit date. */
 object ScheduleParser {
-  fun parse(text: String, now: ZonedDateTime): ParsedSchedule {
+  fun parse(text: String, now: ZonedDateTime): ParsedSchedule = parse(text, now, null)
+
+  /** Only a missing date may inherit the calendar selection; explicit user dates always win. */
+  fun parse(text: String, now: ZonedDateTime, calendarDate: LocalDate?): ParsedSchedule {
     var remaining = text.trim()
     val shift = Regex("(?:한\\s*시간|1\\s*시간)\\s*(늦춰|늦추|뒤로|당겨|앞으로).*$").find(remaining)
     if (shift != null) {
@@ -54,6 +57,7 @@ object ScheduleParser {
       }
       val time = Regex("(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})시(?:\\s*(반|\\d{1,2}분))?").find(remaining)
       val colon = Regex("(?<!\\d)(\\d{1,2}):(\\d{2})(?!\\d)").find(remaining)
+      if(date == null) date = calendarDate
       if(date == null) return ParsedSchedule(error="날짜를 입력하거나 아래에서 직접 지정해 주세요.")
       if(time == null && colon == null) return ParsedSchedule(error="시간을 입력하거나 아래에서 직접 지정해 주세요.")
       val hour: Int; val minute: Int
@@ -70,6 +74,11 @@ object ScheduleParser {
       return ParsedSchedule(title,start,repeat)
     } catch (e: Exception) { return ParsedSchedule(error=e.message?.takeIf { it.contains("주세요") } ?: "날짜 또는 시간이 올바르지 않습니다. 직접 확인해 주세요.") }
   }
+  /** If a user mentions a date, an invalid date must not be silently replaced by the calendar day. */
+  fun mentionsDate(text: String): Boolean =
+    Regex("""\d{4}-\d{2}-\d{2}|(?:\d{4}년\s*)?\d{1,2}월\s*\d{1,2}일|매월\s*\d{1,2}일|(?:오늘|내일|모레)|(?:(?:다음|이번)\s*주)?\s*[월화수목금토일]요일""")
+      .containsMatchIn(text)
+
   fun targets(parsed: ParsedSchedule, schedules: List<ScheduleRecord>): List<ScheduleRecord> {
     if(parsed.error != null || parsed.title.isBlank()) return emptyList()
     val exact=schedules.filter { it.title.contains(parsed.title,ignoreCase=true) }

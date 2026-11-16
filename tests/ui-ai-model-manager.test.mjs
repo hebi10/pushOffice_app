@@ -51,7 +51,7 @@ test('selected model is used for all existing local AI interactions, not just th
   const time = read('modules/push-office-native/android/src/main/java/expo/modules/pushoffice/AiScheduleTime.kt');
   assert.match(runner, /AiScheduleTime\.validated\(/);
   assert.match(time, /ScheduleTime\.validate\(draft/);
-  assert.match(time, /ScheduleParser\.parse\(text, now\)/);
+  assert.match(time, /ScheduleParser\.parse\(text, now, calendarDate\)/);
   assert.match(time, /start\.toInstant\(\) == ground\.start\.toInstant\(\)/);
   assert.match(time, /LocalDate\.parse\(date\)/);
   assert.match(time, /LocalTime\.parse\(time\)/);
