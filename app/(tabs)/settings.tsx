@@ -557,7 +557,7 @@ export default function SettingsScreen() {
                   busy={backupBusy}
                   onPress={() => { void chooseBackupFile(); }}
                 />
-                <SettingsNote>사용자가 파일을 저장한 경우에만 백업됩니다. 파일은 암호화되지 않으며 일정 제목·시각·설정이 포함됩니다. 로그인 정보·알림 원문 후보·AI 모델은 제외됩니다.</SettingsNote>
+                <SettingsNote>사용자가 파일을 저장한 경우에만 백업됩니다. 파일은 암호화되지 않으며 일정 제목·시각·설정이 포함됩니다. 로그인 정보·미승인 알림 후보·AI 모델은 제외됩니다. 승인된 일정의 원본 입력 문장은 포함됩니다.</SettingsNote>
                 {backupPreview ? (
                   <View style={{ gap: uiSpacing.xs, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm }}>
                     <SettingsNote>백업 날짜: {new Date(backupPreview.payload.exportedAt).toLocaleString('ko-KR')}</SettingsNote>
@@ -585,7 +585,7 @@ export default function SettingsScreen() {
                       disabled={!restoreSchedules && !restoreSettings}
                       onPress={() => { void applyBackupFile(); }}
                     />
-                    <AssistantButton label="복원 취소" icon="close-outline" secondary onPress={() => setBackupPreview(null)} />
+                    <AssistantButton label="복원 취소" icon="close-outline" secondary disabled={backupBusy} onPress={() => setBackupPreview(null)} />
                   </View>
                 ) : null}
               </SettingsGroup>
