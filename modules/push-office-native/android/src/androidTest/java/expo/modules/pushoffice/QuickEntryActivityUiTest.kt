@@ -186,6 +186,84 @@ class QuickEntryActivityUiTest {
     }
   }
 
+  @Test fun calendarTimeOnlyInputPrefillsSelectedDayAndDoesNotSaveUntilApproved() {
+    val selected = LocalDate.now().plusDays(12)
+    val before = ScheduleStore(context).use { it.all().size }
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java)
+        .putExtra("entryMode", "text")
+        .putExtra(CalendarQuickEntryDate.EXTRA_DATE, selected.toString())
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        assertTrue(texts(activity).any { it.contains("기본 날짜로 사용합니다") })
+        val transcript = views(activity).filterIsInstance<EditText>().first()
+        transcript.setText("오후 3시 치과 예약")
+        views(activity).filterIsInstance<TextView>()
+          .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
+        val fields = views(activity).filterIsInstance<EditText>()
+        assertEquals(selected.toString(), fields.single {
+          it.contentDescription == "날짜 (YYYY-MM-DD)"
+        }.text.toString())
+        assertEquals("15:00", fields.single {
+          it.contentDescription == "시간 (HH:mm)"
+        }.text.toString())
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+        assertTrue(texts(activity).contains("일정 저장"))
+      }
+    }
+    assertEquals(before, ScheduleStore(context).use { it.all().size })
+  }
+
+  @Test fun explicitDateInTextOverridesSelectedCalendarDay() {
+    val selected = LocalDate.now().plusDays(12)
+    val explicit = selected.plusDays(5)
+    val before = ScheduleStore(context).use { it.all().size }
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java)
+        .putExtra("entryMode", "text")
+        .putExtra(CalendarQuickEntryDate.EXTRA_DATE, selected.toString())
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        val source = "${explicit.year}년 ${explicit.monthValue}월 ${explicit.dayOfMonth}일 오후 2시 치과 예약"
+        views(activity).filterIsInstance<EditText>().first().setText(source)
+        views(activity).filterIsInstance<TextView>()
+          .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
+        assertEquals(explicit.toString(), views(activity).filterIsInstance<EditText>()
+          .single { it.contentDescription == "날짜 (YYYY-MM-DD)" }.text.toString())
+        assertEquals("14:00", views(activity).filterIsInstance<EditText>()
+          .single { it.contentDescription == "시간 (HH:mm)" }.text.toString())
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+      }
+    }
+  }
+
+  @Test fun manualCalendarEntryPresetsOnlyDateAndNeverGuessesTime() {
+    val selected = LocalDate.now().plusDays(14)
+    val before = ScheduleStore(context).use { it.all().size }
+    ActivityScenario.launch<QuickEntryActivity>(
+      Intent(context, QuickEntryActivity::class.java)
+        .putExtra(CalendarQuickEntryDate.EXTRA_DATE, selected.toString())
+    ).use { scenario ->
+      scenario.onActivity { activity ->
+        assertTrue(texts(activity).any { it.startsWith("캘린더 선택일:") })
+        views(activity).single { it.contentDescription == TEXT_CHOICE }.performClick()
+        views(activity).filterIsInstance<Button>()
+          .single { it.text.toString() == "직접 날짜와 시간 지정" }.performClick()
+        val fields = views(activity).filterIsInstance<EditText>()
+        assertEquals(selected.toString(), fields.single {
+          it.contentDescription == "날짜 (YYYY-MM-DD)"
+        }.text.toString())
+        assertEquals("", fields.single {
+          it.contentDescription == "시간 (HH:mm)"
+        }.text.toString())
+        views(activity).filterIsInstance<Button>()
+          .single { it.text.toString() == "일정 저장" }.performClick()
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+      }
+    }
+    assertEquals(before, ScheduleStore(context).use { it.all().size })
+  }
+
   private fun visibleError(activity: QuickEntryActivity): Boolean =
     views(activity).filterIsInstance<TextView>().any {
       it.visibility == View.VISIBLE && it.text.toString().contains("날짜와 시간을 다시 확인")
