@@ -87,5 +87,6 @@ test('UI-12-04 leaves recording, on-device AI and the existing Android capture s
   assert.ok(capture.includes('screenshot("05-quick-entry"'));
   assert.ok(capture.includes('screenshot("06-native-editor"'));
   assert.ok(capture.includes('screenshot("07b-native-confirmation-actions"'));
-  assert.doesNotMatch(source, /"weekly"|"daily"|"location"|"meetingUrl"/);
+  assert.match(source, /val repeats=listOf\("none","daily","weekly","monthly","yearly"\)/);
+  assert.doesNotMatch(source, /"location"|"meetingUrl"/);
 });
