@@ -39,7 +39,7 @@ class ReminderReceiver : BroadcastReceiver() {
           val occurrence = ScheduleTime.nextOccurrence(event, dayStart - 1, store.anchorZone(event.id))
           if (occurrence != null && Instant.ofEpochMilli(occurrence).atZone(zone).toLocalDate() == today) {
             val time = if (event.isAllDay) "종일" else Instant.ofEpochMilli(occurrence).atZone(zone).toLocalTime().toString()
-            "$time ${event.title}"
+            "$time ${event.title}${event.location?.let { " · $it" } ?: ""}"
           } else null
         } }
         post(context, "daily", "오늘의 일정 ${lines.size}개", if (lines.isEmpty()) "오늘 예정된 일정이 없습니다." else lines.joinToString("\n"), false)

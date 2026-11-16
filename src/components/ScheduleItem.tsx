@@ -28,7 +28,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
   const endLabel = hasEnd && endAt
     ? sameDayEnd ? `~ ${dayjs(endAt).format('HH:mm')}` : `~ ${dayjs(endAt).format('M/D HH:mm')}`
     : '';
-  const showMeta = !calendar || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
+  const showMeta = !calendar || Boolean(schedule.location) || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
 
   return (
     <TouchableOpacity
@@ -53,6 +53,9 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
           {!calendar ? <Text style={[styles.date, { color: colors.textSecondary }]}>{dateStr}</Text> : null}
           {endLabel && !sameDayEnd ? (
             <Text style={[styles.date, { color: colors.textSecondary }]}>{endLabel}</Text>
+          ) : null}
+          {schedule.location ? (
+            <Text style={[styles.date, { color: colors.textSecondary }]} numberOfLines={1}>장소 · {schedule.location}</Text>
           ) : null}
           {repeatLabel ? (
             <View style={styles.repeat}>

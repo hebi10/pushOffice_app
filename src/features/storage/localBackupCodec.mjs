@@ -81,6 +81,29 @@ function normalizeSettings(value) {
   };
 }
 
+function optionalScheduleExtra(value, field, max) {
+  if (value === undefined) return undefined;
+  valid(value === null || typeof value === 'string' && value.length <= max,
+    '백업의 ' + ({ location: '장소', meetingUrl: '회의 링크', notes: '메모' }[field] || field) +
+      ' 항목이 올바르지 않습니다.');
+  if (value === null) return null;
+  const cleaned = value.trim();
+  if (field === 'location') {
+    valid(!/[\r\n\x00-\x1f\x7f]/.test(cleaned), '백업의 장소에 잘못된 문자가 있습니다.');
+  } else if (field === 'notes') {
+    valid(!/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(cleaned), '백업의 메모에 잘못된 문자가 있습니다.');
+  } else if (field === 'meetingUrl' && cleaned) {
+    let safe = false;
+    try {
+      const uri = new URL(cleaned);
+      safe = uri.protocol.toLowerCase() === 'https:' && !!uri.hostname &&
+        !uri.username && !uri.password && !/\s/.test(cleaned);
+    } catch {}
+    valid(safe, '백업의 회의 링크가 올바르지 않습니다.');
+  }
+  return cleaned || null;
+}
+
 function normalizeSchedule(value) {
   valid(plain(value) && limitedText(value.id, 200, false) &&
     limitedText(value.userId, 200, false) && limitedText(value.type, 40, false) &&
@@ -93,7 +116,12 @@ function normalizeSchedule(value) {
     (value.notificationId === null || limitedText(value.notificationId, 256)) &&
     limitedText(value.sourceText, 12000),
   '백업의 일정 데이터가 올바르지 않습니다.');
-  if (value.anchorZone !== undefined) timezone(value.anchorZone);
+  if (value.anchorZone !== undefined && value.anchorZone !== null) timezone(value.anchorZone);
+  const extras = {
+    ...(value.location === undefined ? {} : { location: optionalScheduleExtra(value.location, 'location', 160) }),
+    ...(value.meetingUrl === undefined ? {} : { meetingUrl: optionalScheduleExtra(value.meetingUrl, 'meetingUrl', 2048) }),
+    ...(value.notes === undefined ? {} : { notes: optionalScheduleExtra(value.notes, 'notes', 2000) }),
+  };
   return {
     id: value.id, userId: value.userId, type: value.type, title: value.title,
     startAt: value.startAt, endAt: value.endAt, isAllDay: value.isAllDay,
@@ -101,6 +129,7 @@ function normalizeSchedule(value) {
     notificationId: value.notificationId, sourceText: value.sourceText,
     createdAt: value.createdAt, updatedAt: value.updatedAt,
     ...(value.anchorZone === undefined ? {} : { anchorZone: value.anchorZone }),
+    ...extras,
   };
 }
 

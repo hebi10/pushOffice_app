@@ -49,7 +49,7 @@ test('precision stage 5 makes confirmation input fields compact but preserves lo
   for (const label of ['일정 제목', '날짜 (YYYY-MM-DD)', '시간 (HH:mm)', '종료 날짜 (YYYY-MM-DD)', '종료 시간 (HH:mm)']) {
     assert.ok(form.includes('field("' + label), 'Missing editable field ' + label);
   }
-  assert.equal((form.match(/compact=true/g) || []).length, 5);
+  assert.equal((form.match(/compact=true/g) || []).length, 8);
   assert.match(field, /compact: Boolean=false/);
   assert.match(field, /dp\(if\(compact\) 6 else 10\)/);
   assert.match(form, /DatePickerDialog\(/);

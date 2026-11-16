@@ -46,6 +46,10 @@ export interface DigestTypes {
 export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface ScheduleDoc {
+  /** Optional local-only details. Old records have no values. */
+  location?: string | null;
+  meetingUrl?: string | null;
+  notes?: string | null;
   /** Native canonical IANA zone of the immutable recurrence anchor. */
   anchorZone?: string;
   id?: string;

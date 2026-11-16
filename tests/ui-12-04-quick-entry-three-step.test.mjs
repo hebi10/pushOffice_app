@@ -88,5 +88,8 @@ test('UI-12-04 leaves recording, on-device AI and the existing Android capture s
   assert.ok(capture.includes('screenshot("06-native-editor"'));
   assert.ok(capture.includes('screenshot("07b-native-confirmation-actions"'));
   assert.match(source, /val repeats=listOf\("none","daily","weekly","monthly","yearly"\)/);
-  assert.doesNotMatch(source, /"location"|"meetingUrl"/);
+  assert.match(source, /field\("장소"/);
+  assert.match(source, /field\("회의 링크 \(HTTPS\)"/);
+  assert.match(source, /field\("메모"/);
+  assert.match(source, /ScheduleExtras\.meetingUrl/);
 });

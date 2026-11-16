@@ -5,11 +5,15 @@ import type { RepeatType, ScheduleDoc } from '../../types';
 import { localCreateSchedule, localUpdateSchedule, localDeleteSchedule } from '../storage/localStore';
 import { getDeviceSchedules } from '../storage/nativeStore';
 import { hydrateSchedule, projectOccurrences, toNativeSchedule } from './scheduleCodec';
+import { normalizeScheduleExtras } from './scheduleExtras';
 export interface CreateScheduleInput {
     userId: string;
     title: string;
     startAt: Date;
     endAt?: Date | null;
+    location?: string | null;
+    meetingUrl?: string | null;
+    notes?: string | null;
     isAllDay?: boolean;
     repeatType: RepeatType;
     notificationEnabled: boolean;
@@ -23,7 +27,7 @@ export async function createSchedule(input: CreateScheduleInput): Promise<string
     if (input.endAt && input.endAt <= input.startAt)
         throw new Error('종료 시간은 시작 시간 이후여야 합니다.');
     const id = Crypto.randomUUID();
-    const record = toNativeSchedule({ ...input, anchorZone: Intl.DateTimeFormat().resolvedOptions().timeZone, id, title: input.title.trim(), createdAt: Date.now(), updatedAt: Date.now() });
+    const record = toNativeSchedule({ ...input, ...normalizeScheduleExtras(input), anchorZone: Intl.DateTimeFormat().resolvedOptions().timeZone, id, title: input.title.trim(), createdAt: Date.now(), updatedAt: Date.now() });
     if (isPushOfficeNativeAvailable)
         await PushOfficeNative.saveSchedule(record);
     else
@@ -43,7 +47,7 @@ export async function updateSchedule(id: string, data: Partial<Omit<ScheduleDoc,
     const existing = await getSchedule(id);
     if (!existing)
         throw new Error('일정을 찾을 수 없습니다.');
-    const record = toNativeSchedule({ ...existing, ...data, id, updatedAt: Timestamp.now() });
+    const record = toNativeSchedule({ ...existing, ...data, ...normalizeScheduleExtras({ ...existing, ...data }), id, updatedAt: Timestamp.now() });
     if (!record.title.trim() || record.endAt != null && record.endAt <= record.startAt)
         throw new Error('제목과 시작·종료 시간을 확인해 주세요.');
     if (isPushOfficeNativeAvailable)

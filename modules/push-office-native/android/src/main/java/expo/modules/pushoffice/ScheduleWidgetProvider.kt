@@ -33,7 +33,7 @@ open class ScheduleWidgetProvider : AppWidgetProvider() {
         for(id in widgetIds.getValue(provider)) {
           val data=if(agenda) today else upcoming
           val events=data.map { event ->
-            WidgetEvent(event.first.id,event.third.format(DateTimeFormatter.ofPattern(if(agenda) "HH:mm" else "M/d HH:mm")),event.first.title)
+            WidgetEvent(event.first.id,event.third.format(DateTimeFormatter.ofPattern(if(agenda) "HH:mm" else "M/d HH:mm")),event.first.title,event.first.location)
           }
           manager.updateAppWidget(id,ScheduleWidgetViews.create(context,agenda,events,manager.getAppWidgetOptions(id)))
         }
