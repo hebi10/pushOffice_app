@@ -302,6 +302,53 @@ class QuickEntryActivityUiTest {
     assertEquals(before, ScheduleStore(context).use { it.all().size })
   }
 
+  @Test fun optionalExtrasAreEditableAndOnlySaveAfterValidUserConfirmation() {
+    val title = "ExtrasQA-" + java.util.UUID.randomUUID().toString().take(8)
+    val date = LocalDate.now().plusDays(9)
+    val baseline = ScheduleStore(context).use { it.all().size }
+    var savedId: String? = null
+    try {
+      ActivityScenario.launch<QuickEntryActivity>(
+        Intent(context, QuickEntryActivity::class.java).putExtra("entryMode", "text")
+      ).use { scenario ->
+        scenario.onActivity { activity ->
+          val input = views(activity).filterIsInstance<EditText>().first()
+          input.setText("${date.year}년 ${date.monthValue}월 ${date.dayOfMonth}일 오후 3시 $title")
+          views(activity).filterIsInstance<TextView>()
+            .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
+
+          val fields = views(activity).filterIsInstance<EditText>()
+          val location = fields.single { it.contentDescription == "장소" }
+          val meeting = fields.single { it.contentDescription == "회의 링크 (HTTPS)" }
+          val notes = fields.single { it.contentDescription == "메모" }
+          assertEquals(View.GONE, (location.parent.parent as View).visibility)
+          views(activity).filterIsInstance<Button>()
+            .single { it.text.toString() == "장소·링크·메모 입력" }.performClick()
+          assertEquals(View.VISIBLE, (location.parent.parent as View).visibility)
+          location.setText("회의실 A")
+          meeting.setText("javascript:alert(1)")
+          notes.setText("준비물\\n노트북")
+          val save = views(activity).filterIsInstance<Button>()
+            .single { it.text.toString() == "일정 저장" }
+          assertEquals(baseline, ScheduleStore(context).use { it.all().size })
+          save.performClick()
+          assertTrue(texts(activity).any { it.contains("회의 링크는 계정 정보") })
+          assertEquals(baseline, ScheduleStore(context).use { it.all().size })
+          meeting.setText("https://meet.example.org/room")
+          save.performClick()
+        }
+      }
+      val saved = ScheduleStore(context).use { store -> store.all().single { it.title == title } }
+      savedId = saved.id
+      assertEquals("회의실 A", saved.location)
+      assertEquals("https://meet.example.org/room", saved.meetingUrl)
+      assertEquals("준비물\\n노트북", saved.notes)
+      assertEquals("none", saved.repeatType)
+    } finally {
+      savedId?.let { id -> ScheduleStore(context).use { it.delete(id) } }
+    }
+  }
+
   private fun visibleError(activity: QuickEntryActivity): Boolean =
     views(activity).filterIsInstance<TextView>().any {
       it.visibility == View.VISIBLE && it.text.toString().contains("날짜와 시간을 다시 확인")
