@@ -680,6 +680,39 @@ class QuickEntryActivity : Activity() {
     }
     endFields.addView(endPickerRow)
     root.addView(endFields)
+
+    sectionLabel("장소·회의 링크·메모", "선택 입력이며 기기에만 저장됩니다.")
+    val extrasStart = root.childCount
+    val locationField = field("장소", "장소 (선택)", original?.location.orEmpty(), compact=true)
+    val meetingUrlField = field("회의 링크 (HTTPS)", "https://…", original?.meetingUrl.orEmpty(), compact=true)
+    val notesField = field("메모", "추가 내용을 입력하세요", original?.notes.orEmpty(), multi=true, compact=true)
+    val extrasGroup = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+    while (root.childCount > extrasStart) {
+      val item = root.getChildAt(extrasStart)
+      root.removeViewAt(extrasStart)
+      extrasGroup.addView(item)
+    }
+    val hasSavedExtras = original?.let { !it.location.isNullOrBlank() || !it.meetingUrl.isNullOrBlank() || !it.notes.isNullOrBlank() } == true
+    extrasGroup.visibility = if (hasSavedExtras) View.VISIBLE else View.GONE
+    root.addView(Button(this).apply {
+      text = if (hasSavedExtras) "추가 정보 접기" else "장소·링크·메모 입력"
+      contentDescription = text
+      isAllCaps = false
+      minimumHeight = dp(48)
+      setTextColor(actionColor)
+      stateListAnimator = null
+      background = GradientDrawable().apply {
+        setColor(surface)
+        cornerRadius = dp(8).toFloat()
+        setStroke(dp(1), inputBorder)
+      }
+      setOnClickListener {
+        extrasGroup.visibility = if (extrasGroup.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+        text = if (extrasGroup.visibility == View.VISIBLE) "추가 정보 접기" else "장소·링크·메모 입력"
+        contentDescription = text
+      }
+    }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(6) })
+    root.addView(extrasGroup)
     val repeatCard=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(10),dp(8),dp(10),dp(10))
@@ -750,6 +783,9 @@ class QuickEntryActivity : Activity() {
     timeField.addTextChangedListener(clearErrorOnEdit)
     endDateField.addTextChangedListener(clearErrorOnEdit)
     endTimeField.addTextChangedListener(clearErrorOnEdit)
+    locationField.addTextChangedListener(clearErrorOnEdit)
+    meetingUrlField.addTextChangedListener(clearErrorOnEdit)
+    notesField.addTextChangedListener(clearErrorOnEdit)
     button("입력으로 돌아가기") { editor(false); transcript.setText(source) }
     var saving=false
     button(if(original==null) "일정 저장" else "변경 내용 저장") {
@@ -770,10 +806,15 @@ class QuickEntryActivity : Activity() {
           finishDate.atTime(LocalTime.parse(endTimeText)).atZone(formZone).toInstant().toEpochMilli()
         }
         require(endAt == null || endAt > start) { "종료 시간은 시작 시간 이후여야 합니다. 다시 확인해 주세요." }
+        val location=ScheduleExtras.location(locationField.text.toString())
+        val meetingUrl=ScheduleExtras.meetingUrl(meetingUrlField.text.toString())
+        val notes=ScheduleExtras.notes(notesField.text.toString())
         val now=System.currentTimeMillis()
         val draft=original?.copy(title=titleField.text.toString().trim(), startAt=start,
-          endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now)
-          ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id)
+          endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now,
+          location=location,meetingUrl=meetingUrl,notes=notes)
+          ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id,
+            location=location,meetingUrl=meetingUrl,notes=notes)
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
