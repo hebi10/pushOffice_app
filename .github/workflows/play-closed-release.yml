@@ -32,10 +32,10 @@ on:
         default: internal
         options: [internal, qa]
       closed_track:
-        description: 'Exact existing closed track API ID (e.g., alpha)'
+        description: 'Exact existing closed track API ID (1차 테스트; do not use alpha without country targeting)'
         required: true
         type: string
-        default: alpha
+        default: '1차 테스트'
       final_batch_approved:
         description: 'Every planned task and release QA finished; separate closed promotion approved'
         required: true
