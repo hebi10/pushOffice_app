@@ -251,6 +251,12 @@ class PushOfficeNativeModule : Module() {
     AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
       ScheduleRuntime.save(context, ScheduleRecord.fromMap(value)).toMap()
     }
+    AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
+      val records = values.map(ScheduleRecord::fromMap)
+      val imported = ScheduleStore(context).use { it.importBackupRecords(records) }
+      val alarmsReady = if (imported > 0) runCatching { ScheduleRuntime.changed(context) }.isSuccess else true
+      mapOf("imported" to imported, "alarmsReady" to alarmsReady)
+    } }
     AsyncFunction("importSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
       // Existing ids win: rerunning legacy import cannot overwrite an edited local record.
       val records = values.map(ScheduleRecord::fromMap)
