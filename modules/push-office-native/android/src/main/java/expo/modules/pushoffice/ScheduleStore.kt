@@ -9,7 +9,7 @@ import java.time.ZoneId
 import java.util.concurrent.CopyOnWriteArraySet
 
 /** One SQLite database shared by JS, native entry, widgets, and receivers. */
-class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationContext, "push_office_local.db", null, 1) {
+class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationContext, "push_office_local.db", null, 2) {
   private val storageContext=context.applicationContext
   override fun onCreate(db: SQLiteDatabase) {
     db.execSQL("""CREATE TABLE schedules (
@@ -17,10 +17,17 @@ class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationCont
       title TEXT NOT NULL, startAt INTEGER NOT NULL, endAt INTEGER,
       isAllDay INTEGER NOT NULL, repeatType TEXT NOT NULL,
       notificationEnabled INTEGER NOT NULL, notificationId TEXT, sourceText TEXT NOT NULL,
-      createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, anchorZone TEXT NOT NULL)""")
+      createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, anchorZone TEXT NOT NULL,
+      location TEXT, meetingUrl TEXT, notes TEXT)""")
     db.execSQL("CREATE INDEX schedules_start ON schedules(startAt)")
   }
-  override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+  override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+    if (oldVersion < 2) {
+      db.execSQL("ALTER TABLE schedules ADD COLUMN location TEXT")
+      db.execSQL("ALTER TABLE schedules ADD COLUMN meetingUrl TEXT")
+      db.execSQL("ALTER TABLE schedules ADD COLUMN notes TEXT")
+    }
+  }
   fun all(): List<ScheduleRecord> = readableDatabase.query("schedules", null, null, null, null, null, "startAt ASC").use { cursor ->
     buildList { while (cursor.moveToNext()) add(read(cursor)) }
   }
@@ -83,6 +90,9 @@ class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationCont
       put("notificationEnabled", if (record.notificationEnabled) 1 else 0); put("notificationId", record.notificationId)
       put("sourceText", record.sourceText); put("createdAt", previous?.createdAt ?: record.createdAt)
       put("updatedAt", record.updatedAt); put("anchorZone", storedZone.id)
+      put("location", ScheduleExtras.location(record.location))
+      put("meetingUrl", ScheduleExtras.meetingUrl(record.meetingUrl))
+      put("notes", ScheduleExtras.notes(record.notes))
     }
     writableDatabase.insertWithOnConflict("schedules", null, values, SQLiteDatabase.CONFLICT_REPLACE).also {
       check(it != -1L) { "일정을 저장하지 못했습니다." }
@@ -100,7 +110,10 @@ class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationCont
     notificationEnabled = c.long("notificationEnabled") == 1L,
     notificationId = c.getColumnIndexOrThrow("notificationId").let { if (c.isNull(it)) null else c.getString(it) },
     sourceText = c.string("sourceText"), createdAt = c.long("createdAt"), updatedAt = c.long("updatedAt"),
-    anchorZone = c.string("anchorZone")
+    anchorZone = c.string("anchorZone"),
+    location = c.getColumnIndexOrThrow("location").let { if (c.isNull(it)) null else c.getString(it) },
+    meetingUrl = c.getColumnIndexOrThrow("meetingUrl").let { if (c.isNull(it)) null else c.getString(it) },
+    notes = c.getColumnIndexOrThrow("notes").let { if (c.isNull(it)) null else c.getString(it) }
   )
   private fun Cursor.string(name: String) = getString(getColumnIndexOrThrow(name))
   private fun Cursor.long(name: String) = getLong(getColumnIndexOrThrow(name))
