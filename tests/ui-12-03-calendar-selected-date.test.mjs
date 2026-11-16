@@ -48,7 +48,7 @@ test('UI-12-03 keeps the selected date in view when jumping to its agenda', () =
   assert.ok(verify.includes('"23c-calendar-today-three-list.png"'));
 });
 
-test('UI-12-03 keeps all genuine schedule states, month query and native entry unchanged', () => {
+test('UI-12-03 keeps all genuine schedule states, month query and native entry with selected date', () => {
   for (const value of [
     'useMonthSchedules(month.year, month.month)',
     'markingType="multi-dot"',
@@ -59,7 +59,7 @@ test('UI-12-03 keeps all genuine schedule states, month query and native entry u
     'dayTextAtIndex6: { color: colors.primary }',
     '.sort((a, b) => a.startAt.toMillis() - b.startAt.toMillis())',
     'label="빠른 일정 입력"',
-    'PushOfficeNative.openQuickEntry()',
+    'PushOfficeNative.openQuickEntryForDate(selected)',
     'title="해당 날짜의 일정" icon="list-outline" flat',
     'variant="calendar"',
     'schedules.isLoading',
