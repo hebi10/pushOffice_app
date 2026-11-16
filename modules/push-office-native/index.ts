@@ -12,7 +12,7 @@ export interface NativeSchedule {
   anchorZone?: string;
   endAt: number | null;
   isAllDay: boolean;
-  repeatType: 'none' | 'monthly' | 'yearly';
+  repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   notificationEnabled: boolean;
   notificationId: string | null;
   sourceText: string;
@@ -73,7 +73,7 @@ export interface AiModelTestResult {
   success: boolean;
   title?: string;
   startAt?: number;
-  repeatType?: 'none' | 'monthly' | 'yearly';
+  repeatType?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   message?: string;
   durationMs: number;
 }
