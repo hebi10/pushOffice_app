@@ -184,8 +184,11 @@ export default function HomeScreen() {
                   {nextEndLabel && !nextEndSameDay ? ` · ${nextEndLabel}` : ''}
                   {next.repeatType === 'daily' ? ' · 매일 반복' : next.repeatType === 'weekly' ? ' · 매주 반복' : next.repeatType === 'monthly' ? ' · 매월 반복' : next.repeatType === 'yearly' ? ' · 매년 반복' : ''}
                 </Text>
+                {next.location ? (
+                  <Text style={[styles.nextDate, { color: colors.textSecondary }]} numberOfLines={1}>장소 · {next.location}</Text>
+                ) : null}
               </View>
-              {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null}
+              {next.id ? <Ionicons name="chevron-forward" size={18} color={colors.primary} /> : null>
             </TouchableOpacity>
           ) : (
             <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
