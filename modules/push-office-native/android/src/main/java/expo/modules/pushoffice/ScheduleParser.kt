@@ -24,6 +24,7 @@ object ScheduleParser {
       fun consume(match: MatchResult) { remaining = remaining.replaceRange(match.range, " ").trim() }
       val yearly = Regex("매년\\s*(\\d{1,2})월\\s*(\\d{1,2})일").find(remaining)
       val monthly = Regex("매월\\s*(\\d{1,2})일").find(remaining)
+      val weekly = Regex("매주\\s*([월화수목금토일])요일").find(remaining)
       val absolute = Regex("(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일").find(remaining)
       val iso = Regex("(\\d{4})-(\\d{2})-(\\d{2})").find(remaining)
       val weekday = Regex("(다음\\s*주|이번\\s*주)?\\s*([월화수목금토일])요일").find(remaining)
@@ -41,6 +42,12 @@ object ScheduleParser {
           date = (0L..24L).map { YearMonth.from(now).plusMonths(it) }.mapNotNull { if(day <= it.lengthOfMonth()) it.atDay(day) else null }.first { !it.isBefore(now.toLocalDate()) }
           consume(monthly)
         }
+        weekly != null -> {
+          repeat = "weekly"
+          val weekday = DayOfWeek.of("월화수목금토일".indexOf(weekly.groupValues[1]) + 1)
+          date = now.toLocalDate().with(TemporalAdjusters.nextOrSame(weekday))
+          consume(weekly)
+        }
         absolute != null -> { date = LocalDate.of(absolute.groupValues[1].toIntOrNull() ?: now.year, absolute.groupValues[2].toInt(), absolute.groupValues[3].toInt()); consume(absolute) }
         iso != null -> { date = LocalDate.parse(iso.value); consume(iso) }
         remaining.contains("모레") -> { date=now.toLocalDate().plusDays(2); remaining=remaining.replace("모레", " ") }
@@ -55,6 +62,19 @@ object ScheduleParser {
           }; consume(weekday)
         }
       }
+      if (repeat == "none") {
+        val daily = Regex("매일").find(remaining)
+        val weeklyBare = Regex("매주").find(remaining)
+        if (daily != null) {
+          repeat = "daily"
+          consume(daily)
+          if (date == null) date = calendarDate ?: now.toLocalDate()
+        } else if (weeklyBare != null) {
+          repeat = "weekly"
+          consume(weeklyBare)
+          if (date == null) date = calendarDate
+        }
+      }
       val time = Regex("(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})시(?:\\s*(반|\\d{1,2}분))?").find(remaining)
       val colon = Regex("(?<!\\d)(\\d{1,2}):(\\d{2})(?!\\d)").find(remaining)
       if(date == null) date = calendarDate
@@ -67,7 +87,12 @@ object ScheduleParser {
         hour=h; minute=if(time.groupValues[3]=="반") 30 else time.groupValues[3].removeSuffix("분").toIntOrNull() ?: 0
         consume(time)
       } else { hour=colon!!.groupValues[1].toInt(); minute=colon.groupValues[2].toInt(); consume(colon) }
-      val start=date.atTime(LocalTime.of(hour,minute)).atZone(now.zone)
+      var start=date.atTime(LocalTime.of(hour,minute)).atZone(now.zone)
+      if (repeat == "daily" || repeat == "weekly") {
+        while (!start.toInstant().isAfter(now.toInstant())) {
+          start = if (repeat == "daily") start.plusDays(1) else start.plusWeeks(1)
+        }
+      }
       val title=remaining.replace(Regex("\\s+")," ").trim().removeSuffix("등록해 줘").removeSuffix("추가해 줘").trim()
       require(title.isNotBlank()) { "일정 제목을 입력해 주세요." }
       require(start.toInstant().isAfter(now.toInstant())) { "미래 날짜와 시간을 지정해 주세요." }
