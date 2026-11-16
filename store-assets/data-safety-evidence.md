@@ -1,6 +1,28 @@
 # Push Office — Play 데이터 보안 저장 결과와 근거
 
-상태: **Play Console 데이터 보안 최종 저장 완료 · 검토 미전송**. 확인일: 2026-11-03. 앱: `com.hebi96.pushOffice_app`, 버전 `1.1.0`, 버전 코드 `3` (`app.json:5,22–24`)이다. 아래의 실제 저장 결과는 등록 담당자의 Console 확인에 따른다. 코드 감사와 SDK 공식 자료는 그 판단의 근거이며, 최종 AAB 및 기존 활성 배포 버전의 동작도 대조해야 한다.
+## 2026-11-16 최신 기능·Play 데이터 보안 재점검 (게시 전 검증)
+
+아래는 2026-11-03에 **저장되었다고 기록된** Console 답변의 최신 소스 정합성 점검입니다. 이 문서 작성 시에는 Play Console의 데이터 보안 양식 실시간 조회·저장 권한이 제공되지 않았으므로, **현재 Console의 답변을 수정하거나 재확인했다고 주장하지 않습니다.** 기존 기록은 아래에 보존합니다.
+
+| 신규/변경 사항 | 소스 및 현재 확인 범위 | Play 데이터 보안 판단 |
+| --- | --- | --- |
+| 장소·회의 링크·메모 | `ScheduleRecord.kt`, `ScheduleStore.kt`, `QuickEntryActivity.kt`, `scheduleExtras.ts`; 앱 전용 SQLite에 저장하고 상세에서 수정·삭제 | 앱 서버로 자동 전송하는 코드가 확인되지 않음. **기기 내 저장 자체는 Play의 ‘수집(기기 밖으로 전송)’ 정의와 구분**. 실제 출시 AAB에서 타 SDK·외부 환경 설정을 재검증 |
+| 홈 위젯·아침 브리핑 | `ScheduleWidgetProvider.kt`, `ReminderReceiver.kt`; **저장된 장소**를 사용자 위젯과 활성 브리핑에 조건부 표시 | 회의 링크·메모는 알림·위젯에 추가하지 않음. 다만 위젯·잠금화면에 장소가 보일 수 있으므로 개인정보처리방침에 명시 |
+| 선택형 JSON 백업·복원 | `localBackupCodec.mjs`, `localBackupService.ts`, Android `LocalBackupDocuments.kt`; 사용자가 직접 파일 제공자/저장 위치 선택 | 파일에는 일정 제목·장소·회의 링크·메모·원문·설정이 포함될 수 있고 **암호화되지 않음**. 체크섬은 손상 검출용이며 암호화가 아님. 사용자가 Drive 등 원격 저장소 제공자를 선택한 경우 해당 제공자가 파일을 처리할 수 있음. 앱 자체 자동 업로드와 구별하여 실제 사용자 선택 경로를 Play 답변 검토 시 확인 |
+| 외부 브리핑·기존 Firebase 복원 | `README.md`, `src/features/digest/digestService.ts`, `src/features/storage/legacyRecovery.ts` | CI의 `EXPO_NO_DOTENV=1`·실제 릴리스 빌드의 환경 변수/리소스·선택 기능 활성화 상태를 재검증해야 함. 기능이 활성화된 경우 기존 ‘진단·기기 ID만 수집’ 선언을 그대로 사용하는 것은 부정확할 수 있음 |
+| ML Kit GenAI | `NanoClient.kt`와 Google ML Kit 공식 데이터 공개 | 사용 분석·진단 및 식별자 수집에 대한 기존 신고 필요성 유지. 본문·메모 원문을 ML Kit가 원격 수집한다고 **추측하지 않음** |
+
+**변경 실행 결과:** 개인정보처리방침의 공개 소스 `docs/privacy/index.html`과 스토어 복사본 `store-assets/privacy-policy-draft.ko.html`을 2026-11-16 계약으로 동기화. Google Play 등록 양식, 트랙, AAB, 심사 제출은 변경하지 않음.
+
+**Play Console 게시 직전 필수 읽기 확인:** 대상 버전의 AAB SHA-256·서명·패키지, 현재 Data safety 양식(데이터 유형/선택·필수/전송 암호화/수집·공유/삭제), 광고 신고, 공개 개인정보 URL, 배포 환경의 외부 연동 활성화 상태를 대조. 실제 UI 또는 인증된 API 결과를 확보하기 전에는 ‘Play 데이터 보안 확인 완료’로 처리하지 않음.
+
+- Google Play 데이터 보안 양식 정의: https://support.google.com/googleplay/android-developer/answer/10787469
+- Google ML Kit Android SDK 데이터 공개: https://developers.google.com/ml-kit/android-data-disclosure
+- 공개 개인정보처리방침: https://hebi10.github.io/pushOffice_app/privacy/
+
+---
+
+**2026-11-03 역사적 기록:** 상태: **Play Console 데이터 보안 최종 저장 완료 · 검토 미전송**. 확인일: 2026-11-03. 앱: `com.hebi96.pushOffice_app`, 버전 `1.1.0`, 버전 코드 `3` (`app.json:5,22–24`)이다. 아래의 실제 저장 결과는 등록 담당자의 Console 확인에 따른다. 코드 감사와 SDK 공식 자료는 그 판단의 근거이며, 최종 AAB 및 기존 활성 배포 버전의 동작도 대조해야 한다.
 
 ## 이번 CI 빌드 범위와 실제 저장 결과
 
