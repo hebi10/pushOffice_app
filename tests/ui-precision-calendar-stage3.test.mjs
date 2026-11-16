@@ -62,7 +62,7 @@ test('precision stage 3 flattens only the agenda wrapper and keeps agenda cards 
 
 test('precision stage 3 retains quick entry and distinct loading, error and empty states', () => {
   assert.match(calendar, /label="빠른 일정 입력"/);
-  assert.match(calendar, /PushOfficeNative\.openQuickEntry\(\)/);
+  assert.match(calendar, /PushOfficeNative\.openQuickEntryForDate\(selected\)/);
   assert.match(calendar, /schedules\.isLoading/);
   assert.match(calendar, /schedules\.isError/);
   assert.match(calendar, /<EmptyState message=/);
