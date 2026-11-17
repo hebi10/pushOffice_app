@@ -523,11 +523,11 @@ class QuickEntryActivity : Activity() {
     fun updateLocalizedSummary() {
       val date=runCatching { LocalDate.parse(dateField.text.toString().trim()) }.getOrNull()
       val time=runCatching { LocalTime.parse(timeField.text.toString().trim()) }.getOrNull()
-      val hasValidDateTime=date!=null && time!=null
-      localizedSummary.text=if(hasValidDateTime) date!!.atTime(time!!).format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) else "날짜와 시간을 확인해 주세요."
+      val selectedDateTime=if(date!=null && time!=null) date.atTime(time) else null
+      localizedSummary.text=selectedDateTime?.format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) ?: "날짜와 시간을 확인해 주세요."
       if(needsTimeSelectionHint) {
-        noteMessage.text=if(hasValidDateTime) "입력한 날짜와 시간을 확인한 뒤 저장하세요." else message
-        noteMessage.setTextColor(if(hasValidDateTime) foregroundColor else dangerColor)
+        noteMessage.text=if(selectedDateTime!=null) "입력한 날짜와 시간을 확인한 뒤 저장하세요." else message
+        noteMessage.setTextColor(if(selectedDateTime!=null) foregroundColor else dangerColor)
       }
     }
     val summaryWatcher=object: TextWatcher {
