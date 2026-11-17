@@ -135,6 +135,33 @@ class QuickEntryActivityUiTest {
       before, ScheduleStore(context).use { it.all().size })
   }
 
+  @Test fun manualDateAndTimeClearInitialWarningButDoNotAutoSave() {
+    val before = ScheduleStore(context).use { it.all().size }
+    launch().use { scenario ->
+      scenario.onActivity { activity ->
+        views(activity).single { it.contentDescription == TEXT_CHOICE }.performClick()
+        views(activity).filterIsInstance<Button>()
+          .single { it.text.toString() == "직접 날짜와 시간 지정" }.performClick()
+        val note = views(activity).filterIsInstance<TextView>()
+          .single { it.text.toString() == "날짜와 시간을 확인한 뒤 저장해 주세요." }
+        val warningColor = note.currentTextColor
+        val fields = views(activity).filterIsInstance<EditText>()
+        fields.single { it.contentDescription == "일정 제목" }.setText("일정 안내 테스트")
+        fields.single { it.contentDescription == "날짜 (YYYY-MM-DD)" }
+          .setText(LocalDate.now().plusDays(3).toString())
+        val time = fields.single { it.contentDescription == "시간 (HH:mm)" }
+        time.setText("14:30")
+        assertEquals("입력한 날짜와 시간을 확인한 뒤 저장하세요.", note.text.toString())
+        assertNotEquals(warningColor, note.currentTextColor)
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+        time.setText("")
+        assertEquals("날짜와 시간을 확인한 뒤 저장해 주세요.", note.text.toString())
+        assertEquals(warningColor, note.currentTextColor)
+      }
+    }
+    assertEquals(before, ScheduleStore(context).use { it.all().size })
+  }
+
   @Test fun confirmationKeepsBackAndSaveFixedWhileDirectIsoEditingRemainsOptional() {
     val before = ScheduleStore(context).use { it.all().size }
     val date = LocalDate.now().plusDays(4)
