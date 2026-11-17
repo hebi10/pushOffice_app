@@ -443,12 +443,15 @@ class QuickEntryActivity : Activity() {
         cornerRadius=dp(6).toFloat()
       }
     }
-    note.addView(TextView(this).apply {
+    val needsTimeSelectionHint=original==null && dateTime==null &&
+      message=="날짜와 시간을 확인한 뒤 저장해 주세요."
+    val noteMessage=TextView(this).apply {
       text=if(original==null) message else "기존 일정에서 변경되는 내용을 확인해 주세요."
       textSize=14f
       setTextColor(if(original==null && dateTime==null) dangerColor else foregroundColor)
       accessibilityLiveRegion=View.ACCESSIBILITY_LIVE_REGION_POLITE
-    })
+    }
+    note.addView(noteMessage)
     note.addView(TextView(this).apply {
       text="저장 기준 시간대: ${formZone.id}"
       textSize=12f
@@ -520,7 +523,12 @@ class QuickEntryActivity : Activity() {
     fun updateLocalizedSummary() {
       val date=runCatching { LocalDate.parse(dateField.text.toString().trim()) }.getOrNull()
       val time=runCatching { LocalTime.parse(timeField.text.toString().trim()) }.getOrNull()
-      localizedSummary.text=if(date!=null && time!=null) date.atTime(time).format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) else "날짜와 시간을 확인해 주세요."
+      val hasValidDateTime=date!=null && time!=null
+      localizedSummary.text=if(hasValidDateTime) date!!.atTime(time!!).format(DateTimeFormatter.ofPattern("yyyy년 M월 d일 (E) · HH:mm",Locale.KOREAN)) else "날짜와 시간을 확인해 주세요."
+      if(needsTimeSelectionHint) {
+        noteMessage.text=if(hasValidDateTime) "입력한 날짜와 시간을 확인한 뒤 저장하세요." else message
+        noteMessage.setTextColor(if(hasValidDateTime) foregroundColor else dangerColor)
+      }
     }
     val summaryWatcher=object: TextWatcher {
       override fun beforeTextChanged(s: CharSequence?,start: Int,count: Int,after: Int) {}
