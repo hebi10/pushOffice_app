@@ -46,6 +46,17 @@ jobs:
       EXPO_NO_TELEMETRY: '1'
       EXPO_NO_DOTENV: '1'
     steps:
+      - name: RU-02 reject legacy Play publishing before any Play auth
+        env:
+          LEGACY_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$LEGACY_MODE" == "deploy" ]]; then
+            echo "::error::Use OPS-04 internal or OPS-05 closed instead of legacy deploy."
+            exit 1
+          fi
+          case "$LEGACY_MODE" in check|build) ;; *) exit 1 ;; esac
       - name: Check out source
         uses: actions/checkout@v7
         with:
