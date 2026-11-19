@@ -56,10 +56,18 @@ test('10-F native widget integration includes both widget sizes, 0-3 events, res
   assert.match(native, /"light" -> setTheme\(R\.style\.PushOfficeDialogLight\)/);
 });
 
-test('10-F release gate does not publish from a design PR', () => {
-  assert.match(workflow, /pull_request:/);
-  assert.doesNotMatch(workflow, /edits\.commit|publish-to-play|upload-aab|play-store/);
-  assert.match(workflow, /permissions:\s+contents: read/);
+test('10-F native device QA is manual and never publishes Play assets', () => {
+  const events = workflow.split('permissions:', 1)[0];
+  assert.ok(events.includes('workflow_call:'));
+  assert.ok(events.includes('workflow_dispatch:'));
+  assert.ok(events.includes('expected_main_sha:'));
+  assert.ok(!events.includes('  pull_request:'));
+  assert.ok(!events.includes('  push:'));
+  assert.ok(workflow.includes('refs/heads/main'));
+  for (const forbidden of ['edits.commit', 'publish-to-play', 'upload-aab', 'play-store']) {
+    assert.ok(!workflow.includes(forbidden), forbidden);
+  }
+  assert.ok(workflow.includes('contents: read'));
 });
 
 test('10-F compact native dialogs and 200 percent widget text prioritize touch targets', () => {
