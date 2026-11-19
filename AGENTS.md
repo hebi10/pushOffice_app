@@ -28,3 +28,10 @@
 
 ### 앱별 보존 지침
 - 알림 접근은 사용자 허가·개인정보 보호·일정 추천 승인 단계를 유지한다. 기기 AI 모델 설치·선택과 알림 분석 동작을 임의 변경하지 않는다. `.github/workflows/android-release.yml` 및 `release-tools.yml`의 기존 서명·Play 검증을 확인한다.
+
+## CI-DEDUP-20261119-P2 — Android 최종 배치 계측
+- 일반 PR/main에서는 `ui-validation.yml`의 JS/TS, ESLint, Expo, 네이티브 Kotlin 컴파일·단위 테스트를 자동 수행한다.
+- `ui-native-instrumentation.yml` API 29, `ui-12-08-android-matrix.yml` API 35·36, `ui-screenshots.yml` 실제 APK 설치·화면 캡처를 `final-device-qa.yml`의 한 번의 최종 수동 실행으로 통합한다.
+- 최종 `main`의 정확한 SHA를 필수로 확인하며 원본 캡처·위젯·빠른 입력·실제 스크린샷 증빙을 유지한다. 기존 PR 전용 오래된 스토어 자산 자동 커밋 경로는 종료하고 수동 Play 게시 권한과 분리한다.
+- 네이티브 알림 접근·권한·개인정보·기기 AI 모델 변경은 필요 시 병합 전 별도 영향 기능 선별 계측을 수행한다.
+- `release-build.yml`은 동일 SHA의 `Push Office UI validation`과 수동 `Push Office final Android QA` 성공 없이는 서명 빌드를 차단한다.
