@@ -1,28 +1,46 @@
 name: Push Office UI screenshots
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "src/**"
-      - "modules/**"
-      - "assets/images/**"
-      - "tools/ui/**"
-      - ".github/workflows/ui-screenshots.yml"
-
+  workflow_call:
+    inputs:
+      expected_main_sha:
+        type: string
+        required: true
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: 'Exact frozen main revision for full Android device QA'
+        type: string
+        required: true
 permissions:
   contents: read
 
 concurrency:
   group: push-office-screenshots-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  validate-source:
+    name: Require exact final main SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Reject stale or non-main device QA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "::error::Final QA is main-only"; exit 1; }
+          [[ "$EXPECTED_MAIN_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_MAIN_SHA" == "$GITHUB_SHA" ]] || { echo "::error::Final SHA mismatch"; exit 1; }
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]] || { echo "::error::main moved since QA started"; exit 1; }
+
   screenshots:
+    needs: validate-source
     if: github.repository == 'hebi10/pushOffice_app'
     permissions:
-      contents: write
+      contents: read
     runs-on: ubuntu-24.04
     timeout-minutes: 75
     env:
@@ -32,7 +50,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
+          ref: ${{ github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -89,7 +107,7 @@ jobs:
           python3 -m pip install --disable-pip-version-check Pillow==11.3.0
       - name: Render eight actual-screen preview posters and a 1024x500 feature graphic
         env:
-          SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          SOURCE_COMMIT_SHA: ${{ github.sha }}
         run: |
           python3 tools/ui/build_store_refresh.py \
             --captures ui-captures \
@@ -130,28 +148,6 @@ jobs:
           path: store-refresh-output/
           if-no-files-found: warn
           retention-days: 30
-      - name: Stage verified preview assets on the same PR branch only
-        if: >-
-          github.event.pull_request.number == 46 &&
-          github.event.pull_request.head.repo.full_name == github.repository &&
-          github.head_ref == 'design/store-brand-refresh-20261111' &&
-          hashFiles('store-assets/ko-KR/refresh-manifest-20261111.json') == ''
-        env:
-          HEAD_REF: ${{ github.head_ref }}
-        run: |
-          mkdir -p store-assets/ko-KR/screenshots-refresh-20261111
-          cp store-refresh-output/*.png store-assets/ko-KR/screenshots-refresh-20261111/
-          mv store-assets/ko-KR/screenshots-refresh-20261111/feature-graphic.png store-assets/ko-KR/feature-graphic-refresh-20261111.png
-          cp store-refresh-output/manifest.json store-assets/ko-KR/refresh-manifest-20261111.json
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add store-assets/ko-KR/screenshots-refresh-20261111 store-assets/ko-KR/feature-graphic-refresh-20261111.png store-assets/ko-KR/refresh-manifest-20261111.json
-          if ! git diff --cached --quiet; then
-            git commit -m "design: stage 8 authentic Android Play graphics for PR review"
-            git fetch origin "$HEAD_REF"
-            git rebase FETCH_HEAD
-            git push origin "HEAD:refs/heads/$HEAD_REF"
-          fi
       - name: Preserve screenshots and capture details
         if: always()
         uses: actions/upload-artifact@v4
