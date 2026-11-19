@@ -1,0 +1,51 @@
+name: Push Office final Android QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: 'Exact frozen main SHA after all development PRs are merged'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pushoffice-final-android-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate-source:
+    name: Verify exact final main SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Require approved main source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "::error::Final QA is main-only"; exit 1; }
+          [[ "$EXPECTED_MAIN_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_MAIN_SHA" == "$GITHUB_SHA" ]] || { echo "::error::Final main SHA mismatch"; exit 1; }
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]] || { echo "::error::main changed"; exit 1; }
+
+  native-api29:
+    needs: validate-source
+    uses: ./.github/workflows/ui-native-instrumentation.yml
+    with:
+      expected_main_sha: ${{ inputs.expected_main_sha }}
+
+  native-api35-36:
+    needs: validate-source
+    uses: ./.github/workflows/ui-12-08-android-matrix.yml
+    with:
+      expected_main_sha: ${{ inputs.expected_main_sha }}
+
+  real-app-captures:
+    needs: validate-source
+    uses: ./.github/workflows/ui-screenshots.yml
+    with:
+      expected_main_sha: ${{ inputs.expected_main_sha }}

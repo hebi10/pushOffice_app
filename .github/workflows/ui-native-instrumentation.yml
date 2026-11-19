@@ -1,23 +1,43 @@
 name: Push Office Mono Office native instrumentation
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "modules/push-office-native/**"
-      - "tools/ui/run_mono_office_native_qa.sh"
-      - ".github/workflows/ui-native-instrumentation.yml"
+  workflow_call:
+    inputs:
+      expected_main_sha:
+        type: string
+        required: true
   workflow_dispatch:
-
+    inputs:
+      expected_main_sha:
+        description: 'Exact frozen main revision for full Android device QA'
+        type: string
+        required: true
 permissions:
   contents: read
 
 concurrency:
   group: mono-office-native-qa-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
+  validate-source:
+    name: Require exact final main SHA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Reject stale or non-main device QA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_MAIN_SHA: ${{ inputs.expected_main_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF" == "refs/heads/main" ]] || { echo "::error::Final QA is main-only"; exit 1; }
+          [[ "$EXPECTED_MAIN_SHA" =~ ^[0-9a-f]{40}$ && "$EXPECTED_MAIN_SHA" == "$GITHUB_SHA" ]] || { echo "::error::Final SHA mismatch"; exit 1; }
+          [[ "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" == "$GITHUB_SHA" ]] || { echo "::error::main moved since QA started"; exit 1; }
+
   native-instrumentation:
+    needs: validate-source
     name: Android API 29 widget and quick-entry instrumentation
     runs-on: ubuntu-24.04
     timeout-minutes: 80
