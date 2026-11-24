@@ -56,6 +56,10 @@ class ReminderReceiver : BroadcastReceiver() {
     val manager = context.getSystemService(NotificationManager::class.java)
     val builder = Notification.Builder(context, CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_info)
       .setContentTitle(title).setContentText(body).setStyle(Notification.BigTextStyle().bigText(body)).setAutoCancel(true)
+    // Hide schedule titles and locations on lock screens configured to hide sensitive content.
+    builder.setVisibility(Notification.VISIBILITY_PRIVATE).setPublicVersion(
+      Notification.Builder(context, CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_info)
+        .setContentTitle("Push Office").setContentText("일정 알림이 있습니다.").build())
     val launch = ReminderNotifications.openIntent(context, if (canSnooze) id else null)
     builder.setContentIntent(PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
     if (canSnooze) {

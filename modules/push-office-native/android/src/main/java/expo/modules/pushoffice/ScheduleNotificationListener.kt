@@ -20,7 +20,7 @@ import android.util.Log
 /** Event-driven background capture. No permanent process, polling or remote processing. */
 class ScheduleNotificationListener : NotificationListenerService() {
   private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
-  private data class Capture(val sourcePackage: String, val key: String, val created: Long, val title: String, val body: String)
+  private data class Capture(val sourcePackage: String, val key: String, val created: Long, val title: String, val body: String, val session: String)
   private val queue = NotificationCaptureQueue<Capture>()
   private val overflow = AtomicInteger(0)
   private val worker = scope.launch(start = CoroutineStart.LAZY) {
@@ -28,6 +28,7 @@ class ScheduleNotificationListener : NotificationListenerService() {
     for (item in queue.items) {
       try {
         if (!NotificationSuggestionStore.enabled(context) || !NotificationSuggestionStore.accessGranted(context)) continue
+        if (NotificationSuggestionStore.captureSession(context) != item.session) continue
         val (sourcePackage, key, created, title, body) = item
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneId.systemDefault())
         val decision = NotificationIntentPolicy.classify(title, body, now)
@@ -45,13 +46,15 @@ class ScheduleNotificationListener : NotificationListenerService() {
           analysis = "local_rules",
           triage = if (decision.triage == NotificationTriage.CONFIRMED_CANDIDATE)
             "confirmed_candidate" else "needs_confirmation"
-        ))
+        ), item.session)
       } catch (e: CancellationException) { throw e }
       catch (_: Exception) { /* A malformed notification must never stop the queue. */ }
     }
   }
   override fun onNotificationPosted(sbn: StatusBarNotification?) {
-    if (sbn == null || !NotificationSuggestionStore.enabled(this) || sbn.packageName == packageName) return
+    if (sbn == null || sbn.packageName == packageName) return
+    if (!NotificationSuggestionStore.enabled(this)) return
+    val session = runCatching { NotificationSuggestionStore.captureSession(this) }.getOrNull() ?: return
     val notification = sbn.notification ?: return
     if ((notification.flags and Notification.FLAG_GROUP_SUMMARY) != 0 ||
         (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0 ||
@@ -62,12 +65,21 @@ class ScheduleNotificationListener : NotificationListenerService() {
     // Keep only bounded, in-memory snapshots; never retain StatusBarNotification objects.
     if (title.length > 4096 || body.length > 4096) return
     worker.start()
-    if (!queue.offer(Capture(sbn.packageName, sbn.key, sbn.postTime, title, body))) {
+    if (!queue.offer(Capture(sbn.packageName, sbn.key, sbn.postTime, title, body, session))) {
       val dropped = overflow.incrementAndGet()
       if (dropped == 1 || dropped % 100 == 0) Log.w("PushOfficeCapture", "Notification queue capacity reached")
     }
   }
+  override fun onListenerConnected() {
+    super.onListenerConnected()
+    runCatching { NotificationSuggestionStore.reconcile(this) }
+  }
+  override fun onListenerDisconnected() {
+    runCatching { NotificationSuggestionStore.reconcile(this) }
+    super.onListenerDisconnected()
+  }
   override fun onDestroy() {
+    runCatching { NotificationSuggestionStore.reconcile(this) }
     queue.cancel()
     worker.cancel()
     scope.cancel()
