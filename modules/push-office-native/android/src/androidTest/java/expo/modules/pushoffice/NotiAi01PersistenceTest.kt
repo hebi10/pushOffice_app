@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import org.json.JSONObject
 import org.junit.Assert.*
+import org.junit.Assume.assumeFalse
+import org.json.JSONArray
 import org.junit.Test
 
 class NotiAi01PersistenceTest {
@@ -46,6 +48,23 @@ class NotiAi01PersistenceTest {
     assertNull(restored.startAt)
     assertNull(restored.toMap()["startAt"])
     assertEquals("내일 약속 잡자", restored.title)
+  }
+
+  @Test fun revokedSystemGrantDisablesCaptureAndPurgesCandidatesAndSession() {
+    assumeFalse("Test requires notification access to be disabled", NotificationSuggestionStore.accessGranted(context))
+    val preferences = context.getSharedPreferences("push_office_notification_suggestions", Context.MODE_PRIVATE)
+    try {
+      val value = NotificationSuggestion("revoked", "테스트", "example.test", "내일 약속",
+        "약속", null, System.currentTimeMillis(), "local_rules", "needs_confirmation")
+      assertTrue(preferences.edit().clear().putBoolean("enabled", true).putInt("consent_version", 2)
+        .putString("capture_session", "old-session").putString("items", JSONArray(listOf(value.toJson())).toString())
+        .putString("seen", "[\"revoked\"]").commit())
+      assertNull(NotificationSuggestionStore.captureSession(context))
+      assertTrue(NotificationSuggestionStore.all(context).isEmpty())
+      assertNull(NotificationSuggestionStore.get(context, "revoked"))
+      assertFalse(NotificationSuggestionStore.add(context, value, "old-session"))
+      assertTrue(preferences.all.isEmpty())
+    } finally { preferences.edit().clear().commit() }
   }
 
   @Test fun oldPermissionConsentCannotEnableExpandedContentAnalysisSilently() {

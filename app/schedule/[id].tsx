@@ -15,7 +15,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { useScheduleDetail, useUpdateSchedule, useDeleteSchedule } from '@/src/features/schedules';
 import { PushOfficeNative } from '@/modules/push-office-native';
 import { dayjs } from '@/src/lib/time';
-import { showError, showToast } from '@/src/components/ui/toast';
+import { showError, showToast, showNotice } from '@/src/components/ui/toast';
 import type { RepeatType } from '@/src/types';
 import { isSafeMeetingUrl, normalizeScheduleExtras } from '@/src/features/schedules/scheduleExtras';
 
@@ -82,7 +82,7 @@ export default function ScheduleDetail() {
       const start = parse(`${date} ${allDay ? '00:00' : time}`);
       const finish = end.trim() ? parse(end.trim()) : null;
       const extras = normalizeScheduleExtras({ location, meetingUrl, notes });
-      await update.mutateAsync({
+      const result = await update.mutateAsync({
         id,
         data: {
           title, startAt: Timestamp.fromDate(start),
@@ -91,7 +91,9 @@ export default function ScheduleDetail() {
           ...extras,
         },
       });
-      showToast('일정을 수정했습니다.');
+      if (!result.alarmsReady || !result.widgetsReady) {
+        showNotice('일정 수정 완료', '일정은 수정했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.');
+      } else showToast('일정을 수정했습니다.');
     } catch (error) {
       showError(error, '저장하지 못했습니다.');
     }
@@ -414,7 +416,10 @@ export default function ScheduleDetail() {
         onDismiss={() => setPendingDialog(null)}
         onConfirm={() => {
           setPendingDialog(null);
-          void remove.mutateAsync(id).then(() => router.back()).catch(e => showError(e, '삭제하지 못했습니다.'));
+          void remove.mutateAsync(id).then(result => {
+            router.back();
+            if (!result.alarmsReady || !result.widgetsReady) showNotice('일정 삭제 완료', '일정은 삭제했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.');
+          }).catch(e => showError(e, '삭제하지 못했습니다.'));
         }}
       />
       <AppDialog

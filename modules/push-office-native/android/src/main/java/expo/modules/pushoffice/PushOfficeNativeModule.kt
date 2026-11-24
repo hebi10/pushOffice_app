@@ -138,8 +138,9 @@ class PushOfficeNativeModule : Module() {
       }
     }
     AsyncFunction("getNotificationSuggestionStatus") {
+      val session = NotificationSuggestionStore.captureSession(context)
       mapOf(
-        "enabled" to NotificationSuggestionStore.enabled(context),
+        "enabled" to (session != null),
         "accessGranted" to NotificationSuggestionStore.accessGranted(context),
         "pendingCount" to NotificationSuggestionStore.all(context).size
       )
@@ -169,7 +170,7 @@ class PushOfficeNativeModule : Module() {
     AsyncFunction("getNotificationSuggestions") { NotificationSuggestionStore.all(context).map(NotificationSuggestion::toMap) }
     AsyncFunction("refineNotificationSuggestion") Coroutine { id: String ->
       require(appContext.currentActivity?.hasWindowFocus() == true) { "기기 AI 분석은 앱 화면에서 사용해 주세요." }
-      require(NotificationSuggestionStore.enabled(context) && NotificationSuggestionStore.accessGranted(context)) { "알림 분석 권한이 없습니다." }
+      val session = requireNotNull(NotificationSuggestionStore.captureSession(context)) { "알림 분석 권한이 없습니다." }
       val original = NotificationSuggestionStore.get(context, id)
         ?: throw IllegalStateException("일정 후보가 삭제되었거나 만료됐습니다.")
       val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
@@ -177,7 +178,7 @@ class PushOfficeNativeModule : Module() {
       val parsed = AiModelRunner.parse(context,AiModelDownloadStore.selected(context),original.excerpt,timestamp)
       require(appContext.currentActivity?.hasWindowFocus() == true) { "앱 화면이 닫혀 AI 결과를 저장하지 않았습니다." }
       NotificationSuggestionStore.refine(context, id, parsed.title, parsed.start?.toInstant()?.toEpochMilli()
-        ?: throw IllegalArgumentException("AI 분석 날짜가 올바르지 않습니다.")).toMap()
+        ?: throw IllegalArgumentException("AI 분석 날짜가 올바르지 않습니다."), session).toMap()
     }
     AsyncFunction("dismissNotificationSuggestion") { id: String ->
       NotificationSuggestionStore.dismiss(context, id)
@@ -263,12 +264,13 @@ class PushOfficeNativeModule : Module() {
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
     AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
-      ScheduleRuntime.save(context, ScheduleRecord.fromMap(value)).toMap()
+      val saved = ScheduleRuntime.save(context, ScheduleRecord.fromMap(value))
+      saved.record.toMap() + saved.sync.toMap()
     }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
       val records = values.map(ScheduleRecord::fromMap)
       val imported = ScheduleStore(context).use { it.importBackupRecords(records) }
-      val alarmsReady = if (imported > 0) runCatching { ScheduleRuntime.changed(context) }.isSuccess else true
+      val alarmsReady = ScheduleRuntime.changed(context).alarmsReady
       mapOf("imported" to imported, "alarmsReady" to alarmsReady)
     } }
     AsyncFunction("importSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
@@ -279,7 +281,8 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
-    AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id) }
+    AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id).toMap() }
+    AsyncFunction("retryScheduleSync") { ScheduleRuntime.changed(context).toMap() }
     AsyncFunction("configure") { value: Map<String, Any?> -> ScheduleSerial.withLock {
       val previous = ReminderSettings.load(context)
       ReminderSettings(

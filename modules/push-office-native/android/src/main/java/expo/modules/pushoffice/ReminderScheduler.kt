@@ -22,16 +22,20 @@ class ReminderScheduler(private val context: Context) {
   fun rescheduleAll(now: Long = System.currentTimeMillis()): Unit = ScheduleSerial.withLock {
     val settings = ReminderSettings.load(context)
     val wanted = mutableSetOf<String>()
+    var failure: Exception? = null
+    fun attempt(action: () -> Unit) {
+      try { action() } catch (error: Exception) { if (failure == null) failure = error }
+    }
     ScheduleStore(context).use { store ->
       store.all().forEach { record ->
         if (settings.pushEnabled && record.notificationEnabled) {
           val version = version(record)
           val next = ReminderLifecycle.choose(read(record.id, "reminder"), record.id, "reminder", version,
             ScheduleTime.nextOccurrence(record, now, store.anchorZone(record.id)))
-          next?.let { wanted.add(key(it.id, it.kind)); reserve(it) }
+          next?.let { wanted.add(key(it.id, it.kind)); attempt { reserve(it) } }
           val snooze = read(record.id, "snooze")
           if (snooze != null && snooze.version == version) {
-            wanted.add(key(snooze.id, snooze.kind)); reserve(snooze)
+            wanted.add(key(snooze.id, snooze.kind)); attempt { reserve(snooze) }
           }
         }
       }
@@ -42,11 +46,17 @@ class ReminderScheduler(private val context: Context) {
       var next = localNow.toLocalDate().atTime(LocalTime.parse(settings.dailyBriefingTime)).atZone(zone)
       if (next.toInstant().toEpochMilli() <= now) next = next.plusDays(1)
       val briefing = ReminderLifecycle.choose(read("daily", "briefing"), "daily", "briefing", version(settings), next.toInstant().toEpochMilli())!!
-      wanted.add(key(briefing.id, briefing.kind)); reserve(briefing)
+      wanted.add(key(briefing.id, briefing.kind)); attempt { reserve(briefing) }
     }
     reservations.all.keys.filter { it !in wanted }.forEach { identity ->
-      readKey(identity)?.let { cancel(it.id, it.kind) } ?: reservations.edit().remove(identity).commit()
+      attempt {
+        val obsolete = readKey(identity)
+        if (obsolete != null) cancel(obsolete.id, obsolete.kind)
+        else check(reservations.edit().remove(identity).commit())
+      }
     }
+    // Report partial failure only after attempting all independent reservations.
+    failure?.let { throw it }
   }
   fun cancelSchedule(id: String): Unit = ScheduleSerial.withLock {
     cancel(id, "reminder"); cancel(id, "snooze")
@@ -117,8 +127,9 @@ class ReminderScheduler(private val context: Context) {
     val operation = if (existing == null) null else PendingIntent.getBroadcast(context, 0, Intent(context, ReminderReceiver::class.java).apply {
       action = ACTION_FIRE; data = Uri.parse(key(id, kind) + "/" + existing.token)
     }, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE)
+    // Invalidate the persisted token before touching the platform alarm; an already queued callback is stale.
+    check(reservations.edit().remove(key(id, kind)).commit()) { "알림 예약을 취소하지 못했습니다." }
     if (operation != null) { alarms.cancel(operation); operation.cancel() }
-    reservations.edit().remove(key(id, kind)).commit()
   }
   companion object { const val ACTION_FIRE = "expo.modules.pushoffice.REMINDER" }
 }

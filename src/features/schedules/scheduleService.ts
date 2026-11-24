@@ -1,11 +1,12 @@
 import { Timestamp } from 'firebase/firestore';
 import * as Crypto from 'expo-crypto';
-import { PushOfficeNative, isPushOfficeNativeAvailable } from '../../../modules/push-office-native';
+import { PushOfficeNative, isPushOfficeNativeAvailable, type ScheduleSyncResult } from '../../../modules/push-office-native';
 import type { RepeatType, ScheduleDoc } from '../../types';
 import { localCreateSchedule, localUpdateSchedule, localDeleteSchedule } from '../storage/localStore';
 import { getDeviceSchedules } from '../storage/nativeStore';
 import { hydrateSchedule, projectOccurrences, toNativeSchedule } from './scheduleCodec';
 import { normalizeScheduleExtras } from './scheduleExtras';
+import { showNotice } from '../../components/ui/toast';
 export interface CreateScheduleInput {
     userId: string;
     title: string;
@@ -28,10 +29,12 @@ export async function createSchedule(input: CreateScheduleInput): Promise<string
         throw new Error('종료 시간은 시작 시간 이후여야 합니다.');
     const id = Crypto.randomUUID();
     const record = toNativeSchedule({ ...input, ...normalizeScheduleExtras(input), anchorZone: Intl.DateTimeFormat().resolvedOptions().timeZone, id, title: input.title.trim(), createdAt: Date.now(), updatedAt: Date.now() });
-    if (isPushOfficeNativeAvailable)
-        await PushOfficeNative.saveSchedule(record);
-    else
+    if (isPushOfficeNativeAvailable) {
+        const result = await PushOfficeNative.saveSchedule(record);
+        if (!result.alarmsReady || !result.widgetsReady) showNotice("일정 저장 완료", "일정은 저장했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.");
+    } else {
         await localCreateSchedule(hydrateSchedule(record));
+    }
     return id;
 }
 export async function getSchedule(id: string): Promise<ScheduleDoc | null> {
@@ -43,23 +46,24 @@ export async function getSchedulesByUser(_userId: string): Promise<ScheduleDoc[]
 export async function getSchedulesByRange(userId: string, start: Date, end: Date): Promise<ScheduleDoc[]> {
     return projectOccurrences((await getSchedulesByUser(userId)).map(toNativeSchedule), start, new Date(end.getTime() + 1)).map(hydrateSchedule);
 }
-export async function updateSchedule(id: string, data: Partial<Omit<ScheduleDoc, 'id' | 'createdAt'>>): Promise<void> {
+export async function updateSchedule(id: string, data: Partial<Omit<ScheduleDoc, 'id' | 'createdAt'>>): Promise<ScheduleSyncResult> {
     const existing = await getSchedule(id);
     if (!existing)
         throw new Error('일정을 찾을 수 없습니다.');
     const record = toNativeSchedule({ ...existing, ...data, ...normalizeScheduleExtras({ ...existing, ...data }), id, updatedAt: Timestamp.now() });
     if (!record.title.trim() || record.endAt != null && record.endAt <= record.startAt)
         throw new Error('제목과 시작·종료 시간을 확인해 주세요.');
-    if (isPushOfficeNativeAvailable)
-        await PushOfficeNative.saveSchedule(record);
-    else
-        await localUpdateSchedule(id, hydrateSchedule(record));
+    if (isPushOfficeNativeAvailable) {
+        const { alarmsReady, widgetsReady } = await PushOfficeNative.saveSchedule(record);
+        return { alarmsReady, widgetsReady };
+    }
+    await localUpdateSchedule(id, hydrateSchedule(record));
+    return { alarmsReady: true, widgetsReady: true };
 }
-export async function deleteSchedule(id: string): Promise<void> {
-    if (isPushOfficeNativeAvailable)
-        await PushOfficeNative.deleteSchedule(id);
-    else
-        await localDeleteSchedule(id);
+export async function deleteSchedule(id: string): Promise<ScheduleSyncResult> {
+    if (isPushOfficeNativeAvailable) return PushOfficeNative.deleteSchedule(id);
+    await localDeleteSchedule(id);
+    return { alarmsReady: true, widgetsReady: true };
 }
 export async function countNotificationsForDate(userId: string, date: Date): Promise<number> {
     const start = new Date(date);

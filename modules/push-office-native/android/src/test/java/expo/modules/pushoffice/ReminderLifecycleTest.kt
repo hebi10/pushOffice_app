@@ -20,6 +20,23 @@ class ReminderLifecycleTest {
     assertEquals(second, restored)
     assertTrue(ReminderLifecycle.matches(restored, "second-token", "v1"))
   }
+  @Test fun delayedRepeatAfterRebootKeepsTokenUntilConsumedAndThenAdvancesFromAnchor() {
+    val zone = java.time.ZoneId.of("Asia/Seoul")
+    val start = java.time.ZonedDateTime.of(2027, 1, 1, 9, 0, 0, 0, zone).toInstant().toEpochMilli()
+    val day = 24 * 60 * 60 * 1000L
+    val schedule = record(true).copy(startAt = start, repeatType = "daily", anchorZone = zone.id)
+    val first = ReminderLifecycle.choose(null, schedule.id, "reminder", "v1", start)!!
+    val delayed = start + 2 * day + 60_000
+    val next = ScheduleTime.nextOccurrence(schedule, delayed, zone)
+    assertEquals(start + 3 * day, next)
+    val recovered = ReminderLifecycle.choose(first, schedule.id, "reminder", "v1", next)
+    assertEquals(first, recovered)
+    assertTrue(ReminderLifecycle.matches(recovered, first.token, "v1"))
+    val newReservation = ReminderLifecycle.choose(null, schedule.id, "reminder", "v1", next)!!
+    assertFalse(ReminderLifecycle.matches(newReservation, first.token, "v1"))
+    assertEquals(start + 3 * day, newReservation.at)
+  }
+
   @Test fun obsoleteOccurrenceCannotNotifyAfterEditDisableDeleteOrReplacement() {
     val old = ReminderReservation("event", "reminder", 100, "before-edit", "old-token")
     val edited = ReminderLifecycle.choose(old, "event", "reminder", "after-edit", 900)!!

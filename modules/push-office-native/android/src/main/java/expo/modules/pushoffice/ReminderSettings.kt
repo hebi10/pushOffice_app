@@ -17,9 +17,9 @@ data class ReminderSettings(
   }
   fun save(context: Context): Unit = ScheduleSerial.withLock {
     validate()
-    context.getSharedPreferences("push_office_reminders", Context.MODE_PRIVATE).edit()
+    check(context.getSharedPreferences("push_office_reminders", Context.MODE_PRIVATE).edit()
       .putBoolean("pushEnabled", pushEnabled).putBoolean("dailyBriefingEnabled", dailyBriefingEnabled)
-      .putString("dailyBriefingTime", dailyBriefingTime).putString("timezone", timezone).commit()
+      .putString("dailyBriefingTime", dailyBriefingTime).putString("timezone", timezone).commit()) { "알림 설정을 저장하지 못했습니다." }
     Unit
   }
   companion object {

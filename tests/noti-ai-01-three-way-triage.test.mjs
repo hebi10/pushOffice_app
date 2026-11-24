@@ -14,7 +14,7 @@ const cases = read('modules/push-office-native/android/src/test/resources/noti-a
 test('NOTI-AI-01 retains real notification listener, opt-in, no background AI and bounded records', () => {
   for (const symbol of ['NotificationSuggestionStore.enabled(this)', 'NotificationSuggestionStore.enabled(context)',
     'NotificationSuggestionStore.accessGranted(context)', 'NotificationIntentPolicy.classify(title, body, now)',
-    'if (decision.triage == NotificationTriage.DISCARD) return@launch',
+    'if (decision.triage == NotificationTriage.DISCARD) continue',
     'NotificationSuggestionStore.add(context, NotificationSuggestion(']) {
     assert.ok(listener.includes(symbol), symbol);
   }

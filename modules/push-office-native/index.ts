@@ -28,6 +28,8 @@ export interface NativeSettings {
   dailyBriefingTime: string;
   timezone: string;
 }
+export interface ScheduleSyncResult { alarmsReady: boolean; widgetsReady: boolean }
+
 export interface ReminderCapabilities {
   exactAlarmAllowed: boolean;
   notificationsAllowed: boolean;
@@ -132,10 +134,11 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
   getSchedules(): Promise<NativeSchedule[]>;
-  saveSchedule(record: NativeSchedule): Promise<NativeSchedule>;
+  saveSchedule(record: NativeSchedule): Promise<NativeSchedule & ScheduleSyncResult>;
   /** Import without overwriting existing ids, retaining history without reserving past alarms. */
   importSchedules(records: NativeSchedule[]): Promise<number>;
-  deleteSchedule(id: string): Promise<void>;
+  deleteSchedule(id: string): Promise<ScheduleSyncResult>;
+  retryScheduleSync(): Promise<ScheduleSyncResult>;
   configure(settings: Partial<NativeSettings>): Promise<ReminderCapabilities>;
   snoozeSchedule(id: string, minutes: number): Promise<number>;
   cancelSnooze(id: string): Promise<void>;
@@ -182,6 +185,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   saveSchedule: unavailable,
   importSchedules: unavailable,
   deleteSchedule: unavailable,
+  retryScheduleSync: unavailable,
   configure: unavailable,
   snoozeSchedule: unavailable,
   cancelSnooze: unavailable,
