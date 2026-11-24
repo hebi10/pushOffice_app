@@ -2,6 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Server-only external briefing counters; Admin SDK bypasses client rules.
+    match /_briefingQuotas/{document} {
+      allow read, write: if false;
+    }
+
     // users 컬렉션
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;

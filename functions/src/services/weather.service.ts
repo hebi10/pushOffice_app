@@ -24,7 +24,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
 
   const cached = cache.get<WeatherResult>(cacheKey);
   if (cached) {
-    logger.info("날씨 캐시 히트", {cacheKey});
+    logger.info("날씨 캐시 히트", {});
     return cached;
   }
 
@@ -36,7 +36,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<WeatherRes
         `&appid=${config.openweatherKey}` +
         `&units=metric&lang=kr`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {signal: AbortSignal.timeout(7000), redirect: "error"});
       if (!response.ok) {
         throw new Error(`OpenWeather API 오류: ${response.status}`);
       }

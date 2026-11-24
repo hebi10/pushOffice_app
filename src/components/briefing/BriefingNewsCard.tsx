@@ -6,6 +6,8 @@ import { APP_FONT_FAMILY } from '@/src/lib/typography';
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text } from 'react-native';
 import { Card } from '../Card';
+import { isSafeNewsLink } from '@/src/features/digest/externalBriefingRequest';
+import { showError } from '@/src/components/ui/toast';
 
 interface NewsItem {
   title: string;
@@ -32,13 +34,13 @@ export function BriefingNewsCard({ items }: Props) {
           key={idx}
           style={({ pressed }) => [
             styles.row,
-            pressed && item.url ? { opacity: 0.6 } : undefined,
+            pressed && isSafeNewsLink(item.url) ? { opacity: 0.6 } : undefined,
             idx < items.length - 1
               ? { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.divider }
               : undefined,
           ]}
-          onPress={() => item.url && Linking.openURL(item.url)}
-          disabled={!item.url}
+          onPress={() => { if (item.url && isSafeNewsLink(item.url)) void Linking.openURL(item.url).catch(() => showError(new Error('뉴스 링크를 열 수 없습니다.'))); }}
+          disabled={!isSafeNewsLink(item.url)}
         >
           <Text
             style={[styles.title, { color: colors.text }]}

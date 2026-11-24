@@ -18,7 +18,7 @@ export async function withRetry<T>(
       return await fn();
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      logger.warn(`[${label}] 시도 ${attempt}/${retries} 실패: ${lastError.message}`);
+      logger.warn(`[${label}] 시도 ${attempt}/${retries} 실패`);
 
       if (attempt < retries) {
         // 지수 백오프: 1초, 2초, 4초 ...

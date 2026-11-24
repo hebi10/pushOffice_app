@@ -13,38 +13,7 @@ import { fetchNews, type NewsItem } from "./news.service.js";
 import { fetchStock, type StockResult } from "./stock.service.js";
 import { fetchWeather, type WeatherResult } from "./weather.service.js";
 
-// ─── 도시 → 좌표 매핑 (한국 주요 도시) ─────────────────────
-const CITY_COORDS: Record<string, {lat: number; lon: number}> = {
-  "서울": {lat: 37.5665, lon: 126.9780},
-  "부산": {lat: 35.1796, lon: 129.0756},
-  "대구": {lat: 35.8714, lon: 128.6014},
-  "인천": {lat: 37.4563, lon: 126.7052},
-  "광주": {lat: 35.1595, lon: 126.8526},
-  "대전": {lat: 36.3504, lon: 127.3845},
-  "울산": {lat: 35.5384, lon: 129.3114},
-  "세종": {lat: 36.4800, lon: 127.0000},
-  "제주": {lat: 33.4996, lon: 126.5312},
-  "수원": {lat: 37.2636, lon: 127.0286},
-  "창원": {lat: 35.2281, lon: 128.6811},
-  "고양": {lat: 37.6584, lon: 126.8320},
-  "용인": {lat: 37.2411, lon: 127.1776},
-  "성남": {lat: 37.4201, lon: 127.1265},
-};
-
-function getCoordsForCity(city?: string): {lat: number; lon: number} {
-  if (!city) return CITY_COORDS["서울"];
-  return CITY_COORDS[city] ?? CITY_COORDS["서울"];
-}
-
-// ─── 인터페이스 ────────────────────────────────────────────
-export interface BriefingInput {
-  lat?: number;
-  lon?: number;
-  city?: string;
-  types?: {weather: boolean; stocks: boolean; news: boolean};
-  stockTickers?: string[];
-  newsLanguage?: string;
-}
+import type {BriefingRequest} from "../briefingPolicy.js";
 
 export interface BriefingOutput {
   generatedAt: string;
@@ -58,29 +27,20 @@ export interface BriefingOutput {
 
 // ─── 메인 브리핑 생성 ──────────────────────────────────────
 export async function generateBriefing(
-  input: BriefingInput,
+  input: BriefingRequest,
 ): Promise<BriefingOutput> {
-  const types = input.types ?? {weather: true, stocks: true, news: true};
-
-  // 좌표 결정: 직접 입력 > 도시명 > 기본값(서울)
-  let lat = input.lat;
-  let lon = input.lon;
-  if (lat == null || lon == null) {
-    const coords = getCoordsForCity(input.city);
-    lat = coords.lat;
-    lon = coords.lon;
-  }
-
-  // 종목 목록 (기본: TSLA)
-  const tickers = input.stockTickers?.length
-    ? input.stockTickers
-    : ["TSLA"];
+  const types = input.types;
+  const {lat, lon, newsCountry} = input;
+  const tickers = input.stockTickers ?? [];
+  if (types.weather && (lat === undefined || lon === undefined)) throw new Error("Missing validated coordinates");
+  if (types.news && !newsCountry) throw new Error("Missing validated news country");
+  if (types.stocks && !tickers.length) throw new Error("Missing validated symbols");
 
   // 서비스 병렬 호출 (Promise.allSettled → 하나가 실패해도 나머지 계속)
   const [weatherResult, newsResult, ...stockResults] =
     await Promise.allSettled([
-      types.weather ? fetchWeather(lat, lon) : Promise.resolve(null),
-      types.news ? fetchNews("kr", 5) : Promise.resolve(null),
+      types.weather && lat !== undefined && lon !== undefined ? fetchWeather(lat, lon) : Promise.resolve(null),
+      types.news && newsCountry ? fetchNews(newsCountry, 5) : Promise.resolve(null),
       ...(types.stocks
         ? tickers.map((t) => fetchStock(t))
         : [Promise.resolve(null)]),
@@ -102,18 +62,19 @@ export async function generateBriefing(
 
   // 실패 로그
   if (weatherResult.status === "rejected") {
-    logger.error("날씨 서비스 실패", weatherResult.reason);
+    logger.warn("날씨 서비스 실패");
   }
   if (newsResult.status === "rejected") {
-    logger.error("뉴스 서비스 실패", newsResult.reason);
+    logger.warn("뉴스 서비스 실패");
   }
-  stockResults.forEach((r, i) => {
+  stockResults.forEach((r) => {
     if (r.status === "rejected") {
-      logger.error(`주식 서비스 실패 [${tickers[i]}]`, r.reason);
+      logger.warn("주식 서비스 실패");
     }
   });
 
   // AI 요약 생성 (OpenAI 키 없으면 기본 템플릿)
+  if (!weather && !news?.length && !stocks.length) throw new Error("No provider data");
   const briefingText = await generateAISummary({weather, news, stocks});
 
   return {

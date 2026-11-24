@@ -56,7 +56,7 @@ GitHub Actions 실행 [41588844929](https://github.com/hebi10/pushOffice_app/act
 
 - **‘수집 안 함’ 일괄 선택 불가.** 이번 빌드도 ML Kit 진단과 식별자를 수집한다.
 - 이번 빌드에서 저장한 공유 안 함·전송 암호화 예는 ML Kit 공식 자료의 HTTPS·제삼자 미전달 및 외부 기능 미구성 범위에 근거한다. 모든 향후 구성·연동까지 같은 결론을 보장하지 않는다.
-- 외부 브리핑 URL은 런타임 설정값이고 앱 코드가 HTTPS를 강제 검증하지 않는다. 백엔드를 활성화하면 실제 URL·처리자 관계·공유 예외·암호화 답변을 다시 확인해야 한다.
+- 과거 감사 기준 외부 브리핑 URL의 HTTPS 강제는 없었다. PO-SEC-01의 새 코드에서는 HTTPS Cloud Functions/Cloud Run 주소, 기존 인증 계정 승인, 서버 공통 호출 제한, 최소 요청 본문을 적용한다. 기존 배포본 및 실제 운영 설정은 별도로 확인해야 하며, 백엔드 활성화 전 URL·처리자 관계·공유 예외·암호화 및 UID 해시/인증 정보 처리에 대한 Console 답변을 재검증해야 한다.
 - 서버 코드가 도시·선택 유형을 로그에 남기므로 활성화된 외부 요청을 임시 처리로 일괄 선언할 수 없다. ML Kit·백엔드의 실제 보관 기간을 새로 약속하지 않는다.
 - 공개 정책과 지원 이메일은 개인정보 문의 경로를 제공한다. 그러나 Google SDK 진단을 운영자가 삭제 보장하는 경로는 확인되지 않았고, 별도 서버 삭제 화면·계정 삭제 API도 없다. **Console 삭제 요청 배지는 아니요**로 저장했다. 수동 문의 경로와 삭제 보장·자동 기능은 구별한다.
 - 크래시 스택 수집 근거가 없어 ‘크래시 로그’를 자동 추가하지 않는다. 공개된 기술 성능 항목은 ‘진단’으로 설명 가능하므로 ‘기타 앱 성능 데이터’를 중복 추가할 명확한 근거도 없다. ML Kit 사용 이벤트를 ‘앱 상호작용’으로 보는 것은 분류 해석이며, 앱의 사용자 탭 추적이 구현되었다는 근거는 아니다.
@@ -73,7 +73,7 @@ GitHub Actions 실행 [41588844929](https://github.com/hebi10/pushOffice_app/act
 | ML Kit GenAI prompt beta5 사용, 기기 내 추론 | `modules/push-office-native/android/build.gradle:18`, `modules/push-office-native/android/src/main/java/expo/modules/pushoffice/NanoClient.kt:12–24,26–50` |
 | SDK 상태 확인의 자동 호출 | `app/(tabs)/index.tsx:28–40`, `app/(tabs)/settings.tsx:30–32` |
 | 외부 항목 기본 꺼짐, 홈에서 직접 요청 | `src/store/slices/settingsSlice.ts:10`, `app/(tabs)/index.tsx:88–90` |
-| 외부 POST 전체 입력: ownerId/ownerType/dateKey/timezone/types/city/stockTickers/newsKeywords/newsLanguage, 일정 내용 없음 | `src/features/digest/digestService.ts:11–22,42–49` |
+| 과거 외부 POST 전체 입력(현행 배포 여부 별도 확인): ownerId/ownerType/dateKey/timezone/types/city/stockTickers/newsKeywords/newsLanguage, 일정 내용 없음. PO-SEC-01 신규 경로는 선택된 types/city/stockTickers/newsLanguage만 전송하고 별도 인증 헤더 사용 | `src/features/digest/digestService.ts:11–22,42–49` |
 | 외부 브리핑 결과도 로컬 저장 | `src/features/digest/digestWorkflow.ts:15–25`, `src/features/digest/digestService.ts:69–82` |
 | 요청 IP 기반 메모리 제한, 도시·선택 유형 서버 로그 | `functions/src/index.ts:18–30,64–81` |
 | 선택적 날씨/뉴스/주식 서버 호출, OpenAI 설정 시 외부 결과 요약 | `functions/src/services/briefing.service.ts:79–117`, `functions/src/utils/ai.ts:35–74,107–135` |
