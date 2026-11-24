@@ -17,6 +17,7 @@ export interface CreateScheduleInput {
     meetingUrl?: string | null;
     notes?: string | null;
     category?: ScheduleCategory | null;
+    reminderOffsets?: number[];
     isAllDay?: boolean;
     repeatType: RepeatType;
     notificationEnabled: boolean;
@@ -60,6 +61,13 @@ export async function updateSchedule(id: string, data: Partial<Omit<ScheduleDoc,
         return { alarmsReady, widgetsReady };
     }
     await localUpdateSchedule(id, hydrateSchedule(record));
+    return { alarmsReady: true, widgetsReady: true };
+}
+export async function setScheduleCompleted(id: string, completed: boolean): Promise<ScheduleSyncResult> {
+    if (isPushOfficeNativeAvailable) return PushOfficeNative.setScheduleCompleted(id, completed);
+    const existing = await getSchedule(id);
+    if (!existing) throw new Error('일정을 찾을 수 없습니다.');
+    await localUpdateSchedule(id, { completedAt: completed ? existing.completedAt ?? Date.now() : null });
     return { alarmsReady: true, widgetsReady: true };
 }
 export async function deleteSchedule(id: string): Promise<ScheduleSyncResult> {

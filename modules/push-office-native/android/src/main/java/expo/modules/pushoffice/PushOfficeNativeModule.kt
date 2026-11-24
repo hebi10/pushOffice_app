@@ -295,6 +295,9 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
+    AsyncFunction("setScheduleCompleted") { id: String, completed: Boolean ->
+      ScheduleRuntime.setCompleted(context, id, completed).sync.toMap()
+    }
     AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id).toMap() }
     AsyncFunction("retryScheduleSync") { ScheduleRuntime.changed(context).toMap() }
     AsyncFunction("configure") { value: Map<String, Any?> -> ScheduleSerial.withLock {
@@ -321,5 +324,6 @@ fun ScheduleRecord.toMap(): Map<String, Any?> = mapOf(
   "endAt" to endAt, "isAllDay" to isAllDay, "repeatType" to repeatType,
   "notificationEnabled" to notificationEnabled, "notificationId" to notificationId,
   "sourceText" to sourceText, "createdAt" to createdAt, "updatedAt" to updatedAt, "anchorZone" to anchorZone,
-  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category
+  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category,
+  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt
 )

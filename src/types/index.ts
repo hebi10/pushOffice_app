@@ -52,6 +52,9 @@ export interface ScheduleDoc {
   meetingUrl?: string | null;
   notes?: string | null;
   category?: ScheduleCategory | null;
+  reminderOffsets?: number[];
+  /** Epoch milliseconds; null means active. Completion applies to the stored series. */
+  completedAt?: number | null;
   /** Native canonical IANA zone of the immutable recurrence anchor. */
   anchorZone?: string;
   id?: string;
