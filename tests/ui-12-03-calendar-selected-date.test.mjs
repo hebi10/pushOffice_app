@@ -22,7 +22,7 @@ test('UI-12-03 retains the selected day and clamps safely on 5/6-week short mont
 test('UI-12-03 connects the selected-day summary to the calendar without another card', () => {
   assert.ok(calendar.includes('setSelected(previous => retainSelectedDayInMonth(previous, date.year, date.month))'));
   assert.ok(calendar.includes('onDayPress={date => setSelected(date.dateString)}'));
-  assert.ok(calendar.includes('style={[styles.selectionPanel, { backgroundColor: colors.inputBackground }]}'));
+  assert.ok(calendar.includes('style={[styles.selectionPanel, { backgroundColor: colors.inputBackground }, layout.narrow && styles.selectionStack]}'));
   assert.ok(calendar.includes('style={styles.selectionSummary}'));
   assert.ok(calendar.indexOf('styles.selectionPanel') > calendar.indexOf('<Calendar'));
   assert.ok(calendar.includes('accessibilityRole="summary"'));

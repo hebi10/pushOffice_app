@@ -52,7 +52,7 @@ test('PO-UI-05 compact agenda preserves home rows, title, time ranges, recurrenc
   assert.match(row, /calendar = variant === 'calendar'/);
   assert.match(row, /calendar \? styles\.calendarContainer : null/);
   assert.match(row, /accentRail/);
-  assert.match(row, /numberOfLines=\{calendar \? 3 : 2\}/);
+  assert.match(row, /numberOfLines=\{layout\.narrow \? undefined : calendar \? 3 : 2\}/);
   assert.match(row, /endAt\.getTime\(\) > startAt\.getTime\(\)/);
   assert.match(row, /schedule\.isAllDay/);
   assert.match(row, /REPEAT_LABEL/);
