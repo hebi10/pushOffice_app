@@ -119,8 +119,9 @@ export async function localGetSettings(): Promise<Partial<UserSettings> | null> 
 const settingsQueue = new SettingsQueue();
 export const withSettingsLock = <T>(operation: () => Promise<T>): Promise<T> => settingsQueue.run(operation);
 /** Internal write; callers must hold withSettingsLock. */
-export async function writeLocalSettings(settings: Partial<UserSettings>): Promise<void> {
-  await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+export async function writeLocalSettings(settings: Partial<UserSettings> | null): Promise<void> {
+  if (settings === null) await AsyncStorage.removeItem(SETTINGS_KEY);
+  else await AsyncStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 export async function localSaveSettings(settings: Partial<UserSettings>): Promise<void> {
   await withSettingsLock(async () => {

@@ -99,6 +99,8 @@ export function AssistantTextField({
   multiline,
   maxLength,
   autoCapitalize,
+  secureTextEntry = false,
+  editable = true,
 }: {
   label: string;
   value: string;
@@ -108,6 +110,8 @@ export function AssistantTextField({
   multiline?: boolean;
   maxLength?: number;
   autoCapitalize?: TextInputProps['autoCapitalize'];
+  secureTextEntry?: boolean;
+  editable?: boolean;
 }) {
   const { colors } = useTheme();
   return (
@@ -122,6 +126,11 @@ export function AssistantTextField({
         multiline={multiline}
         maxLength={maxLength}
         autoCapitalize={autoCapitalize}
+        secureTextEntry={secureTextEntry}
+        autoCorrect={secureTextEntry ? false : undefined}
+        autoComplete={secureTextEntry ? 'off' : undefined}
+        importantForAutofill={secureTextEntry ? 'noExcludeDescendants' : undefined}
+        editable={editable}
         placeholderTextColor={colors.textTertiary}
         selectionColor={colors.primary}
         style={[assistantStyles.input, {
