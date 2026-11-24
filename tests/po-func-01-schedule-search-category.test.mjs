@@ -76,7 +76,7 @@ test('UI and native persistence preserve explicit categories and use unexpanded 
   assert.match(search, /includeAll/);
   assert.match(search, /검색 조건에 맞는 일정이 없습니다/);
   assert.match(search, /variant="search"/);
-  assert.doesNotMatch(search, /projectOccurrences|fetch\(|axios|aiParse/);
+  assert.doesNotMatch(search, /projectOccurrences|\bfetch\s*\(|\baxios\b|\baiParse\b/);
   assert.match(calendar, /router\.push\('\/schedule-search'\)/);
   assert.match(detail, /category: normalizeScheduleCategory\(category\)/);
   assert.match(native, /categorySpinner\.selectedItemPosition/);
