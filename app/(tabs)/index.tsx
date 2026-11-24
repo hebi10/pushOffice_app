@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { BriefingNewsCard, BriefingStockCard, BriefingWeatherCard } from '@/src/components/briefing';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { useGenerateDigest } from '@/src/features/digest';
 import { useSchedules } from '@/src/features/schedules';
 import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
@@ -13,7 +14,8 @@ import { ENV } from '@/src/lib/env';
 import { isFirebaseConfigured } from '@/src/lib/firebase';
 import { isTrustedBriefingEndpoint } from '@/src/features/digest/externalBriefingRequest';
 import { useAppSelector } from '@/src/store/store';
-import { PushOfficeNative, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
+import { PushOfficeNative } from '@/modules/push-office-native';
+import { useLiveNotificationSuggestions } from '@/src/features/notifications/useLiveNotificationSuggestions';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { showError } from '@/src/components/ui/toast';
 import React, { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
@@ -23,26 +25,31 @@ import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View, Sty
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 export default function HomeScreen() {
     const { colors } = useTheme();
+    const layout = useAdaptiveLayout();
     const now = useClock();
     const settings = useAppSelector(x => x.settings);
     const uid = useAppSelector(x => x.auth.uid);
     const schedules = useSchedules();
     const external = useGenerateDigest();
     const [ai, setAi] = useState({ status: 'unavailable', message: '기기 지원 상태를 확인하고 있습니다.' });
-    const [notificationSuggestions, setNotificationSuggestions] = useState<NotificationSuggestion[]>([]);
-    const [notificationFeature, setNotificationFeature] = useState<NotificationSuggestionStatus | null>(null);
+    const { items: notificationSuggestions, status: notificationFeature, error: suggestionError, refreshing: suggestionsRefreshing, refresh: refreshSuggestions } = useLiveNotificationSuggestions();
     const [showNotificationDisclosure, setShowNotificationDisclosure] = useState(false);
-    const refreshSuggestions = useCallback(() => {
-      void PushOfficeNative.getNotificationSuggestions().then(setNotificationSuggestions).catch(() => setNotificationSuggestions([]));
-      void PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationFeature).catch(() => setNotificationFeature(null));
-    }, []);
+    const [showAllSuggestions, setShowAllSuggestions] = useState(false);
+    const [candidateBusy, setCandidateBusy] = useState<string | null>(null);
+    const candidateAction = useRef(false);
     const declineSuggestion = async (id: string) => {
-      try { await PushOfficeNative.dismissNotificationSuggestion(id); refreshSuggestions(); }
+      if (candidateAction.current) return;
+      candidateAction.current = true; setCandidateBusy(id);
+      try { await PushOfficeNative.dismissNotificationSuggestion(id); await refreshSuggestions(); }
       catch (error) { showError(error, '일정 후보를 거절하지 못했습니다.'); }
+      finally { candidateAction.current = false; setCandidateBusy(null); }
     };
     const reviewSuggestion = async (id: string) => {
+      if (candidateAction.current) return;
+      candidateAction.current = true; setCandidateBusy(id);
       try { await PushOfficeNative.openNotificationSuggestion(id); }
-      catch (error) { showError(error, '일정 후보를 열지 못했습니다.'); refreshSuggestions(); }
+      catch (error) { showError(error, '일정 후보를 열지 못했습니다.'); void refreshSuggestions(); }
+      finally { candidateAction.current = false; setCandidateBusy(null); }
     };
     const [refined, setRefined] = useState('');
     const [busy, setBusy] = useState(false);
@@ -51,7 +58,6 @@ export default function HomeScreen() {
         let statusRevision = 0;
         const refresh = () => {
             request.setActive(AppState.currentState === 'active');
-            if (AppState.currentState === 'active') refreshSuggestions();
             setRefined(''); setBusy(false);
             const revision = ++statusRevision;
             if (AppState.currentState !== 'active') return;
@@ -60,8 +66,8 @@ export default function HomeScreen() {
         };
         refresh();
         const sub = AppState.addEventListener('change', refresh);
-        return () => { statusRevision++; request.setActive(false); sub.remove(); };
-    }, [request, refreshSuggestions]));
+        return () => { statusRevision++; request.setActive(false); sub.remove(); setShowAllSuggestions(false); };
+    }, [request]));
     const occurrences = useMemo(() => {
         const date = new Date(now);
         const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -120,8 +126,8 @@ export default function HomeScreen() {
       <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={s.content}
-        refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
+        contentContainerStyle={[s.content, {maxWidth:layout.contentMaxWidth}]}
+        refreshControl={<RefreshControl refreshing={schedules.isRefetching || suggestionsRefreshing} onRefresh={() => { void schedules.refetch(); void refreshSuggestions(); }} />}
       >
         <ScreenIntro
           eyebrow={dayjs(now).format('M월 D일 dddd')}
@@ -156,6 +162,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={[styles.homePanels, layout.twoPane && styles.homePanelsWide]}>
+        <View style={layout.twoPane ? styles.homePane : undefined}>
         <AssistantCard title="다음 일정" icon="calendar-outline" compact>
           {schedules.isLoading ? (
             <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
@@ -167,11 +175,15 @@ export default function HomeScreen() {
               accessibilityLabel={`${next.title}, ${dayjs(nextAt).format('M월 D일')}, ${next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}${nextEndLabel ? ` ${nextEndLabel}` : ''}, 일정 상세 보기`}
               accessibilityState={{ disabled: !next.id }}
               disabled={!next.id}
-              onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
+              onPress={() => {
+                if (!next.id) return;
+                if (next.repeatType !== 'none') router.push({ pathname: '/schedule-occurrence', params: { id: next.id, at: String(next.startAt.toMillis()) } });
+                else router.push(`/schedule/${next.id}`);
+              }}
               activeOpacity={0.75}
               style={[styles.nextCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
             >
-              <View style={styles.nextTimeCol}>
+              <View style={[styles.nextTimeCol, layout.narrow && {width:undefined, minWidth:68, maxWidth:'40%'}]}>
                 <Text style={[styles.nextTime, { color: colors.primary }]}>
                   {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
                 </Text>
@@ -196,7 +208,8 @@ export default function HomeScreen() {
             <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
           )}
         </AssistantCard>
-
+        </View>
+        <View style={layout.twoPane ? styles.homePane : undefined}>
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
             <View style={styles.briefingCopy}>
@@ -218,6 +231,8 @@ export default function HomeScreen() {
             />
           ) : null}
         </AssistantCard>
+        </View>
+        </View>
 
         {(schedules.isLoading || schedules.isError || todayItems.length > 0) ? (
           <AssistantCard title="오늘 일정" icon="list-outline" compact>
@@ -282,29 +297,37 @@ export default function HomeScreen() {
           </AssistantCard>
         ) : null}
 
-        {notificationSuggestions.length > 0 ? (
+        {suggestionError ? (
+          <AssistantCard title="일정 추천 조회" icon="notifications-outline" compact>
+            <Text style={[s.caption, { color: colors.textSecondary }]}>추천 일정을 확인하지 못했습니다. 권한과 연결 상태를 확인해 주세요.</Text>
+            <AssistantButton label="추천 일정 다시 확인" icon="refresh-outline" secondary busy={suggestionsRefreshing} onPress={() => { void refreshSuggestions(); }} />
+          </AssistantCard>
+        ) : null}
+        {notificationFeature?.enabled && notificationFeature.accessGranted && notificationSuggestions.length > 0 ? (
           <AssistantCard title="확인할 일정 추천" icon="calendar-outline" subtitle="다른 앱 알림에서 분석한 일정입니다. 확인한 후에만 저장됩니다." compact>
-            {notificationSuggestions.slice(0, 3).map(item => (
+            <Text accessibilityLiveRegion="polite" style={[s.caption,{color:colors.textSecondary}]}>확인할 후보 {notificationSuggestions.length}건</Text>
+            {(showAllSuggestions ? notificationSuggestions : notificationSuggestions.slice(0, 3)).map(item => (
               <View key={item.id} style={{ borderWidth: uiSizes.borderWidth, borderColor: colors.inputBorder, padding: uiSpacing.sm, gap: uiSpacing.xs }}>
                 <Text style={[s.body, { color: colors.text, fontWeight: '700' }]}>{item.title}</Text>
                 <Text style={[s.caption, { color: colors.textSecondary }]}>
-                  {dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
+                  {item.triage === 'needs_confirmation' || item.startAt == null ? '날짜·시간 확인 필요' : dayjs(item.startAt).format('M월 D일 (ddd) HH:mm')} · {item.sourceApp}
                 </Text>
                 <Text numberOfLines={2} style={[s.caption, { color: colors.textSecondary }]}>{item.excerpt}</Text>
                 <View style={{ gap: uiSpacing.xs }}>
-                  <AssistantButton label="확인 후 일정 추가" icon="checkmark-outline" onPress={() => { void reviewSuggestion(item.id); }} />
-                  <AssistantButton label="거절" icon="close-outline" secondary onPress={() => { void declineSuggestion(item.id); }} />
+                  <AssistantButton label={item.triage === 'needs_confirmation' ? '날짜·시간 확인' : '확인 후 일정 추가'} icon="checkmark-outline" disabled={candidateBusy !== null} onPress={() => { void reviewSuggestion(item.id); }} />
+                  <AssistantButton label="거절" icon="close-outline" secondary disabled={candidateBusy !== null} onPress={() => { void declineSuggestion(item.id); }} />
                 </View>
               </View>
             ))}
             {notificationSuggestions.length > 3 ? (
               <TouchableOpacity
                 accessibilityRole="button"
-                accessibilityLabel={`일정 추천 ${notificationSuggestions.length}건 모두 확인`}
-                onPress={() => router.push('/(tabs)/settings')}
+                accessibilityLabel={showAllSuggestions ? '추천 일정 접기' : `일정 추천 ${notificationSuggestions.length}건 모두 확인`}
+                accessibilityState={{ expanded: showAllSuggestions }}
+                onPress={() => setShowAllSuggestions(value => !value)}
                 style={{ minHeight: uiSizes.touchMinHeight, justifyContent: 'center', alignItems: 'center' }}
               >
-                <Text style={[s.caption, { color: colors.primary }]}>나머지 {notificationSuggestions.length - 3}건 설정에서 확인</Text>
+                <Text style={[s.caption, { color: colors.primary }]}>{showAllSuggestions ? '접기' : '나머지 ' + (notificationSuggestions.length - 3) + '건 더 보기'}</Text>
               </TouchableOpacity>
             ) : null}
           </AssistantCard>
@@ -372,6 +395,9 @@ export default function HomeScreen() {
 
 
 const styles = StyleSheet.create({
+  homePanels: { gap: uiSpacing.sm },
+  homePanelsWide: { flexDirection: 'row', alignItems:'flex-start' },
+  homePane: { flex:1, minWidth:0 },
   quickEntry: { gap: uiSpacing.xxs },
   quickEntryTools: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
   quickEntryHint: { ...uiTypography.caption, flex: 1, minWidth: 0 },

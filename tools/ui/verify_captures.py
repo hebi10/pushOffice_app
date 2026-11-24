@@ -64,6 +64,9 @@ REQUIRED = {
     "23a-calendar-today-one.png",
     "23b-calendar-today-three.png",
     "23c-calendar-today-three-list.png",
+    "24a-wide-calendar-week.png",
+    "24b-resize-wide-draft.png",
+    "24c-resize-narrow-draft.png",
 }
 
 
@@ -154,6 +157,14 @@ def verify() -> None:
         profiles = matrix.get("profiles", {})
         large = profiles.get("large_font", {})
         tablet = profiles.get("tablet_viewport", {})
+        resized = profiles.get("resized_viewport", {})
+        if resized.get("draft_preserved") is not True or resized.get("viewport") != "720x1600":
+            errors.append("live resize did not preserve the disposable native draft")
+        for name in ("24a-wide-calendar-week.png", "24b-resize-wide-draft.png"):
+            if dimensions.get(name) != (1440, 2160):
+                errors.append(f"wide viewport evidence mismatch: {name}")
+        if dimensions.get("24c-resize-narrow-draft.png") != (720, 1600):
+            errors.append("narrow resize evidence mismatch")
         if large.get("font_scale") != 1.3 or large.get("viewport") != "720x1600":
             errors.append("large-font runtime profile is not the requested QA configuration")
         if tablet.get("font_scale") != 1.0 or tablet.get("viewport") != "1440x2160":

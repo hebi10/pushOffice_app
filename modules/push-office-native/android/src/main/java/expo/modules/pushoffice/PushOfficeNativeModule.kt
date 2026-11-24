@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 class PushOfficeNativeModule : Module() {
   private val context get() = appContext.reactContext ?: error("앱 컨텍스트가 준비되지 않았습니다.")
   private val listener: () -> Unit = { sendEvent("schedulesChanged", emptyMap<String, Any>()) }
+  private val suggestionListener: () -> Unit = { sendEvent("notificationSuggestionsChanged", emptyMap<String, Any>()) }
   private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var backupPromise: Promise? = null
   private var pendingExport: String? = null
@@ -60,10 +61,14 @@ class PushOfficeNativeModule : Module() {
   }
   override fun definition() = ModuleDefinition {
     Name("PushOfficeNative")
-    Events("schedulesChanged", "aiDownloadProgress")
-    OnCreate { ScheduleStore.addListener(listener) }
+    Events("schedulesChanged", "aiDownloadProgress", "notificationSuggestionsChanged")
+    OnCreate {
+      ScheduleStore.addListener(listener)
+      NotificationSuggestionStore.addListener(suggestionListener)
+    }
     OnDestroy {
       ScheduleStore.removeListener(listener)
+      NotificationSuggestionStore.removeListener(suggestionListener)
       backupPromise?.reject("BACKUP_INTERRUPTED", "백업 파일 작업이 중단되었습니다.", null)
       backupPromise = null
       pendingExport = null
@@ -151,6 +156,7 @@ class PushOfficeNativeModule : Module() {
         } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
       }
     }
+    AsyncFunction("getNotificationSuggestionSnapshot") { NotificationSuggestionStore.snapshot(context) }
     AsyncFunction("getNotificationSuggestionStatus") {
       val session = NotificationSuggestionStore.captureSession(context)
       mapOf(
@@ -277,11 +283,29 @@ class PushOfficeNativeModule : Module() {
         .edit().putString("themeMode",mode).apply()
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
+    AsyncFunction("checkScheduleConflicts") Coroutine { value: Map<String, Any?>, ignoreOccurrenceAt: Double? ->
+      withContext(Dispatchers.IO) {
+        ScheduleSerial.withLock {
+          val draft = ScheduleRecord.fromMap(value)
+          val now = System.currentTimeMillis()
+          ScheduleTime.validate(draft, now, true)
+          val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
+          ScheduleStore(context).use { store ->
+            val ignore = ignoreOccurrenceAt?.let(ScheduleOccurrences::epoch)
+            if (ignore != null) {
+              val original = store.get(draft.id) ?: error("반복 일정을 찾을 수 없습니다.")
+              ScheduleOccurrences.requireEditable(original, ignore, draft.updatedAt, store.anchorZone(draft.id))
+            }
+            ScheduleConflicts.find(draft, store.all(), now, zone, ignore).map(ScheduleConflict::toMap)
+          }
+        }
+      }
+    }
     AsyncFunction("saveSchedule") { value: Map<String, Any?> -> ScheduleSerial.withLock {
       val draft = ScheduleRecord.fromMap(value)
       val previous = ScheduleStore(context).use { it.get(draft.id) }
       // A normal form save may not reopen a completed row from a stale UI snapshot.
-      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt))
+      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt, excludedStarts = previous?.excludedStarts ?: emptyList()))
       saved.record.toMap() + saved.sync.toMap()
     } }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
@@ -298,6 +322,12 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
+    AsyncFunction("mutateScheduleOccurrence") { id: String, at: Double, expectedUpdatedAt: Double,
+      action: String, replacement: Map<String, Any?> ->
+      val (mutation, sync) = ScheduleRuntime.mutateOccurrence(context, id, ScheduleOccurrences.epoch(at),
+        ScheduleOccurrences.epoch(expectedUpdatedAt), action, replacement)
+      sync.toMap() + mapOf("detachedId" to mutation.detached?.id)
+    }
     AsyncFunction("setScheduleCompleted") { id: String, completed: Boolean ->
       ScheduleRuntime.setCompleted(context, id, completed).sync.toMap()
     }
@@ -328,5 +358,5 @@ fun ScheduleRecord.toMap(): Map<String, Any?> = mapOf(
   "notificationEnabled" to notificationEnabled, "notificationId" to notificationId,
   "sourceText" to sourceText, "createdAt" to createdAt, "updatedAt" to updatedAt, "anchorZone" to anchorZone,
   "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category,
-  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt
+  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt, "excludedStarts" to excludedStarts
 )

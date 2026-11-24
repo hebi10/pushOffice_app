@@ -9,6 +9,19 @@ object ScheduleTime {
   /** Return the first occurrence strictly after [after], always derived from original startAt. */
   fun nextOccurrence(record: ScheduleRecord, after: Long, zone: ZoneId): Long? {
     if (record.completedAt != null) return null
+    val excluded = record.excludedStarts.toHashSet()
+    var cursor = after
+    // At most the number of explicit exclusions can be skipped.
+    repeat(excluded.size + 1) {
+      val candidate = rawNextOccurrence(record, cursor, zone) ?: return null
+      if (candidate !in excluded) return candidate
+      cursor = candidate
+    }
+    return null
+  }
+
+  private fun rawNextOccurrence(record: ScheduleRecord, after: Long, zone: ZoneId): Long? {
+    if (after >= ScheduleOccurrences.MAX_EPOCH) return null
     val recurrenceZone=record.anchorZone?.let { ZoneId.of(ScheduleZone.validate(it)) } ?: zone
     if (record.startAt > after) return record.startAt
     if (record.repeatType == "none") return null
@@ -30,6 +43,7 @@ object ScheduleTime {
         else -> throw IllegalArgumentException("지원하지 않는 반복 방식입니다.")
       }
       val candidate = local.atZone(recurrenceZone).toInstant().toEpochMilli()
+      if (candidate > ScheduleOccurrences.MAX_EPOCH) return null
       if (candidate > after) return candidate
       steps++
     }
@@ -40,6 +54,10 @@ object ScheduleTime {
     ScheduleCategory.validate(record.category)
     ScheduleReminders.validate(record.reminderOffsets)
     ScheduleReminders.completedAt(record.completedAt)
+    ScheduleOccurrences.validate(record.excludedStarts)
+    require(record.excludedStarts.isEmpty() || record.repeatType != "none" && record.excludedStarts.all { it >= record.startAt }) {
+      "제외 회차는 반복 기준일 이후에만 설정할 수 있습니다."
+    }
     require(record.id.isNotBlank() && record.id.length <= 256) { "일정 ID가 올바르지 않습니다." }
     require(record.userId.isNotBlank()) { "사용자 ID가 필요합니다." }
     require(record.title.isNotBlank() && record.title.length <= 500) { "일정 제목을 입력해 주세요 (500자 이하)." }

@@ -4,6 +4,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAppSelector } from '../../store/store';
 import type { ScheduleDoc } from '../../types';
+import { weekBounds, weekDateKeys } from './calendarWeek';
 import {
     createSchedule,
     CreateScheduleInput,
@@ -30,7 +31,7 @@ export function useSchedules() {
 }
 
 /** 월간 일정 */
-export function useMonthSchedules(year: number, month: number) {
+export function useMonthSchedules(year: number, month: number, enabled = true) {
   const uid = useAppSelector((s) => s.auth.uid);
   const start = new Date(year, month - 1, 1, 0, 0, 0);
   const end = new Date(year, month, 0, 23, 59, 59);
@@ -38,7 +39,18 @@ export function useMonthSchedules(year: number, month: number) {
   return useQuery<ScheduleDoc[]>({
     queryKey: [QUERY_KEY, 'month', uid, year, month],
     queryFn: () => (uid ? getSchedulesByRange(uid, start, end) : Promise.resolve([])),
-    enabled: !!uid,
+    enabled: !!uid && enabled,
+  });
+}
+
+/** 주간 일정: 월 경계를 넘어가는 7일 전체를 조회합니다. */
+export function useWeekSchedules(selected: string, enabled: boolean) {
+  const uid = useAppSelector(s => s.auth.uid);
+  const { start, end } = weekBounds(selected);
+  return useQuery<ScheduleDoc[]>({
+    queryKey: [QUERY_KEY, 'week', uid, weekDateKeys(selected)[0]],
+    queryFn: () => uid ? getSchedulesByRange(uid, start, end) : Promise.resolve([]),
+    enabled: !!uid && enabled,
   });
 }
 

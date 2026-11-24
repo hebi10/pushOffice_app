@@ -3,6 +3,7 @@ import type { NativeSchedule } from '../../../modules/push-office-native';
 import type { ScheduleDoc } from '../../types';
 import { normalizeScheduleCategory } from './scheduleCategories.mjs';
 import { normalizeReminderOffsets, normalizeCompletedAt } from './scheduleReminders.mjs';
+import { normalizeExcludedStarts } from './scheduleOccurrences.mjs';
 type TimestampInput = number | Date | {
     seconds: number;
     nanoseconds?: number;
@@ -36,6 +37,7 @@ export function toNativeSchedule(value: object): NativeSchedule {
         ...(s.category === undefined ? {} : { category: normalizeScheduleCategory(s.category) }),
         ...(s.reminderOffsets === undefined ? {} : { reminderOffsets: normalizeReminderOffsets(s.reminderOffsets) }),
         ...(s.completedAt === undefined ? {} : { completedAt: normalizeCompletedAt(s.completedAt) }),
+        ...(s.excludedStarts === undefined ? {} : { excludedStarts: normalizeExcludedStarts(s.excludedStarts) }),
         repeatType: s.repeatType ?? 'none', notificationEnabled: s.notificationEnabled ?? false,
         notificationId: s.notificationId ?? null, sourceText: s.sourceText ?? '',
         createdAt: epoch(s.createdAt, Date.now()), updatedAt: epoch(s.updatedAt, Date.now()),
@@ -86,6 +88,7 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
     const from = start.getTime();
     const rangeEnd = end.getTime();
     for (const record of records) {
+        const excluded = new Set(record.excludedStarts ?? []);
         const until = record.repeatType !== 'none' && record.completedAt != null
             ? Math.min(rangeEnd, Math.max(record.startAt, record.completedAt) + 1) : rangeEnd;
         if (from >= until) continue;
@@ -111,7 +114,7 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
                     month: candidateDay.getUTCMonth() + 1,
                     day: candidateDay.getUTCDate(),
                 }, zone);
-                if (occurrence >= record.startAt && occurrence >= from && occurrence < until) {
+                if (occurrence >= record.startAt && occurrence >= from && occurrence < until && !excluded.has(occurrence)) {
                     result.push({ ...record, startAt: occurrence,
                         endAt: record.endAt == null ? null : occurrence + record.endAt - record.startAt });
                 }
@@ -125,7 +128,7 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
             if (record.repeatType === 'yearly' && month !== anchor.month) continue;
             const day = Math.min(anchor.day, new Date(Date.UTC(year, month, 0)).getUTCDate());
             const occurrence = zonedEpoch({ ...anchor, year, month, day }, zone);
-            if (occurrence >= record.startAt && occurrence >= from && occurrence < until) {
+            if (occurrence >= record.startAt && occurrence >= from && occurrence < until && !excluded.has(occurrence)) {
                 result.push({ ...record, startAt: occurrence, endAt: record.endAt == null ? null : occurrence + record.endAt - record.startAt });
             }
         }
@@ -136,11 +139,12 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
 /** Next card has no view horizon: calculate one occurrence per immutable series anchor. */
 export function nextOccurrence(record: NativeSchedule, now: number): NativeSchedule | null {
     if (record.completedAt != null) return null;
-    if (record.startAt >= now) return { ...record };
+    const excluded = new Set(record.excludedStarts ?? []);
+    if (record.startAt >= now && !excluded.has(record.startAt)) return { ...record };
     if (record.repeatType === 'none') return null;
     const zone = record.anchorZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const anchor = zonedFields(record.startAt, zone);
-    const reference = zonedFields(now, zone);
+    const reference = zonedFields(Math.max(now, record.startAt), zone);
     if (record.repeatType === 'daily' || record.repeatType === 'weekly') {
         const daysPerStep = record.repeatType === 'weekly' ? 7 : 1;
         const anchorDay = civilDay(anchor);
@@ -149,7 +153,8 @@ export function nextOccurrence(record: NativeSchedule, now: number): NativeSched
             const candidateDay = new Date((anchorDay + step * daysPerStep) * 86400000);
             const startAt = zonedEpoch({ ...anchor, year: candidateDay.getUTCFullYear(),
                 month: candidateDay.getUTCMonth() + 1, day: candidateDay.getUTCDate() }, zone);
-            if (startAt >= now) return { ...record, startAt,
+            if (startAt > 253402300799999) return null;
+            if (startAt >= now && startAt >= record.startAt && !excluded.has(startAt)) return { ...record, startAt,
                 endAt: record.endAt == null ? null : startAt + record.endAt - record.startAt };
             step++;
         }
@@ -160,7 +165,8 @@ export function nextOccurrence(record: NativeSchedule, now: number): NativeSched
         const year = Math.floor(monthIndex / 12); const month = monthIndex % 12 + 1;
         const day = Math.min(anchor.day, new Date(Date.UTC(year, month, 0)).getUTCDate());
         const startAt = zonedEpoch({ ...anchor, year, month, day }, zone);
-        if (startAt >= now) return { ...record, startAt, endAt: record.endAt == null ? null : startAt + record.endAt - record.startAt };
+        if (startAt > 253402300799999) return null;
+        if (startAt >= now && startAt >= record.startAt && !excluded.has(startAt)) return { ...record, startAt, endAt: record.endAt == null ? null : startAt + record.endAt - record.startAt };
         monthIndex += step;
     }
 }

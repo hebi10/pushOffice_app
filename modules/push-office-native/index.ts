@@ -18,6 +18,7 @@ export interface NativeSchedule {
   category?: ScheduleCategory | null;
   reminderOffsets?: number[];
   completedAt?: number | null;
+  excludedStarts?: number[];
   isAllDay: boolean;
   repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   notificationEnabled: boolean;
@@ -33,6 +34,7 @@ export interface NativeSettings {
   timezone: string;
 }
 export interface ScheduleSyncResult { alarmsReady: boolean; widgetsReady: boolean }
+export interface ScheduleConflict { id: string; title: string; startAt: number; proposedStart: number }
 
 export interface ReminderCapabilities {
   exactAlarmAllowed: boolean;
@@ -112,6 +114,7 @@ export interface AiDownloadProgress {
 }
 export type PushOfficeNativeEvents = {
   schedulesChanged: () => void;
+  notificationSuggestionsChanged: () => void;
   aiDownloadProgress: (update: AiDownloadProgress) => void;
 };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
@@ -127,6 +130,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   /** Atomic, existing IDs are never overwritten; alarm refresh failure is reported separately. */
   importBackupSchedules(records: NativeSchedule[]): Promise<{ imported: number; alarmsReady: boolean }>;
   getNotificationSuggestionStatus(): Promise<NotificationSuggestionStatus>;
+  getNotificationSuggestionSnapshot(): Promise<{status: NotificationSuggestionStatus; items: NotificationSuggestion[]}>;
   setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
   openNotificationAccessSettings(): Promise<void>;
   getNotificationSuggestions(): Promise<NotificationSuggestion[]>;
@@ -153,11 +157,13 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
   getSchedules(): Promise<NativeSchedule[]>;
+  checkScheduleConflicts(record: NativeSchedule, ignoreOccurrenceAt: number | null): Promise<ScheduleConflict[]>;
   saveSchedule(record: NativeSchedule): Promise<NativeSchedule & ScheduleSyncResult>;
   /** Import without overwriting existing ids, retaining history without reserving past alarms. */
   importSchedules(records: NativeSchedule[]): Promise<number>;
   deleteSchedule(id: string): Promise<ScheduleSyncResult>;
   setScheduleCompleted(id: string, completed: boolean): Promise<ScheduleSyncResult>;
+  mutateScheduleOccurrence(id: string, at: number, expectedUpdatedAt: number, action: 'edit' | 'delete' | 'complete', replacement: {title?: string; startAt?: number; endAt?: number | null}): Promise<ScheduleSyncResult & {detachedId: string | null}>;
   retryScheduleSync(): Promise<ScheduleSyncResult>;
   configure(settings: Partial<NativeSettings>): Promise<ReminderCapabilities>;
   snoozeSchedule(id: string, minutes: number): Promise<number>;
@@ -181,6 +187,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   pickLocalBackupDocument: unavailable,
   importBackupSchedules: unavailable,
   getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
+  getNotificationSuggestionSnapshot: async () => ({ status: { enabled: false, accessGranted: false, pendingCount: 0 }, items: [] }),
   setNotificationCaptureEnabled: unavailable,
   openNotificationAccessSettings: unavailable,
   getNotificationSuggestions: async () => [],
@@ -205,9 +212,11 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   setUiTheme: unavailable,
   getSchedules: async () => [],
   saveSchedule: unavailable,
+  checkScheduleConflicts: unavailable,
   importSchedules: unavailable,
   deleteSchedule: unavailable,
   setScheduleCompleted: unavailable,
+  mutateScheduleOccurrence: unavailable,
   retryScheduleSync: unavailable,
   configure: unavailable,
   snoozeSchedule: unavailable,

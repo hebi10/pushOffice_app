@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { dayjs } from '@/src/lib/time';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import type { ScheduleDoc } from '@/src/types';
@@ -18,6 +19,7 @@ const REPEAT_LABEL: Record<string, string> = {
 
 export function ScheduleItem({ schedule, variant = 'default' }: { schedule: ScheduleDoc; variant?: 'default' | 'calendar' | 'search' }) {
   const { colors } = useTheme();
+  const layout = useAdaptiveLayout();
   const calendar = variant === 'calendar';
   const search = variant === 'search';
   const completed = schedule.completedAt != null;
@@ -41,18 +43,23 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
       accessibilityState={{ disabled: !schedule.id }}
       disabled={!schedule.id}
       activeOpacity={0.8}
-      onPress={() => { if (schedule.id) router.push(`/schedule/${schedule.id}`); }}
+      onPress={() => {
+        if (!schedule.id) return;
+        if (!search && schedule.repeatType !== 'none' && schedule.completedAt == null) {
+          router.push({ pathname: '/schedule-occurrence', params: { id: schedule.id, at: String(schedule.startAt.toMillis()) } });
+        } else router.push(`/schedule/${schedule.id}`);
+      }}
       style={[styles.container, calendar ? styles.calendarContainer : null, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
     >
       <View style={[styles.accentRail, { backgroundColor: colors.primary }]} />
-      <View style={styles.timeCol}>
+      <View style={[styles.timeCol, layout.narrow && {width:undefined,minWidth:62,maxWidth:'38%'}]}>
         <Text style={[styles.time, { color: colors.primary }]}>{time}</Text>
         {endLabel && sameDayEnd ? (
           <Text style={[styles.endTime, { color: colors.textSecondary }]}>{endLabel}</Text>
         ) : null}
       </View>
       <View style={styles.content}>
-        <Text style={[styles.title, calendar ? styles.calendarTitle : null, { color: colors.text }]} numberOfLines={calendar ? 3 : 2}>{schedule.title}</Text>
+        <Text style={[styles.title, calendar ? styles.calendarTitle : null, { color: colors.text }]} numberOfLines={layout.narrow ? undefined : calendar ? 3 : 2}>{schedule.title}</Text>
         {showMeta ? <View style={styles.metaRow}>
           {!calendar ? <Text style={[styles.date, { color: colors.textSecondary }]}>{search && repeatLabel ? '반복 기준일 · ' : ''}{dateStr}</Text> : null}
           {schedule.category || search ? <Text style={[styles.date, { color: colors.textSecondary }]}>{categoryLabel}</Text> : null}

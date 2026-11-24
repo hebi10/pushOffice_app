@@ -1,5 +1,6 @@
 import { normalizeScheduleCategory } from '../schedules/scheduleCategories.mjs';
 import { normalizeReminderOffsets, normalizeCompletedAt } from '../schedules/scheduleReminders.mjs';
+import { normalizeExcludedStarts } from '../schedules/scheduleOccurrences.mjs';
 
 const FORMAT = 'pushoffice-local-backup';
 const PACKAGE = 'com.hebi96.pushOffice_app';
@@ -120,6 +121,8 @@ function normalizeSchedule(value) {
     limitedText(value.sourceText, 12000),
   '백업의 일정 데이터가 올바르지 않습니다.');
   if (value.anchorZone !== undefined && value.anchorZone !== null) timezone(value.anchorZone);
+  const excludedStarts = normalizeExcludedStarts(value.excludedStarts);
+  valid(!excludedStarts.length || value.repeatType !== 'none' && excludedStarts.every(at => at >= value.startAt), '제외 회차 정보가 올바르지 않습니다.');
   const extras = {
     ...(value.location === undefined ? {} : { location: optionalScheduleExtra(value.location, 'location', 160) }),
     ...(value.meetingUrl === undefined ? {} : { meetingUrl: optionalScheduleExtra(value.meetingUrl, 'meetingUrl', 2048) }),
@@ -127,6 +130,7 @@ function normalizeSchedule(value) {
     ...(value.category === undefined ? {} : { category: normalizeScheduleCategory(value.category) }),
     ...(value.reminderOffsets === undefined ? {} : { reminderOffsets: normalizeReminderOffsets(value.reminderOffsets) }),
     ...(value.completedAt === undefined ? {} : { completedAt: normalizeCompletedAt(value.completedAt) }),
+    ...(value.excludedStarts === undefined ? {} : { excludedStarts }),
   };
   return {
     id: value.id, userId: value.userId, type: value.type, title: value.title,

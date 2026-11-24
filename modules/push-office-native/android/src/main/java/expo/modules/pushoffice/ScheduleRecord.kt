@@ -20,7 +20,8 @@ data class ScheduleRecord(
   val notes: String? = null,
   val category: String? = null,
   val reminderOffsets: List<Int> = listOf(0),
-  val completedAt: Long? = null
+  val completedAt: Long? = null,
+  val excludedStarts: List<Long> = emptyList()
 ) {
   companion object {
     fun fromMap(value: Map<String, Any?>): ScheduleRecord {
@@ -40,7 +41,7 @@ data class ScheduleRecord(
         ScheduleExtras.fromMap(value, "location"),
         ScheduleExtras.fromMap(value, "meetingUrl"),
         ScheduleExtras.fromMap(value, "notes"), ScheduleCategory.fromMap(value),
-        ScheduleReminders.fromMap(value), ScheduleReminders.completedAt(value["completedAt"]))
+        ScheduleReminders.fromMap(value), ScheduleReminders.completedAt(value["completedAt"]), ScheduleOccurrences.fromMap(value))
     }
   }
 }

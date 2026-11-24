@@ -55,6 +55,7 @@ export interface ScheduleDoc {
   reminderOffsets?: number[];
   /** Epoch milliseconds; null means active. Completion applies to the stored series. */
   completedAt?: number | null;
+  excludedStarts?: number[];
   /** Native canonical IANA zone of the immutable recurrence anchor. */
   anchorZone?: string;
   id?: string;

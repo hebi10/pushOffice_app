@@ -107,6 +107,24 @@ class QuickEntryActivityUiTest {
     }
   }
 
+  @Test fun sizeConfigurationCallbackPreservesEditorViewsAndUnsavedText() {
+    val before = ScheduleStore(context).use { it.all().size }
+    launch().use { scenario ->
+      scenario.onActivity { activity ->
+        views(activity).single { it.contentDescription == TEXT_CHOICE }.performClick()
+        val input = views(activity).filterIsInstance<EditText>().first()
+        input.setText("FoldResizeQA")
+        val configuration = android.content.res.Configuration(activity.resources.configuration)
+        activity.onConfigurationChanged(configuration)
+        assertSame(input, views(activity).filterIsInstance<EditText>().first())
+        assertEquals("FoldResizeQA", input.text.toString())
+        assertTrue(texts(activity).contains("내용 확인"))
+        assertTrue(activity.window.attributes.width <= 400 * activity.resources.displayMetrics.density)
+        assertEquals(before, ScheduleStore(context).use { it.all().size })
+      }
+    }
+  }
+
   @Test fun calendarPreviewIsEditableAndNeverAutoSaves() {
     val before = ScheduleStore(context).use { it.all().size }
     val date = LocalDate.now().plusDays(4)

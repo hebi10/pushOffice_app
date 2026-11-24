@@ -79,7 +79,7 @@ jobs:
       - name: Build emulator-installable app with bundled JS
         working-directory: android
         run: |
-          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleRelease --no-daemon --max-workers=2 \
+          bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleRelease --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
             -PreactNativeArchitectures=x86_64

@@ -58,8 +58,7 @@ test('UI-11-02 keeps sensitive notification disclosure and explicit user approva
   assert.match(home, /title="다른 앱 알림 접근 안내"/);
   assert.match(home, /인증번호 등 민감한 정보도 이 권한의 범위에 포함됩니다/);
   assert.match(home, /PushOfficeNative\.openNotificationAccessSettings\(\)/);
-  assert.match(home, /PushOfficeNative\.getNotificationSuggestions\(\)/);
-  assert.match(home, /PushOfficeNative\.getNotificationSuggestionStatus\(\)/);
+  assert.match(home, /useLiveNotificationSuggestions\(\)/);
   assert.match(home, /notificationSuggestions\.slice\(0, 3\)/);
   assert.match(home, /reviewSuggestion\(item\.id\)/);
   assert.match(home, /declineSuggestion\(item\.id\)/);

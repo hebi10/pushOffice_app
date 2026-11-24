@@ -475,7 +475,15 @@ QA_PROFILES = {
             "21c-tablet-settings.png",
             "21d-tablet-chooser.png",
             "21e-tablet-editor.png",
+            "24a-wide-calendar-week.png",
+            "24b-resize-wide-draft.png",
         ],
+    },
+    "resized_viewport": {
+        "font_scale": 1.0,
+        "viewport": "720x1600",
+        "screens": ["24c-resize-narrow-draft.png"],
+        "draft_preserved": False,
     },
 }
 widget_providers = {"small": False, "agenda": False}
@@ -535,6 +543,11 @@ try:
     screenshot("21a-tablet-home", "1440x2160 tablet-class viewport: home")
     tap("일정", bottom=True)
     screenshot("21b-tablet-calendar", "1440x2160 tablet-class viewport: calendar")
+    tap("주간 일정")
+    if find("이전 주") is None or find("다음 주") is None:
+        raise RuntimeError("Wide weekly calendar navigation is missing")
+    screenshot("24a-wide-calendar-week", "wide tablet-class viewport: week controls and selected agenda")
+    tap("월간 일정")
     tap("설정", bottom=True)
     screenshot("21c-tablet-settings", "1440x2160 tablet-class viewport: settings")
     tap("홈", bottom=True)
@@ -542,6 +555,19 @@ try:
     screenshot("21d-tablet-chooser", "1440x2160 tablet-class viewport: native chooser")
     tap("텍스트로 일정 입력")
     screenshot("21e-tablet-editor", "1440x2160 tablet-class viewport: native editor")
+    type_field("일정 내용", "FoldResizeQA")
+    if find("FoldResizeQA", class_name="android.widget.EditText") is None:
+        raise RuntimeError("Could not enter disposable resize-test text")
+    screenshot("24b-resize-wide-draft", "wide native text editor with unsaved synthetic draft")
+    # Same density, change the real emulator window while the editor is active.
+    adb("shell", "wm", "size", "720x1600")
+    time.sleep(6)
+    if find("FoldResizeQA", class_name="android.widget.EditText") is None:
+        raise RuntimeError("Unsaved native draft was lost after same-density resize")
+    if find("내용 확인") is None or find("뒤로") is None:
+        raise RuntimeError("Native footer actions are unreachable after resize")
+    screenshot("24c-resize-narrow-draft", "narrow viewport after live resize; same unsaved text and footer")
+    QA_PROFILES["resized_viewport"]["draft_preserved"] = True
 except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
     WARNINGS.append(f"Tablet-class viewport QA: {exc}")
 finally:
@@ -555,6 +581,7 @@ finally:
         "widget_providers_registered": widget_providers,
         "not_verified": [
             "Physical phone and real tablet hardware",
+            "Physical fold hinge and density changes; same-density emulator resizing is checked separately",
             "Launcher widget placement, resize and click on third-party launchers",
             "Microphone-based speech recognition (emulator uses -noaudio)",
             "Gemini Nano inference on supported real hardware",

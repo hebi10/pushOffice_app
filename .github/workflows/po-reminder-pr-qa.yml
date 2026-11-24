@@ -5,12 +5,16 @@ on:
     branches:
       - main
     paths:
+      - '.github/ci/retry-gradle-resolution.sh'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/*Notification*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/Reminder*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleReminders.kt'
       - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ScheduleRemindersDeviceTest.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleRuntime.kt'
       - 'modules/push-office-native/android/src/main/AndroidManifest.xml'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ShareTextActivity.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleConflicts.kt'
+      - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ShareTextDeviceTest.kt'
       - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ReminderSchedulerRecoveryTest.kt'
       - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/NotiAi01PersistenceTest.kt'
       - '.github/workflows/po-reminder-pr-qa.yml'

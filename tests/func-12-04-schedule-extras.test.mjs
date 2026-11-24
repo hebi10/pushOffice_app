@@ -82,7 +82,7 @@ test('both native JSON serialization and new schedule detail UI preserve the fie
     assert.ok(detail.includes('set' + key[0].toUpperCase() + key.slice(1)), key);
     assert.ok(quick.includes(key + '='));
   }
-  assert.match(store, /"push_office_local\.db", null, 4/);
+  assert.match(store, /"push_office_local\.db", null, 5/);
   assert.match(store, /if \(oldVersion < 2\)/);
   assert.match(store, /ALTER TABLE schedules ADD COLUMN location TEXT/);
   assert.match(store, /ALTER TABLE schedules ADD COLUMN meetingUrl TEXT/);

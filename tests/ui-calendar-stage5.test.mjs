@@ -17,7 +17,7 @@ test('PO-UI-05 keeps calendar first, selected-date summary, quick entry, then ag
   ];
   assert.ok(indices.every(x => x >= 0), 'Missing calendar stage section');
   assert.ok(indices.every((x, i) => i === 0 || x > indices[i - 1]), 'Calendar hierarchy has changed');
-  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month\)/);
+  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month, mode === 'month'\)/);
   assert.match(calendar, /onMonthChange=\{date =>/);
   assert.match(calendar, /onDayPress=\{date => setSelected\(date\.dateString\)\}/);
   assert.match(calendar, /monthFormat="yyyy년 M월"/);
@@ -52,7 +52,7 @@ test('PO-UI-05 compact agenda preserves home rows, title, time ranges, recurrenc
   assert.match(row, /calendar = variant === 'calendar'/);
   assert.match(row, /calendar \? styles\.calendarContainer : null/);
   assert.match(row, /accentRail/);
-  assert.match(row, /numberOfLines=\{calendar \? 3 : 2\}/);
+  assert.match(row, /numberOfLines=\{layout\.narrow \? undefined : calendar \? 3 : 2\}/);
   assert.match(row, /endAt\.getTime\(\) > startAt\.getTime\(\)/);
   assert.match(row, /schedule\.isAllDay/);
   assert.match(row, /REPEAT_LABEL/);

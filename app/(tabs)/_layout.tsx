@@ -1,4 +1,5 @@
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { Ionicons } from '@expo/vector-icons';
 import { AppBrandHeader, NotificationSettingsAction } from '@/src/components/ui/AppBrandHeader';
 import { APP_FONT_FAMILY } from '@/src/lib/typography';
@@ -8,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
+  const layout = useAdaptiveLayout();
 
   return (
     <Tabs
@@ -23,7 +25,7 @@ export default function TabsLayout() {
           backgroundColor: colors.tabBar,
           borderTopColor: colors.tabBarBorder,
           borderTopWidth: 0.5,
-          height: 60 + insets.bottom,
+          height: layout.tabHeight + insets.bottom,
           paddingBottom: insets.bottom,
           paddingTop: 4,
         },

@@ -62,6 +62,10 @@ object NotificationSuggestionStore {
   private const val SEEN_LIMIT = 200
   private const val RETAIN_MS = 48L * 60 * 60 * 1000
   private val lock = Any()
+  private val listeners = java.util.concurrent.CopyOnWriteArraySet<() -> Unit>()
+  fun addListener(listener: () -> Unit) { listeners.add(listener) }
+  fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
+  private fun notifyChanged() { listeners.forEach { runCatching { it() } } }
   private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREF, Context.MODE_PRIVATE)
 
   fun accessGranted(context: Context): Boolean {
@@ -83,6 +87,7 @@ object NotificationSuggestionStore {
     if (!enabled(context) || !accessGranted(context)) {
       if (prefs(context).all.isNotEmpty()) {
         check(prefs(context).edit().clear().commit()) { "수집 기록을 삭제하지 못했습니다." }
+        notifyChanged()
       }
       scheduleCleanup(context, emptyList())
       return@synchronized null
@@ -130,6 +135,7 @@ object NotificationSuggestionStore {
       check(prefs(context).edit().clear().commit()) { "수집 기록을 삭제하지 못했습니다." }
       scheduleCleanup(context, emptyList())
     }
+    notifyChanged()
   }
 
   private fun readItems(context: Context): List<NotificationSuggestion> = try {
@@ -149,6 +155,7 @@ object NotificationSuggestionStore {
     if (seen != null) editor.putString(SEEN, JSONArray(seen).toString())
     check(editor.commit()) { "일정 후보를 저장하지 못했습니다." }
     scheduleCleanup(context, items)
+    notifyChanged()
   }
   private fun retained(context: Context): List<NotificationSuggestion> {
     if (captureSession(context) == null) return emptyList()
@@ -159,6 +166,16 @@ object NotificationSuggestionStore {
     return valid
   }
   fun all(context: Context): List<NotificationSuggestion> = synchronized(lock) { retained(context).sortedByDescending { it.receivedAt } }
+  /** Status and bounded rows are read under one lock; never expose stale rows without consent. */
+  fun snapshot(context: Context): Map<String, Any> = synchronized(lock) {
+    val items = retained(context).sortedByDescending { it.receivedAt }
+    val granted = accessGranted(context)
+    val active = granted && enabled(context) && captureSession(context) != null
+    val visible = if (active) items else emptyList()
+    mapOf("status" to mapOf("enabled" to active, "accessGranted" to granted, "pendingCount" to visible.size),
+      "items" to visible.map(NotificationSuggestion::toMap))
+  }
+
   fun get(context: Context, id: String): NotificationSuggestion? = synchronized(lock) { retained(context).firstOrNull { it.id == id } }
   fun dismiss(context: Context, id: String): Boolean = synchronized(lock) {
     val existing = retained(context)

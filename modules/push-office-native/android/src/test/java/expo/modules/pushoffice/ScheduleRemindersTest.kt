@@ -51,11 +51,13 @@ class ScheduleRemindersTest {
   @Test fun onlyDefaultUnchangedRecordsRecognizeLegacyVersionInputs() {
     val default = base.copy(reminderOffsets = listOf(0))
     val inputs = ScheduleReminders.compatibleVersionInputs(default)
-    assertEquals(3, inputs.size)
+    assertEquals(4, inputs.size)
     assertTrue(inputs.any { it.endsWith(", category=null)") })
     assertTrue(inputs.any { it.endsWith(", notes=null)") })
-    assertEquals(setOf(base.toString()), ScheduleReminders.compatibleVersionInputs(base))
+    assertEquals(2, ScheduleReminders.compatibleVersionInputs(base).size)
+    assertTrue(base.toString() in ScheduleReminders.compatibleVersionInputs(base))
     val completed = default.copy(completedAt = start)
-    assertEquals(setOf(completed.toString()), ScheduleReminders.compatibleVersionInputs(completed))
+    assertEquals(2, ScheduleReminders.compatibleVersionInputs(completed).size)
+    assertEquals(setOf(base.copy(excludedStarts=listOf(start)).toString()), ScheduleReminders.compatibleVersionInputs(base.copy(excludedStarts=listOf(start))))
   }
 }

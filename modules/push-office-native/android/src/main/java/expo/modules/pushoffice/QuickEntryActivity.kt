@@ -40,6 +40,8 @@ class QuickEntryActivity : Activity() {
   private val session=CaptureSession()
   private var applyingSpeech=false
   private var modelJob: Job?=null
+  private var chooserVisible = false
+  private var fullHeightEntry = false
   private val calendarDate: LocalDate? by lazy {
     runCatching { CalendarQuickEntryDate.parse(intent.getStringExtra(CalendarQuickEntryDate.EXTRA_DATE)) }.getOrNull()
   }
@@ -67,9 +69,17 @@ class QuickEntryActivity : Activity() {
     }
     super.onCreate(state)
     window.setBackgroundDrawableResource(android.R.color.transparent)
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(boundedEntryWidth(), WindowManager.LayoutParams.WRAP_CONTENT)
     when(intent.getStringExtra("entryMode")) {
       "text" -> editor(false)
+      "sharedText" -> {
+        val shared = SharedScheduleText.accept(Intent.ACTION_SEND, "text/plain", intent.getStringExtra(SharedScheduleText.EXTRA))
+        if (shared == null) chooser() else {
+          editor(false)
+          transcript.setText(shared)
+          status.text = "공유한 텍스트를 확인하고 내용을 수정한 뒤 직접 저장해 주세요."
+        }
+      }
       "voice" -> editor(true)
       "notificationSuggestion" -> {
         val suggestion = intent.getStringExtra("suggestionId")?.let { NotificationSuggestionStore.get(this, it) }
@@ -86,15 +96,40 @@ class QuickEntryActivity : Activity() {
       else -> chooser()
     }
   }
+  private fun availableViewport(): Pair<Int,Int> {
+    if(Build.VERSION.SDK_INT>=30) {
+      val metrics=windowManager.currentWindowMetrics
+      val insets=metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+      return (metrics.bounds.width()-insets.left-insets.right).coerceAtLeast(1) to
+        (metrics.bounds.height()-insets.top-insets.bottom).coerceAtLeast(1)
+    }
+    return resources.displayMetrics.widthPixels.coerceAtLeast(1) to resources.displayMetrics.heightPixels.coerceAtLeast(1)
+  }
+  private fun boundedEntryWidth(full: Boolean = false, inset: Int = 0): Int =
+    QuickEntryViewport.width(availableViewport().first - inset, dp(400), full)
+
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    // The existing views and unsaved input survive window resizing/folding.
+    window.setGravity(if (chooserVisible) Gravity.BOTTOM else Gravity.CENTER)
+    window.setLayout(
+      boundedEntryWidth(full = chooserVisible),
+      if (fullHeightEntry) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
+    )
+    if (::root.isInitialized) root.requestLayout()
+  }
   private fun page(title: String, subtitle: String) {
+    chooserVisible = false
     exitEditor()
     confirmationFooter=null
     window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() } }
     val confirmationPage=title=="일정 확인 및 저장" || title=="변경 내용 확인" || title=="일정 입력"
-    val limit=(resources.displayMetrics.heightPixels-dp(if(confirmationPage) 240 else 160)).coerceAtLeast(dp(160))
+    fullHeightEntry = confirmationPage
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val viewport = availableViewport().second
+        val limit=QuickEntryViewport.scrollHeight(viewport, dp(if(confirmationPage) 200 else 80), dp(48))
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
           else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(limit)
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
@@ -116,22 +151,15 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
     window.setLayout(
-      (resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(400)),
+      boundedEntryWidth(),
       if(confirmationPage) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
     )
   }
   private fun chooser() {
     confirmationFooter=null
+    chooserVisible=true
+    fullHeightEntry=false
     exitEditor()
-    var availableWidth=resources.displayMetrics.widthPixels
-    var availableHeight=resources.displayMetrics.heightPixels
-    if(Build.VERSION.SDK_INT>=30) {
-      val metrics=windowManager.currentWindowMetrics
-      val insets=metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-      availableWidth=metrics.bounds.width()-insets.left-insets.right
-      availableHeight=metrics.bounds.height()-insets.top-insets.bottom
-    }
-    val maxHeight=(availableHeight-dp(32)).coerceAtLeast(1)
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(20),dp(12),dp(20),dp(22))
@@ -143,6 +171,7 @@ class QuickEntryActivity : Activity() {
     }
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val maxHeight=(availableViewport().second-dp(32)).coerceAtLeast(1)
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) maxHeight
           else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(maxHeight)
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
@@ -275,7 +304,7 @@ class QuickEntryActivity : Activity() {
     choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
     choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
     window.setGravity(Gravity.BOTTOM)
-    window.setLayout(availableWidth.coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(boundedEntryWidth(full = true),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun stepHint(step: Int, name: String) {
     root.addView(TextView(this).apply {
@@ -315,16 +344,25 @@ class QuickEntryActivity : Activity() {
       })
     }
     root.addView(TextView(this).apply {
-      text="예: 내일 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
+      text="예: 내일 오후 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
       textSize=13f
       setTextColor(secondary)
       setPadding(dp(2),0,dp(2),dp(6))
     })
     session.enterEditor()
     transcript=field("일정 내용", "날짜, 시간, 일정 제목을 입력하세요", "", true)
+    transcript.filters = arrayOf(android.text.InputFilter.LengthFilter(4096))
+    val inputCount = TextView(this).apply {
+      text = "0 / 4096자"
+      textSize = 12f
+      setTextColor(secondary)
+      gravity = Gravity.END
+    }
+    root.addView(inputCount)
     transcript.addTextChangedListener(object: TextWatcher {
       override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
       override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+        inputCount.text = "${s?.length ?: 0} / 4096자"
         session.inputChanged(); cancelModel()
         if(!applyingSpeech) stopSpeech()
       }
@@ -909,28 +947,51 @@ class QuickEntryActivity : Activity() {
             location=location,meetingUrl=meetingUrl,notes=notes,category=category,reminderOffsets=ScheduleReminders.validate(selectedOffsets.toList()))
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
-        // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
-        val result = ScheduleSerial.withLock {
-          if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
-          val suggestionId = intent.getStringExtra("suggestionId")
-          if (suggestionId != null) {
-            require(NotificationSuggestionStore.get(this, suggestionId) != null) { "일정 후보가 만료됐습니다. 다시 확인해 주세요." }
-            val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
-            require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
+        fun persistDraft() {
+          try {
+            // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
+            val result = ScheduleSerial.withLock {
+              if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
+              val suggestionId = intent.getStringExtra("suggestionId")
+              if (suggestionId != null) {
+                require(NotificationSuggestionStore.get(this, suggestionId) != null) { "일정 후보가 만료됐습니다. 다시 확인해 주세요." }
+                val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
+                require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
+              }
+              val saved = ScheduleRuntime.save(this,draft)
+              val dismissed = runCatching {
+                if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
+              }.isSuccess
+              saved.sync to dismissed
+            }
+            val message = when {
+              !result.first.alarmsReady -> "일정은 저장했습니다. 알림 예약을 확인하지 못했습니다. 설정에서 다시 예약해 주세요."
+              !result.first.widgetsReady -> "일정은 저장했습니다. 위젯 갱신을 다시 확인해 주세요."
+              !result.second -> "일정은 저장했습니다. 일정 후보 삭제는 다시 확인해 주세요."
+              else -> "일정을 저장했습니다."
+            }
+            Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
+          } catch (e: Exception) {
+            saving=false
+            error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }
+              ?: "일정을 저장하지 못했습니다. 다시 확인해 주세요."
+            error.visibility=View.VISIBLE
           }
-          val saved = ScheduleRuntime.save(this,draft)
-          val dismissed = runCatching {
-            if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
-          }.isSuccess
-          saved.sync to dismissed
         }
-        val message = when {
-          !result.first.alarmsReady -> "일정은 저장했습니다. 알림 예약을 확인하지 못했습니다. 설정에서 다시 예약해 주세요."
-          !result.first.widgetsReady -> "일정은 저장했습니다. 위젯 갱신을 다시 확인해 주세요."
-          !result.second -> "일정은 저장했습니다. 일정 후보 삭제는 다시 확인해 주세요."
-          else -> "일정을 저장했습니다."
+        val overlaps = ScheduleSerial.withLock {
+          ScheduleStore(this).use { ScheduleConflicts.find(draft, it.all(), now, formZone) }
         }
-        Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
+        if (overlaps.isEmpty()) persistDraft()
+        else {
+          val lines = overlaps.joinToString("\n") { hit ->
+            "${Instant.ofEpochMilli(hit.startAt).atZone(formZone).format(FORMAT)} · ${hit.title}"
+          }
+          AlertDialog.Builder(this).setTitle("겹치는 일정 확인")
+            .setMessage(lines + "\n\n최대 8건 표시 · 반복 일정은 첫 예정 회차부터 30일 범위를 확인합니다. 종료 미지정 일정은 시작 시각만 비교합니다.")
+            .setNegativeButton("다시 확인") { _, _ -> saving=false }
+            .setPositiveButton("그대로 저장") { _, _ -> persistDraft() }
+            .setOnCancelListener { saving=false }.show()
+        }
       } catch(e: Exception) {
         saving=false
         error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }
@@ -964,6 +1025,7 @@ class QuickEntryActivity : Activity() {
       setTextColor(foregroundColor)
       setHintTextColor(secondary)
       setSingleLine(!multi)
+      imeOptions = imeOptions or android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
       minimumHeight=dp(if(multi)104 else 48)
       setPadding(dp(12),dp(10),dp(12),dp(10))
@@ -1109,7 +1171,7 @@ class QuickEntryActivity : Activity() {
     dialog.show()
     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     dialog.window?.setLayout(
-      (resources.displayMetrics.widthPixels-dp(32)).coerceAtMost(dp(400)),
+      boundedEntryWidth(full = true, inset = dp(32)),
       WindowManager.LayoutParams.WRAP_CONTENT
     )
   }
