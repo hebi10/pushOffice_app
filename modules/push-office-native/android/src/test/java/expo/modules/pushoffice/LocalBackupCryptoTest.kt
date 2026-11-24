@@ -32,6 +32,13 @@ class LocalBackupCryptoTest {
     assertThrows(Exception::class.java) { LocalBackupCrypto.decrypt(archive.replace("V1", "V2"), passphrase) }
   }
 
+  @Test fun decryptsIndependentStandardCryptoVector() {
+    // Public synthetic vector: Python hashlib PBKDF2 + cryptography AESGCM, no production key.
+    val archive = listOf(LocalBackupCrypto.HEADER, "AAECAwQFBgcICQoLDA0ODw==",
+      "EBESExQVFhcYGRob", "3Oe4g0cS+lbw+27UEQqzr8JPGmXGxbJ5z+sDLVyOI/fDFWZRZnnKypQ=").joinToString("\n")
+    assertEquals("{\"title\":\"한글 일정\"}", LocalBackupCrypto.decrypt(archive, "synthetic-vector-passphrase"))
+  }
+
   @Test fun boundsAndMalformedEnvelopeFailBeforeKeyDerivation() {
     assertThrows(IllegalArgumentException::class.java) { LocalBackupCrypto.encrypt(data, "short") }
     assertThrows(IllegalArgumentException::class.java) { LocalBackupCrypto.encrypt("a".repeat(LocalBackupCrypto.MAX_PLAINTEXT_BYTES + 1), passphrase) }

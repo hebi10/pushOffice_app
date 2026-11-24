@@ -25,6 +25,13 @@ class LocalBackupDocumentsTest {
     assertThrows(IllegalArgumentException::class.java) { LocalBackupDocuments.boundedUtf8(input) }
   }
 
+  @Test fun increasedReadLimitDoesNotPermitOversizedPlainJson() {
+    assertThrows(IllegalArgumentException::class.java) {
+      LocalBackupDocuments.boundedUtf8(ByteArrayInputStream(ByteArray(LocalBackupDocuments.MAX_BYTES + 1) { 65 }),
+        LocalBackupDocuments.MAX_ENCRYPTED_BYTES)
+    }
+  }
+
   @Test fun oversizedExportDoesNotWritePartially() {
     val output = ByteArrayOutputStream()
     assertThrows(IllegalArgumentException::class.java) {
