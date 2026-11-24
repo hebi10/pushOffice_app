@@ -25,7 +25,7 @@ export async function fetchNews(
 
   const cached = cache.get<NewsItem[]>(cacheKey);
   if (cached) {
-    logger.info("뉴스 캐시 히트", {cacheKey});
+    logger.info("뉴스 캐시 히트", {});
     return cached;
   }
 
@@ -33,11 +33,11 @@ export async function fetchNews(
     const result = await withRetry(async () => {
       const url =
         `https://newsapi.org/v2/top-headlines` +
-        `?country=${country}` +
+        `?country=${encodeURIComponent(country)}` +
         `&pageSize=${pageSize}` +
         `&apiKey=${config.newsApiKey}`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {signal: AbortSignal.timeout(7000), redirect: "error"});
       if (!response.ok) {
         throw new Error(`NewsAPI 오류: ${response.status}`);
       }

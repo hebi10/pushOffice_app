@@ -22,7 +22,7 @@ export async function fetchStock(symbol = "TSLA"): Promise<StockResult> {
 
   const cached = cache.get<StockResult>(cacheKey);
   if (cached) {
-    logger.info("주식 캐시 히트", {cacheKey});
+    logger.info("주식 캐시 히트", {});
     return cached;
   }
 
@@ -31,10 +31,10 @@ export async function fetchStock(symbol = "TSLA"): Promise<StockResult> {
       const url =
         `https://www.alphavantage.co/query` +
         `?function=GLOBAL_QUOTE` +
-        `&symbol=${symbol}` +
+        `&symbol=${encodeURIComponent(symbol)}` +
         `&apikey=${config.alphaVantageKey}`;
 
-      const response = await fetch(url);
+      const response = await fetch(url, {signal: AbortSignal.timeout(7000), redirect: "error"});
       if (!response.ok) {
         throw new Error(`Alpha Vantage API 오류: ${response.status}`);
       }

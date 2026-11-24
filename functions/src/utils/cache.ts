@@ -17,22 +17,25 @@ class MemoryCache {
   get<T>(key: string): T | null {
     const entry = this.store.get(key);
     if (!entry) return null;
-    if (Date.now() > entry.expiry) {
-      this.store.delete(key);
-      return null;
-    }
+    if (Date.now() > entry.expiry) return null;
     return entry.data as T;
   }
 
   /** 캐시 저장 */
   set<T>(key: string, data: T, ttlMs: number): void {
+    this.store.delete(key);
+    if (this.store.size >= 256) {
+      const first = this.store.keys().next().value;
+      if (first !== undefined) this.store.delete(first);
+    }
     this.store.set(key, {data, expiry: Date.now() + ttlMs});
   }
 
   /** 만료된 캐시라도 반환 (fallback용) */
   getStale<T>(key: string): T | null {
     const entry = this.store.get(key);
-    return entry ? (entry.data as T) : null;
+    if (!entry || Date.now() > entry.expiry + 3600000) return null;
+    return entry.data as T;
   }
 }
 
