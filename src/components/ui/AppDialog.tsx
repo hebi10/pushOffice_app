@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
 type AppDialogProps = {
@@ -28,6 +29,7 @@ export function AppDialog({
   showCancel = true,
 }: AppDialogProps) {
   const { colors } = useTheme();
+  const layout = useAdaptiveLayout();
   const actionColor = destructive ? colors.danger : colors.primary;
   const actionTextColor = destructive ? colors.onDanger : colors.onPrimary;
 
@@ -57,13 +59,13 @@ export function AppDialog({
           <ScrollView style={styles.messageScroll} showsVerticalScrollIndicator keyboardShouldPersistTaps="handled">
             <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
           </ScrollView>
-          <View style={styles.actions}>
+          <View style={[styles.actions, layout.stackDialogActions && styles.stackedActions]}>
             {showCancel ? (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={cancelLabel}
                 onPress={onDismiss}
-                style={[styles.action, { backgroundColor: colors.surface, borderColor: colors.inputBorder }]}
+                style={[styles.action, layout.stackDialogActions && styles.stackedAction, { backgroundColor: colors.surface, borderColor: colors.inputBorder }]}
               >
                 <Text style={[styles.label, { color: colors.text }]}>{cancelLabel}</Text>
               </Pressable>
@@ -73,7 +75,7 @@ export function AppDialog({
               accessibilityLabel={confirmLabel}
               accessibilityHint={destructive ? "선택하면 삭제 확인 작업을 실행합니다." : undefined}
               onPress={onConfirm}
-              style={[styles.action, { backgroundColor: actionColor, borderColor: actionColor }]}
+              style={[styles.action, layout.stackDialogActions && styles.stackedAction, { backgroundColor: actionColor, borderColor: actionColor }]}
             >
               <Text style={[styles.label, { color: actionTextColor }]}>{confirmLabel}</Text>
             </Pressable>
@@ -113,6 +115,8 @@ const styles = StyleSheet.create({
   messageScroll: { flexShrink: 1 },
   message: { ...uiTypography.body, fontSize: 14, lineHeight: 22 },
   actions: { flexDirection: 'row', alignItems: 'stretch', gap: uiSpacing.xs + 2, marginTop: uiSpacing.xs },
+  stackedActions: { flexDirection:'column' },
+  stackedAction: { flex:0 },
   action: {
     flex: 1,
     minHeight: uiSizes.touchMinHeight,

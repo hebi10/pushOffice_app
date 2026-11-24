@@ -8,6 +8,7 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { useMonthSchedules, useWeekSchedules } from '@/src/features/schedules';
 import { shiftCivilDate, weekDateKeys } from '@/src/features/schedules/calendarWeek';
 import { retainSelectedDayInMonth } from '@/src/features/schedules/calendarSelection';
@@ -35,6 +36,7 @@ type DayMark = {
 
 export default function CalendarScreen() {
   const { colors, isDark } = useTheme();
+  const layout = useAdaptiveLayout();
   const now = useClock();
   const [selected, setSelected] = useState(() => dayjs(now).format('YYYY-MM-DD'));
   const [month, setMonth] = useState(() => ({ year: dayjs(now).year(), month: dayjs(now).month() + 1 }));
@@ -42,9 +44,10 @@ export default function CalendarScreen() {
   const [calendarRevision, setCalendarRevision] = useState(0);
   const calendarScrollRef = useRef<ScrollView>(null);
   const agendaTop = useRef(0);
+  const panelsTop = useRef(0);
   const scrollToSelectedAgenda = () => {
     calendarScrollRef.current?.scrollTo({
-      y: Math.max(0, agendaTop.current - uiSizes.touchMinHeight * 2 - uiSpacing.sm),
+      y: Math.max(0, panelsTop.current + agendaTop.current - uiSizes.touchMinHeight * 2 - uiSpacing.sm),
       animated: false,
     });
   };
@@ -124,7 +127,7 @@ export default function CalendarScreen() {
     <ScrollView
       ref={calendarScrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content,{maxWidth:layout.contentMaxWidth}]}
       refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
     >
       <ScreenIntro title="캘린더" compact />
@@ -143,7 +146,9 @@ export default function CalendarScreen() {
           </TouchableOpacity>
         ))}
       </View>
-      <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
+      <View style={[styles.calendarPanels, layout.twoPane && styles.calendarPanelsWide]}
+        onLayout={event => { panelsTop.current = event.nativeEvent.layout.y; }}>
+      <View style={[styles.calendarSurface, layout.twoPane && styles.calendarPane, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
         {mode === 'month' ? <Calendar
           key={(isDark ? 'dark' : 'light') + calendarRevision}
           current={monthStart}
@@ -194,7 +199,7 @@ export default function CalendarScreen() {
             점은 일정 건수를 나타냅니다 (최대 3개)
           </Text>
         ) : null}
-        <View style={[styles.selectionPanel, { backgroundColor: colors.inputBackground }]}>
+        <View style={[styles.selectionPanel, { backgroundColor: colors.inputBackground }, layout.narrow && styles.selectionStack]}>
           <View
             style={styles.selectionSummary}
             accessible
@@ -220,7 +225,7 @@ export default function CalendarScreen() {
         </View>
       </View>
       <View
-        style={styles.agendaSection}
+        style={[styles.agendaSection, layout.twoPane && styles.calendarPane]}
         onLayout={event => { agendaTop.current = event.nativeEvent.layout.y; }}
       >
       <AssistantButton
@@ -249,11 +254,15 @@ export default function CalendarScreen() {
         )}
       </AssistantCard>
       </View>
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
+  calendarPanels: { gap:uiSpacing.sm },
+  calendarPanelsWide: { flexDirection:'row', alignItems:'flex-start' },
+  calendarPane: { flex:1,minWidth:0 },
   calendarActions: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
   searchAction: { flex: 1, minWidth: 0 },
   modeRow: { flexDirection: 'row', gap: uiSpacing.xs },
@@ -270,6 +279,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
     paddingBottom: 0,
   },
+  selectionStack: { flexWrap:'wrap' },
   selectionPanel: {
     flexDirection: 'row',
     alignItems: 'center',

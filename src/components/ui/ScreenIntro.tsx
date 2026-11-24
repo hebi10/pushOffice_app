@@ -2,6 +2,7 @@ import React from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Image, type ImageSourcePropType, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
 export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon, monochromeArtwork = false, compact = false, featured = false, dense = false }: {
@@ -16,6 +17,7 @@ export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon,
   dense?: boolean;
 }) {
   const { colors, isDark } = useTheme();
+  const layout = useAdaptiveLayout();
   return (
     <View style={[styles.container, compact && styles.compactContainer, featured && styles.featuredContainer, dense && styles.denseContainer]}>
       <View style={styles.copy}>
@@ -23,18 +25,18 @@ export function ScreenIntro({ eyebrow, title, description, artwork, graphicIcon,
         <Text style={[styles.title, compact && styles.compactTitle, featured && styles.featuredTitle, dense && styles.denseTitle, { color: colors.text }]}>{title}</Text>
         {description ? <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text> : null}
       </View>
-      {graphicIcon && !compact ? (
+      {layout.showIntroArtwork && graphicIcon && !compact ? (
         <View style={[styles.flatGraphic, featured && styles.featuredGraphic]} accessible={false}>
           <Ionicons name={graphicIcon} size={featured ? 48 : 32} color={colors.primary} />
         </View>
-      ) : artwork && !compact && monochromeArtwork ? (
+      ) : layout.showIntroArtwork && artwork && !compact && monochromeArtwork ? (
         <Image
           source={artwork}
           style={[styles.artwork, featured && styles.featuredArtwork, dense && styles.denseArtwork, { tintColor: colors.primary }]}
           resizeMode="contain"
           accessible={false}
         />
-      ) : artwork && !compact && !isDark ? (
+      ) : layout.showIntroArtwork && artwork && !compact && !isDark ? (
         <Image source={artwork} style={[styles.artwork, featured && styles.featuredArtwork, dense && styles.denseArtwork]} resizeMode={featured ? "contain" : "cover"} accessible={false} />
       ) : null}
     </View>

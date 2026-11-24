@@ -40,6 +40,8 @@ class QuickEntryActivity : Activity() {
   private val session=CaptureSession()
   private var applyingSpeech=false
   private var modelJob: Job?=null
+  private var chooserVisible = false
+  private var fullHeightEntry = false
   private val calendarDate: LocalDate? by lazy {
     runCatching { CalendarQuickEntryDate.parse(intent.getStringExtra(CalendarQuickEntryDate.EXTRA_DATE)) }.getOrNull()
   }
@@ -94,15 +96,38 @@ class QuickEntryActivity : Activity() {
       else -> chooser()
     }
   }
+  private fun availableViewport(): Pair<Int,Int> {
+    if(Build.VERSION.SDK_INT>=30) {
+      val metrics=windowManager.currentWindowMetrics
+      val insets=metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
+      return (metrics.bounds.width()-insets.left-insets.right).coerceAtLeast(1) to
+        (metrics.bounds.height()-insets.top-insets.bottom).coerceAtLeast(1)
+    }
+    return resources.displayMetrics.widthPixels.coerceAtLeast(1) to resources.displayMetrics.heightPixels.coerceAtLeast(1)
+  }
+  override fun onConfigurationChanged(newConfig: Configuration) {
+    super.onConfigurationChanged(newConfig)
+    // The existing views and unsaved input survive window resizing/folding.
+    val (width, _) = availableViewport()
+    window.setGravity(if (chooserVisible) Gravity.BOTTOM else Gravity.CENTER)
+    window.setLayout(
+      (if (chooserVisible) width else (width*.94).toInt()).coerceIn(1,dp(400)),
+      if (fullHeightEntry) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
+    )
+    if (::root.isInitialized) root.requestLayout()
+  }
   private fun page(title: String, subtitle: String) {
+    chooserVisible = false
     exitEditor()
     confirmationFooter=null
     window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
     root=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(dp(18),dp(14),dp(18),dp(16)); background=GradientDrawable().apply { setColor(surface); cornerRadius=dp(10).toFloat() } }
     val confirmationPage=title=="일정 확인 및 저장" || title=="변경 내용 확인" || title=="일정 입력"
-    val limit=(resources.displayMetrics.heightPixels-dp(if(confirmationPage) 240 else 160)).coerceAtLeast(dp(160))
+    fullHeightEntry = confirmationPage
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val viewport = availableViewport().second
+        val limit=(viewport-dp(if(confirmationPage) 200 else 80)).coerceAtLeast(dp(48)).coerceAtMost(viewport)
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
           else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(limit)
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
@@ -124,22 +149,16 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
     window.setLayout(
-      (resources.displayMetrics.widthPixels*.94).toInt().coerceAtMost(dp(400)),
+      (availableViewport().first*.94).toInt().coerceIn(1,dp(400)),
       if(confirmationPage) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
     )
   }
   private fun chooser() {
     confirmationFooter=null
+    chooserVisible=true
+    fullHeightEntry=false
     exitEditor()
-    var availableWidth=resources.displayMetrics.widthPixels
-    var availableHeight=resources.displayMetrics.heightPixels
-    if(Build.VERSION.SDK_INT>=30) {
-      val metrics=windowManager.currentWindowMetrics
-      val insets=metrics.windowInsets.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout())
-      availableWidth=metrics.bounds.width()-insets.left-insets.right
-      availableHeight=metrics.bounds.height()-insets.top-insets.bottom
-    }
-    val maxHeight=(availableHeight-dp(32)).coerceAtLeast(1)
+    val availableWidth=availableViewport().first
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(20),dp(12),dp(20),dp(22))
@@ -151,6 +170,7 @@ class QuickEntryActivity : Activity() {
     }
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val maxHeight=(availableViewport().second-dp(32)).coerceAtLeast(1)
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) maxHeight
           else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(maxHeight)
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
@@ -1004,6 +1024,7 @@ class QuickEntryActivity : Activity() {
       setTextColor(foregroundColor)
       setHintTextColor(secondary)
       setSingleLine(!multi)
+      imeOptions = imeOptions or android.view.inputmethod.EditorInfo.IME_FLAG_NO_EXTRACT_UI
       if(multi) { minLines=3; maxLines=5; gravity=Gravity.TOP }
       minimumHeight=dp(if(multi)104 else 48)
       setPadding(dp(12),dp(10),dp(12),dp(10))

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 
 export function SchedulePickerDialog({
@@ -27,6 +28,7 @@ export function SchedulePickerDialog({
   children: React.ReactNode;
 }) {
   const { colors } = useTheme();
+  const layout = useAdaptiveLayout();
   return (
     <Modal
       visible={visible}
@@ -36,7 +38,7 @@ export function SchedulePickerDialog({
     >
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
+        style={[styles.overlay, layout.narrow && {padding:uiSpacing.xs}]}
       >
         <Pressable
           style={StyleSheet.absoluteFill}

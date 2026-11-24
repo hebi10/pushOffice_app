@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { BriefingNewsCard, BriefingStockCard, BriefingWeatherCard } from '@/src/components/briefing';
 import { useTheme } from '@/src/contexts/ThemeContext';
+import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { useGenerateDigest } from '@/src/features/digest';
 import { useSchedules } from '@/src/features/schedules';
 import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
@@ -24,6 +25,7 @@ import { AppState, RefreshControl, ScrollView, Text, TouchableOpacity, View, Sty
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 export default function HomeScreen() {
     const { colors } = useTheme();
+    const layout = useAdaptiveLayout();
     const now = useClock();
     const settings = useAppSelector(x => x.settings);
     const uid = useAppSelector(x => x.auth.uid);
@@ -124,7 +126,7 @@ export default function HomeScreen() {
       <>
       <ScrollView
         style={{ flex: 1, backgroundColor: colors.background }}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, {maxWidth:layout.contentMaxWidth}]}
         refreshControl={<RefreshControl refreshing={schedules.isRefetching || suggestionsRefreshing} onRefresh={() => { void schedules.refetch(); void refreshSuggestions(); }} />}
       >
         <ScreenIntro
@@ -160,6 +162,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <View style={[styles.homePanels, layout.twoPane && styles.homePanelsWide]}>
+        <View style={layout.twoPane ? styles.homePane : undefined}>
         <AssistantCard title="다음 일정" icon="calendar-outline" compact>
           {schedules.isLoading ? (
             <Text style={[s.body, { color: colors.textSecondary }]}>다음 일정을 확인하는 중입니다.</Text>
@@ -179,7 +183,7 @@ export default function HomeScreen() {
               activeOpacity={0.75}
               style={[styles.nextCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
             >
-              <View style={styles.nextTimeCol}>
+              <View style={[styles.nextTimeCol, layout.narrow && {width:undefined, minWidth:68, maxWidth:'40%'}]}>
                 <Text style={[styles.nextTime, { color: colors.primary }]}>
                   {next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}
                 </Text>
@@ -204,7 +208,8 @@ export default function HomeScreen() {
             <Text style={[s.body, { color: colors.textSecondary }]}>다가오는 일정이 없습니다.</Text>
           )}
         </AssistantCard>
-
+        </View>
+        <View style={layout.twoPane ? styles.homePane : undefined}>
         <AssistantCard title="오늘의 브리핑" icon="sunny-outline" compact>
           <View style={styles.briefingHeading}>
             <View style={styles.briefingCopy}>
@@ -226,6 +231,8 @@ export default function HomeScreen() {
             />
           ) : null}
         </AssistantCard>
+        </View>
+        </View>
 
         {(schedules.isLoading || schedules.isError || todayItems.length > 0) ? (
           <AssistantCard title="오늘 일정" icon="list-outline" compact>
@@ -388,6 +395,9 @@ export default function HomeScreen() {
 
 
 const styles = StyleSheet.create({
+  homePanels: { gap: uiSpacing.sm },
+  homePanelsWide: { flexDirection: 'row', alignItems:'flex-start' },
+  homePane: { flex:1, minWidth:0 },
   quickEntry: { gap: uiSpacing.xxs },
   quickEntryTools: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
   quickEntryHint: { ...uiTypography.caption, flex: 1, minWidth: 0 },
