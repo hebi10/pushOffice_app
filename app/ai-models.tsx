@@ -33,9 +33,9 @@ function showProgress(model: AiModelInfo) {
 export default function AiModelsScreen() {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
-  const [foreground, setForeground] = useState(AppState.currentState === 'active');
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const focusedRef = useRef(false);
-  const foregroundRef = useRef(AppState.currentState === 'active');
+  const foregroundRef = useRef(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const [models, setModels] = useState<AiModelInfo[]>([]);
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [sample, setSample] = useState(sampleInput);
@@ -122,10 +122,8 @@ export default function AiModelsScreen() {
         const message = (result as {message?:unknown}).message;
         if (revision === activeRevision.current && typeof message === 'string' && message) setNotice({title,message});
       }
-      await refresh();
     } catch {
       if (revision === activeRevision.current) setNotice({title,message:'현재 기기 지원 상태, 네트워크 또는 저장 공간을 확인한 후 다시 시도해 주세요.'});
-      await refresh();
     } finally { actionInFlight.current = false; setBusyId(null); void refresh(); }
   };
 

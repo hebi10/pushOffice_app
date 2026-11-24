@@ -91,11 +91,12 @@ internal object AiModelDownloadStore {
 
   /** Prevent delete, replace or finalization while the engine has the verified file open. */
   suspend fun <T> withVerifiedInstalledFile(ctx: Context, model: AiModelDefinition,
-    action: suspend (File) -> T): T = operations.withLock {
+    action: suspend (File, Long) -> T): T = operations.withLock {
     withContext(Dispatchers.IO) {
+      val started = SystemClock.elapsedRealtime()
       val file = verifyLocked(ctx, model)
         ?: throw IllegalStateException("모델 다운로드 또는 무결성 확인이 필요합니다.")
-      action(file)
+      action(file, SystemClock.elapsedRealtime() - started)
     }
   }
 
@@ -163,7 +164,9 @@ internal object AiModelDownloadStore {
   private fun matchingJobs(ctx: Context, model: AiModelDefinition): List<Long> {
     val result = mutableListOf<Long>()
     val path = partial(ctx, model.id).absolutePath
-    manager(ctx).query(DownloadManager.Query())?.use { rows ->
+    requireNotNull(manager(ctx).query(DownloadManager.Query())) {
+      "다운로드 기록을 확인할 수 없습니다."
+    }.use { rows ->
       while (rows.moveToNext()) {
         val uri = rows.getString(rows.getColumnIndexOrThrow(DownloadManager.COLUMN_URI))
         val title = rows.getString(rows.getColumnIndexOrThrow(DownloadManager.COLUMN_TITLE))
@@ -199,7 +202,8 @@ internal object AiModelDownloadStore {
     }
     val query = DownloadManager.Query().setFilterById(requestId)
     val cursor = manager(ctx).query(query)
-    if (cursor == null) return mapOf("state" to "error", "message" to "다운로드 기록을 확인할 수 없습니다.")
+    if (cursor == null) return mapOf("state" to "error", "reservationUnknown" to true,
+      "message" to "다운로드 기록을 확인할 수 없습니다.")
     cursor.use {
       if (!it.moveToFirst()) return mapOf("state" to "error", "message" to "다운로드 기록이 삭제됐습니다.")
       val status = it.getInt(it.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
@@ -302,12 +306,14 @@ internal object AiModelDownloadStore {
         "message" to "Gemini Nano 모델은 Android AICore에서 관리합니다. 전용 다운로드 기능을 사용해 주세요.")
       if (verifyLocked(ctx, model) != null) return@withContext mapOf("state" to "installed")
       val queued = state(ctx, id)
+      require(queued["reservationUnknown"] != true) { "기존 다운로드 상태를 다시 확인해 주세요." }
       if (queued["state"] in listOf("downloading", "verifying"))
         return@withContext queued + ("message" to "이미 다운로드 중이거나 검증 대기 중입니다.")
       val remote = remoteMetadata(model)
       val folder = directory(ctx)
       val outstanding = AiModelCatalog.models.filter { it.file != null && it.id != id }.mapNotNull { other ->
         val status = state(ctx, other.id)
+        require(status["reservationUnknown"] != true) { "진행 중인 다운로드 상태를 다시 확인해 주세요." }
         if (status["state"] in listOf("downloading", "verifying"))
           AiModelResources.remaining(expectedSize(ctx, other.id), (status["bytesDownloaded"] as? Number)?.toLong() ?: 0L)
         else null
@@ -331,7 +337,11 @@ internal object AiModelDownloadStore {
         setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         setDestinationInExternalFilesDir(ctx,null,"ai_models/" + id + ".part")
       }
-      val next = manager(ctx).enqueue(request)
+      val next = try { manager(ctx).enqueue(request) } catch (_: Exception) {
+        val message = "다운로드를 시작하지 못했습니다. Wi-Fi와 저장 공간을 확인해 주세요."
+        prefs(ctx).edit().putString(id + "_failure", message).commit()
+        return@withContext mapOf("state" to "error", "message" to message)
+      }
       if (!prefs(ctx).edit().putLong(id + "_download",next).commit()) {
         // If cleanup itself fails, the matching job can be rediscovered on the next read.
         runCatching { manager(ctx).remove(next) }

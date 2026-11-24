@@ -52,9 +52,7 @@ internal object AiModelRunner {
         require(before.memoryReady(model)) {
           "현재 사용 가능한 RAM이 부족합니다. 앱을 정리하거나 작은 모델을 사용해 주세요."
         }
-        val verifying = SystemClock.elapsedRealtime()
-        AiModelDownloadStore.withVerifiedInstalledFile(context, model) { file ->
-          val verifyMs = SystemClock.elapsedRealtime() - verifying
+        AiModelDownloadStore.withVerifiedInstalledFile(context, model) { file, verifyMs ->
           currentCoroutineContext().ensureActive()
           require(AiModelDownloadStore.memoryCapacity(context).memoryReady(model)) {
             "모델 검증 중 사용 가능한 RAM이 부족해졌습니다. 작은 모델을 사용해 주세요."
