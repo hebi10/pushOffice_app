@@ -52,7 +52,7 @@ test('UI-12-06 shows real external service configuration without inventing data'
   assert.ok(settings.includes("externalServiceConfigured\n                  ? `요청할 때만 조회 · 선택 ${externalTypesSelected}종 · 일정 내용 전송 없음`"));
   assert.ok(settings.includes('외부 서비스 미연결 · 선택'));
   assert.ok(settings.includes('설정값만 저장'));
-  for (const field of ['날씨', '뉴스', '주식', '외부 정보 상세 설정', '날씨 도시', '뉴스 키워드 (쉼표 구분)', '주식 종목 (쉼표 구분, 최대 5개)', '외부 정보 설정 저장']) {
+  for (const field of ['날씨', '뉴스', '주식', '외부 정보 상세 설정', '날씨 도시', '뉴스 키워드 (로컬 보관 · 서버 미전송)', '주식 종목 (쉼표 구분, 최대 5개)', '외부 정보 설정 저장']) {
     assert.ok(settings.includes(field), field);
   }
   assert.ok(settings.includes('stockTickers: tickers.split'));

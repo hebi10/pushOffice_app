@@ -10,6 +10,8 @@ import { hydrateSchedule, nextSchedule, projectOccurrences, toNativeSchedule } f
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { dayjs } from '@/src/lib/time';
 import { ENV } from '@/src/lib/env';
+import { isFirebaseConfigured } from '@/src/lib/firebase';
+import { isTrustedBriefingEndpoint } from '@/src/features/digest/externalBriefingRequest';
 import { useAppSelector } from '@/src/store/store';
 import { PushOfficeNative, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
 import { AppDialog } from '@/src/components/ui/AppDialog';
@@ -81,7 +83,7 @@ export default function HomeScreen() {
         : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(', ')}.${next && !nextIsInTodayAgenda ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}`
         : '오늘 등록된 일정은 없어요. 여유 있는 하루를 계획해 보세요.';
     const externalTypesSelected = settings.digestTypes.weather || settings.digestTypes.news || settings.digestTypes.stocks;
-    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim());
+    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim()) && isFirebaseConfigured && isTrustedBriefingEndpoint(ENV.FUNCTIONS_BASE_URL.trim());
     const externalCanRequest = externalTypesSelected && externalServiceConfigured;
     const externalResultForToday = externalCanRequest && external.isSuccess && external.variables?.input.dateKey === today;
     const source = JSON.stringify([today, summary, schedules.data]);
@@ -315,7 +317,7 @@ export default function HomeScreen() {
                 ? '선택 기능입니다. 설정에서 날씨·뉴스·주식을 선택해 주세요.'
                 : !externalServiceConfigured
                   ? '외부 브리핑 서비스가 연결되지 않았습니다. 로컬 일정은 계속 사용할 수 있습니다.'
-                  : '선택한 외부 정보는 직접 요청할 때만 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.'}
+                  : '승인된 기존 계정에서 직접 요청할 때만 외부 정보를 가져옵니다. 일정 내용은 외부로 전송하지 않습니다.'}
             </Text>
             {externalCanRequest ? (
               <AssistantButton
@@ -341,7 +343,7 @@ export default function HomeScreen() {
             ) : null}
             {externalCanRequest && external.isError ? (
               <Text style={[s.caption, { color: colors.danger }]}>
-                외부 정보를 가져오지 못했습니다. 로컬 일정은 계속 사용할 수 있습니다.
+                {external.error instanceof Error ? external.error.message : '외부 정보를 가져오지 못했습니다.'} 로컬 일정은 계속 사용할 수 있습니다.
               </Text>
             ) : null}
           </AssistantCard>

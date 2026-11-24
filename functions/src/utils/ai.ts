@@ -114,6 +114,8 @@ export async function generateAISummary(data: BriefingData): Promise<string> {
     const briefing = await withRetry(async () => {
       const response = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
+        signal: AbortSignal.timeout(7000),
+        redirect: "error",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${config.openaiApiKey}`,
@@ -136,8 +138,7 @@ export async function generateAISummary(data: BriefingData): Promise<string> {
       });
 
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API 오류 (${response.status}): ${errorText}`);
+        throw new Error(`OpenAI API 오류 (${response.status})`);
       }
 
       const result = await response.json() as {
@@ -147,8 +148,8 @@ export async function generateAISummary(data: BriefingData): Promise<string> {
     }, "OpenAI");
 
     return briefing;
-  } catch (err) {
-    logger.error("AI 요약 생성 실패 → 기본 템플릿 사용", err);
+  } catch {
+    logger.warn("AI 요약 생성 실패 → 기본 템플릿 사용");
     return generateFallbackBriefing(data);
   }
 }
