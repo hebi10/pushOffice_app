@@ -277,10 +277,13 @@ class PushOfficeNativeModule : Module() {
         .edit().putString("themeMode",mode).apply()
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
-    AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
-      val saved = ScheduleRuntime.save(context, ScheduleRecord.fromMap(value))
+    AsyncFunction("saveSchedule") { value: Map<String, Any?> -> ScheduleSerial.withLock {
+      val draft = ScheduleRecord.fromMap(value)
+      val previous = ScheduleStore(context).use { it.get(draft.id) }
+      // A normal form save may not reopen a completed row from a stale UI snapshot.
+      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt))
       saved.record.toMap() + saved.sync.toMap()
-    }
+    } }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
       val records = values.map(ScheduleRecord::fromMap)
       val imported = ScheduleStore(context).use { it.importBackupRecords(records) }
@@ -295,6 +298,9 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
+    AsyncFunction("setScheduleCompleted") { id: String, completed: Boolean ->
+      ScheduleRuntime.setCompleted(context, id, completed).sync.toMap()
+    }
     AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id).toMap() }
     AsyncFunction("retryScheduleSync") { ScheduleRuntime.changed(context).toMap() }
     AsyncFunction("configure") { value: Map<String, Any?> -> ScheduleSerial.withLock {
@@ -321,5 +327,6 @@ fun ScheduleRecord.toMap(): Map<String, Any?> = mapOf(
   "endAt" to endAt, "isAllDay" to isAllDay, "repeatType" to repeatType,
   "notificationEnabled" to notificationEnabled, "notificationId" to notificationId,
   "sourceText" to sourceText, "createdAt" to createdAt, "updatedAt" to updatedAt, "anchorZone" to anchorZone,
-  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category
+  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category,
+  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt
 )

@@ -81,7 +81,7 @@ test('UI and native persistence preserve explicit categories and use unexpanded 
   assert.match(detail, /category: normalizeScheduleCategory\(category\)/);
   assert.match(native, /categorySpinner\.selectedItemPosition/);
   assert.match(native, /category=category/);
-  assert.match(store, /"push_office_local\.db", null, 3/);
+  assert.match(store, /"push_office_local\.db", null, 4/);
   assert.match(store, /ALTER TABLE schedules ADD COLUMN category TEXT/);
   assert.doesNotMatch(store, /DROP TABLE schedules/);
 });

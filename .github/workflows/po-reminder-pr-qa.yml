@@ -7,6 +7,8 @@ on:
     paths:
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/*Notification*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/Reminder*.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleReminders.kt'
+      - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ScheduleRemindersDeviceTest.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleRuntime.kt'
       - 'modules/push-office-native/android/src/main/AndroidManifest.xml'
       - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ReminderSchedulerRecoveryTest.kt'

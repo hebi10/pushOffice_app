@@ -80,7 +80,7 @@ export default function HomeScreen() {
         item.id === next.id && item.startAt.toMillis() === next.startAt.toMillis()));
     const summary = schedules.isLoading ? '기기에 저장된 일정을 확인하고 있어요.'
         : schedules.isError ? '일정을 불러오지 못했습니다. 다시 확인해 주세요.'
-        : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}`).join(', ')}.${next && !nextIsInTodayAgenda ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}`
+        : todayItems.length ? `오늘은 ${todayItems.length}개의 일정이 있어요. ${todayItems.map(x => `${x.isAllDay ? '하루 종일' : dayjs(x.startAt.toDate()).format('HH:mm')} ${x.title}${x.completedAt != null ? " (완료)" : ""}`).join(', ')}.${next && !nextIsInTodayAgenda ? ` 다음 일정은 ${dayjs(next.startAt.toDate()).format('M월 D일 HH:mm')} ${next.title}입니다.` : ''}`
         : '오늘 등록된 일정은 없어요. 여유 있는 하루를 계획해 보세요.';
     const externalTypesSelected = settings.digestTypes.weather || settings.digestTypes.news || settings.digestTypes.stocks;
     const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim()) && isFirebaseConfigured && isTrustedBriefingEndpoint(ENV.FUNCTIONS_BASE_URL.trim());

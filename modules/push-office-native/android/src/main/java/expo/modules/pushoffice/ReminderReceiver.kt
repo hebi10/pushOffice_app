@@ -21,7 +21,8 @@ class ReminderReceiver : BroadcastReceiver() {
     if (intent.action == ACTION_SNOOZE) {
       intent.getStringExtra("scheduleId")?.let { id ->
         if (runCatching { scheduler.snooze(id, 10) }.isSuccess) {
-          context.getSystemService(NotificationManager::class.java).cancel(id, 1)
+          val originalKind = intent.getStringExtra("notificationKind") ?: "reminder"
+          context.getSystemService(NotificationManager::class.java).cancel(ScheduleReminders.notificationTag(id, originalKind), 1)
         } else {
           Log.w("PushOfficeReminder", "Snooze could not be reserved")
         }
@@ -52,7 +53,17 @@ class ReminderReceiver : BroadcastReceiver() {
         }
       } else {
         val event = ScheduleStore(context).use { it.get(id) }
-        if (event != null && event.notificationEnabled) post(context, id, event.title, "예정된 일정입니다.", true)
+        if (event != null && ScheduleReminders.enabled(event)) {
+          val offset = ScheduleReminders.offset(kind)
+          // A delayed early reminder is no longer useful after its intended event starts.
+          if (offset == null || ScheduleReminders.stillUseful(fired, offset, System.currentTimeMillis())) {
+            val body = if (offset != null && offset > 0) {
+              val remaining = ((fired.at + offset * 60_000L - System.currentTimeMillis()) + 59_999L) / 60_000L
+              if (remaining > 0) "일정 시작까지 약 ${remaining}분 남았습니다." else "곧 시작할 일정입니다."
+            } else "예정된 일정입니다."
+            post(context, id, event.title, body, true, kind)
+          }
+        }
       }
     } finally {
       // A failed notification post must not prevent the next repeating occurrence from being scheduled.
@@ -62,7 +73,7 @@ class ReminderReceiver : BroadcastReceiver() {
       if (!sync.ready) Log.w("PushOfficeReminder", "Reminder recovery needs retry")
     }
   }
-  private fun post(context: Context, id: String, title: String, body: String, canSnooze: Boolean) {
+  private fun post(context: Context, id: String, title: String, body: String, canSnooze: Boolean, kind: String = "briefing") {
     if (!ReminderNotifications.allowed(context)) return
     val manager = context.getSystemService(NotificationManager::class.java)
     val builder = Notification.Builder(context, CHANNEL).setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -75,11 +86,13 @@ class ReminderReceiver : BroadcastReceiver() {
     builder.setContentIntent(PendingIntent.getActivity(context, 0, launch, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE))
     if (canSnooze) {
       val snooze = PendingIntent.getBroadcast(context, 0, Intent(context, ReminderReceiver::class.java).apply {
-        action = ACTION_SNOOZE; data = Uri.parse(ScheduleTime.alarmIdentity(id, "snooze-action")); putExtra("scheduleId", id)
+        action = ACTION_SNOOZE
+        data = Uri.parse(ScheduleTime.alarmIdentity(id, "snooze-action-" + kind))
+        putExtra("scheduleId", id); putExtra("notificationKind", kind)
       }, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
       builder.addAction(Notification.Action.Builder(null, "10분 후 다시 알림", snooze).build())
     }
-    manager.notify(id, 1, builder.build())
+    manager.notify(ScheduleReminders.notificationTag(id, kind), 1, builder.build())
   }
   companion object {
     const val CHANNEL = "push_office_local_schedules"
