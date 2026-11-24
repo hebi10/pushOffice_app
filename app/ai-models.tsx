@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Linking, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from 'expo-router';
 import { AppDialog } from '@/src/components/ui/AppDialog';
 import { AssistantButton, AssistantCard, AssistantTextField, assistantStyles as s } from '@/src/components/AssistantUI';
 import { uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
-import { describeModelTest, downloadPercent } from '@/src/features/ai/modelPresentation';
+import { describeInferenceMetrics, describeModelTest, downloadPercent } from '@/src/features/ai/modelPresentation';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { PushOfficeNative, type AiModelInfo, type AiModelTestResult } from '@/modules/push-office-native';
 
@@ -15,6 +15,7 @@ function sampleInput() {
 function isReady(model: AiModelInfo) {
   return model.state === 'installed' || model.state === 'available';
 }
+function hasRuntimeMemory(model: AiModelInfo) { return model.memoryReady !== false; }
 function modelStatus(model: AiModelInfo) {
   if (isReady(model)) return '사용 준비됨';
   if (model.state === 'downloadable') return '설치 가능';
@@ -31,6 +32,10 @@ function showProgress(model: AiModelInfo) {
 
 export default function AiModelsScreen() {
   const { colors } = useTheme();
+  const [focused, setFocused] = useState(false);
+  const [foreground, setForeground] = useState(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
+  const focusedRef = useRef(false);
+  const foregroundRef = useRef(AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
   const [models, setModels] = useState<AiModelInfo[]>([]);
   const [listState, setListState] = useState<'loading' | 'ready' | 'error'>('loading');
   const [sample, setSample] = useState(sampleInput);
@@ -41,31 +46,69 @@ export default function AiModelsScreen() {
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const sampleRevision = useRef(0);
   const refreshing = useRef(false);
+  const refreshRequested = useRef(false);
+  const actionInFlight = useRef(false);
+  const activeRevision = useRef(0);
 
   const refresh = useCallback(async () => {
-    if (refreshing.current) return;
+    if (!focusedRef.current || !foregroundRef.current) return;
+    if (refreshing.current) { refreshRequested.current = true; return; }
     refreshing.current = true;
     try {
-      const next = await PushOfficeNative.listAiModels();
-      setModels(next);
-      setResults(previous => {
-        const readyIds = new Set(next.filter(isReady).map(model => model.id));
-        return Object.fromEntries(Object.entries(previous).filter(([id]) => readyIds.has(id)));
-      });
-      setListState('ready');
-    } catch {
-      setListState('error');
+      do {
+        refreshRequested.current = false;
+        const revision = activeRevision.current;
+        try {
+          const next = await PushOfficeNative.listAiModels();
+          if (revision !== activeRevision.current || !focusedRef.current || !foregroundRef.current) continue;
+          setModels(next);
+          setResults(previous => {
+            const readyIds = new Set(next.filter(isReady).map(model => model.id));
+            return Object.fromEntries(Object.entries(previous).filter(([id]) => readyIds.has(id)));
+          });
+          setListState('ready');
+        } catch {
+          if (revision === activeRevision.current) setListState('error');
+        }
+      } while (refreshRequested.current && focusedRef.current && foregroundRef.current);
     } finally { refreshing.current = false; }
   }, []);
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    setFocused(true);
+    activeRevision.current += 1;
+    if (!actionInFlight.current) void refresh();
+    return () => {
+      focusedRef.current = false;
+      setFocused(false);
+      activeRevision.current += 1;
+      sampleRevision.current += 1;
+    };
+  }, [refresh]));
   useEffect(() => {
-    if (!models.some(model => model.state === 'downloading' || model.state === 'verifying')) return;
-    const timer = setInterval(() => { void refresh(); }, 2500);
+    const subscription = AppState.addEventListener('change', state => {
+      foregroundRef.current = state === 'active';
+      setForeground(foregroundRef.current);
+      activeRevision.current += 1;
+      if (foregroundRef.current) {
+        if (focusedRef.current && !actionInFlight.current) void refresh();
+      } else sampleRevision.current += 1;
+    });
+    return () => subscription.remove();
+  }, [refresh]);
+  const downloading = models.some(model => model.state === 'downloading' || model.state === 'verifying');
+  useEffect(() => {
+    if (!focused || !foreground || busyId || !downloading) return;
+    const timer = setInterval(() => {
+      if (!actionInFlight.current && !refreshing.current) void refresh();
+    }, 4000);
     return () => clearInterval(timer);
-  }, [models,refresh]);
+  }, [focused, foreground, busyId, downloading, refresh]);
 
   const action = async (id:string, call:()=>Promise<unknown>, title:string) => {
-    if(busyId || listState !== 'ready') return;
+    if(actionInFlight.current || listState !== 'ready' || !focusedRef.current || !foregroundRef.current) return;
+    actionInFlight.current = true;
+    const revision = activeRevision.current;
     setBusyId(id);
     setResults(previous => {
       if (!(id in previous)) return previous;
@@ -77,16 +120,17 @@ export default function AiModelsScreen() {
       const result = await call();
       if(result && typeof result === 'object' && 'message' in result) {
         const message = (result as {message?:unknown}).message;
-        if (typeof message === 'string' && message) setNotice({title,message});
+        if (revision === activeRevision.current && typeof message === 'string' && message) setNotice({title,message});
       }
-      await refresh();
     } catch {
-      setNotice({title,message:'현재 기기 지원 상태, 네트워크 또는 저장 공간을 확인한 후 다시 시도해 주세요.'});
-    } finally { setBusyId(null); }
+      if (revision === activeRevision.current) setNotice({title,message:'현재 기기 지원 상태, 네트워크 또는 저장 공간을 확인한 후 다시 시도해 주세요.'});
+    } finally { actionInFlight.current = false; setBusyId(null); void refresh(); }
   };
 
   const testOne = async (id:string) => {
-    if(busyId || listState !== 'ready' || !sample.trim()) return;
+    if(actionInFlight.current || listState !== 'ready' || !sample.trim() || !focusedRef.current || !foregroundRef.current) return;
+    if (!models.some(model => model.id === id && isReady(model) && hasRuntimeMemory(model))) return;
+    actionInFlight.current = true;
     const revision = sampleRevision.current;
     const input = sample.trim();
     setBusyId(id);
@@ -95,16 +139,17 @@ export default function AiModelsScreen() {
       if (revision === sampleRevision.current) setResults(old=>({...old,[id]:result}));
     } catch {
       if (revision === sampleRevision.current) setResults(old=>({...old,[id]:{modelId:id,success:false,durationMs:0,message:'이 기기에서 모델을 실행하지 못했습니다.'}}));
-    } finally { setBusyId(null); }
+    } finally { actionInFlight.current = false; setBusyId(null); void refresh(); }
   };
 
   const compareAll = async () => {
-    if(busyId || listState !== 'ready' || !sample.trim()) return;
+    if(actionInFlight.current || listState !== 'ready' || !sample.trim() || !focusedRef.current || !foregroundRef.current) return;
+    actionInFlight.current = true;
     const revision = sampleRevision.current;
     const input = sample.trim();
     setBusyId('compare');
     try {
-      for(const model of models.filter(isReady)) {
+      for(const model of models.filter(isReady).filter(hasRuntimeMemory)) {
         if (revision !== sampleRevision.current) break;
         try {
           const result=await PushOfficeNative.testAiModel(model.id,input);
@@ -113,7 +158,7 @@ export default function AiModelsScreen() {
           if (revision === sampleRevision.current) setResults(old=>({...old,[model.id]:{modelId:model.id,success:false,durationMs:0,message:'모델 실행 실패'}}));
         }
       }
-    } finally { setBusyId(null); }
+    } finally { actionInFlight.current = false; setBusyId(null); void refresh(); }
   };
 
   const remove = async () => {
@@ -133,14 +178,19 @@ export default function AiModelsScreen() {
           <Text style={[styles.caption,{color:colors.textSecondary}]}>
             {listState === 'ready' ? `사용 준비된 모델 ${models.filter(isReady).length} / ${models.length}종` : listState === 'loading' ? '모델 상태 확인 중' : '모델 상태 조회 실패 · 이전 결과일 수 있음'}
           </Text>
-          {listState === 'error' ? (
-            <AssistantButton label="모델 목록 다시 확인" icon="refresh-outline" secondary onPress={()=>{void refresh();}} />
+          {listState === 'ready' && models.length > 0 && typeof models[0].availableMemoryMb === 'number' ? (
+            <Text style={[styles.caption,{color:colors.textSecondary}]}>
+              {'현재 기기 여유 RAM ' + models[0].availableMemoryMb.toLocaleString('ko-KR') + ' / ' + (models[0].totalMemoryMb ?? 0).toLocaleString('ko-KR') + 'MB'}
+              {typeof models[0].freeStorageMb === 'number' && models[0].freeStorageMb >= 0 ? ' · 여유 저장 공간 ' + models[0].freeStorageMb.toLocaleString('ko-KR') + 'MB' : ''}
+              {'\n추천은 현재 여유 RAM·저장 공간 기준이며 속도나 정확도를 보장하지 않습니다.'}
+            </Text>
           ) : null}
+          <AssistantButton label="모델 목록 다시 확인" icon="refresh-outline" secondary disabled={Boolean(busyId)} onPress={()=>{void refresh();}} />
           <AssistantTextField label="공통 한국어 일정 테스트 문장" value={sample}
             onChangeText={value=>{sampleRevision.current += 1;setSample(value);setResults({});}}
             placeholder="예: 내일 오후 3시 치과 예약" multiline />
           <AssistantButton label="사용 준비된 모델 모두 비교" icon="analytics-outline" secondary
-            disabled={listState !== 'ready' || !models.some(isReady) || Boolean(busyId) || !sample.trim()}
+            disabled={listState !== 'ready' || !models.some(model => isReady(model) && hasRuntimeMemory(model)) || Boolean(busyId) || !sample.trim()}
             busy={busyId==='compare'} onPress={()=>{void compareAll();}} />
           <Text style={[styles.caption,{color:colors.textSecondary}]}>
             실제 추출 결과·응답 시간만 표시합니다. 모델 테스트에서는 일정을 저장하지 않습니다.
@@ -168,6 +218,14 @@ export default function AiModelsScreen() {
                 </Text>
                 {model.selected && ready ? <Text style={[styles.selected,{color:colors.text}]}>기본 모델</Text> : null}
               </View>
+              {model.recommended ? <Text style={[styles.selected,{color:colors.text}]}>현재 기기 기준 추천</Text> : null}
+              {model.id !== 'gemini-nano' && typeof model.minAvailableMb === 'number' ? (
+                <Text style={[styles.caption,{color:model.memoryReady === false ? colors.danger : colors.textSecondary}]}>
+                  {'권장 실행 여유 RAM ' + model.minAvailableMb.toLocaleString('ko-KR') + 'MB'}
+                  {model.memoryReady === false ? ' · 현재 RAM 부족, 실행 전 앱을 정리하거나 작은 모델을 선택해 주세요.' : ''}
+                  {!ready && model.storageReady === false ? '\n다운로드에 필요한 여유 저장 공간이 부족할 수 있습니다.' : ''}
+                </Text>
+              ) : null}
               <View
                 style={[styles.statusRow,{backgroundColor:colors.inputBackground}]}
                 accessible
@@ -208,7 +266,7 @@ export default function AiModelsScreen() {
               ) : null}
               {ready ? (
                 <AssistantButton label="이 모델로 테스트" icon="flask-outline" secondary
-                  disabled={Boolean(busyId)||listState !== 'ready'||!sample.trim()} busy={busyId===model.id}
+                  disabled={Boolean(busyId)||listState !== 'ready'||!sample.trim()||!hasRuntimeMemory(model)} busy={busyId===model.id}
                   onPress={()=>{void testOne(model.id);}} />
               ) : null}
               {result ? (
@@ -219,13 +277,16 @@ export default function AiModelsScreen() {
                   <Text style={[styles.copy,{color:colors.textSecondary}]}>
                     {describeModelTest(result).details}
                   </Text>
+                  {describeInferenceMetrics(result).map(line => (
+                    <Text key={line} style={[styles.caption,{color:colors.textSecondary}]}>{line}</Text>
+                  ))}
                 </View>
               ) : ready ? (
                 <Text style={[styles.caption,{color:colors.textSecondary}]}>테스트 전 · 모델 선택 전 테스트 결과를 확인해 주세요.</Text>
               ) : null}
               {ready && !model.selected ? (
                 <AssistantButton label="기본 모델로 사용" icon="checkmark-outline"
-                  disabled={Boolean(busyId)||listState !== 'ready'||!result?.success}
+                  disabled={Boolean(busyId)||listState !== 'ready'||!result?.success||!hasRuntimeMemory(model)}
                   onPress={()=>{void action(model.id,()=>PushOfficeNative.selectAiModel(model.id),'기본 모델 변경');}} />
               ) : null}
               {model.id!=='gemini-nano' && (model.state==='installed'||model.state==='downloading'||model.state==='verifying'||model.state==='error') ? (

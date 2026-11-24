@@ -6,7 +6,7 @@ import java.security.MessageDigest
 
 /** Full-file verification, never trusts a stored digest string without recomputing it. */
 internal object AiModelIntegrity {
-  fun matches(file: File, expectedBytes: Long, expectedSha256: String): Boolean {
+  fun matches(file: File, expectedBytes: Long, expectedSha256: String, checkActive: () -> Unit = {}): Boolean {
     if (!file.isFile || expectedBytes <= 0 || file.length() != expectedBytes ||
         !expectedSha256.matches(Regex("[a-f0-9]{64}"))) return false
     return try {
@@ -14,11 +14,13 @@ internal object AiModelIntegrity {
       FileInputStream(file).buffered(1024 * 1024).use { stream ->
         val buffer = ByteArray(1024 * 1024)
         while (true) {
+          checkActive()
           val count = stream.read(buffer)
           if (count < 0) break
           digest.update(buffer, 0, count)
         }
       }
+      checkActive()
       val bytes = expectedSha256.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
       MessageDigest.isEqual(digest.digest(), bytes)
     } catch (_: java.io.IOException) {
