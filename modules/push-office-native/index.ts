@@ -101,6 +101,7 @@ export interface AiDownloadProgress {
 }
 export type PushOfficeNativeEvents = {
   schedulesChanged: () => void;
+  notificationSuggestionsChanged: () => void;
   aiDownloadProgress: (update: AiDownloadProgress) => void;
 };
 export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativeEvents> {
@@ -116,6 +117,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   /** Atomic, existing IDs are never overwritten; alarm refresh failure is reported separately. */
   importBackupSchedules(records: NativeSchedule[]): Promise<{ imported: number; alarmsReady: boolean }>;
   getNotificationSuggestionStatus(): Promise<NotificationSuggestionStatus>;
+  getNotificationSuggestionSnapshot(): Promise<{status: NotificationSuggestionStatus; items: NotificationSuggestion[]}>;
   setNotificationCaptureEnabled(enabled: boolean): Promise<boolean>;
   openNotificationAccessSettings(): Promise<void>;
   getNotificationSuggestions(): Promise<NotificationSuggestion[]>;
@@ -172,6 +174,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   pickLocalBackupDocument: unavailable,
   importBackupSchedules: unavailable,
   getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
+  getNotificationSuggestionSnapshot: async () => ({ status: { enabled: false, accessGranted: false, pendingCount: 0 }, items: [] }),
   setNotificationCaptureEnabled: unavailable,
   openNotificationAccessSettings: unavailable,
   getNotificationSuggestions: async () => [],

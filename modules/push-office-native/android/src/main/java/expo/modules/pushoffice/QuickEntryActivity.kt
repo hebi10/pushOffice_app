@@ -323,16 +323,25 @@ class QuickEntryActivity : Activity() {
       })
     }
     root.addView(TextView(this).apply {
-      text="예: 내일 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
+      text="예: 내일 오후 3시 고객 미팅 · 고객 미팅 1시간 늦춰"
       textSize=13f
       setTextColor(secondary)
       setPadding(dp(2),0,dp(2),dp(6))
     })
     session.enterEditor()
     transcript=field("일정 내용", "날짜, 시간, 일정 제목을 입력하세요", "", true)
+    transcript.filters = arrayOf(android.text.InputFilter.LengthFilter(4096))
+    val inputCount = TextView(this).apply {
+      text = "0 / 4096자"
+      textSize = 12f
+      setTextColor(secondary)
+      gravity = Gravity.END
+    }
+    root.addView(inputCount)
     transcript.addTextChangedListener(object: TextWatcher {
       override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
       override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+        inputCount.text = "${s?.length ?: 0} / 4096자"
         session.inputChanged(); cancelModel()
         if(!applyingSpeech) stopSpeech()
       }

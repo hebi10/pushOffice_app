@@ -23,6 +23,7 @@ import kotlinx.coroutines.withContext
 class PushOfficeNativeModule : Module() {
   private val context get() = appContext.reactContext ?: error("앱 컨텍스트가 준비되지 않았습니다.")
   private val listener: () -> Unit = { sendEvent("schedulesChanged", emptyMap<String, Any>()) }
+  private val suggestionListener: () -> Unit = { sendEvent("notificationSuggestionsChanged", emptyMap<String, Any>()) }
   private val backupScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
   private var backupPromise: Promise? = null
   private var pendingExport: String? = null
@@ -60,10 +61,14 @@ class PushOfficeNativeModule : Module() {
   }
   override fun definition() = ModuleDefinition {
     Name("PushOfficeNative")
-    Events("schedulesChanged", "aiDownloadProgress")
-    OnCreate { ScheduleStore.addListener(listener) }
+    Events("schedulesChanged", "aiDownloadProgress", "notificationSuggestionsChanged")
+    OnCreate {
+      ScheduleStore.addListener(listener)
+      NotificationSuggestionStore.addListener(suggestionListener)
+    }
     OnDestroy {
       ScheduleStore.removeListener(listener)
+      NotificationSuggestionStore.removeListener(suggestionListener)
       backupPromise?.reject("BACKUP_INTERRUPTED", "백업 파일 작업이 중단되었습니다.", null)
       backupPromise = null
       pendingExport = null
@@ -151,6 +156,7 @@ class PushOfficeNativeModule : Module() {
         } catch(e: Exception) { promise.reject("OPEN_VOICE_ENTRY",e.message,e) }
       }
     }
+    AsyncFunction("getNotificationSuggestionSnapshot") { NotificationSuggestionStore.snapshot(context) }
     AsyncFunction("getNotificationSuggestionStatus") {
       val session = NotificationSuggestionStore.captureSession(context)
       mapOf(
