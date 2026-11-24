@@ -196,6 +196,11 @@ export default function ScheduleDetail() {
         keyboardShouldPersistTaps="handled"
       >
         <ScreenIntro title="일정 관리" compact />
+        {!!detail.data.excludedStarts?.length ? (
+          <Text style={[s.caption, { color: colors.textSecondary }]}>
+            {'개별 변경·삭제된 회차 ' + detail.data.excludedStarts.length + '건. 기존 제외 회차를 보존하기 위해 반복 기준일과 주기 변경은 제한됩니다. 분리된 독립 일정은 별도로 관리합니다.'}
+          </Text>
+        ) : null}
         <View accessibilityRole="summary" style={[styles.scheduleOverview, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
           <Text style={[styles.overviewTitle, { color: colors.text }]} numberOfLines={2}>{title || '제목 없는 일정'}</Text>
           <Text style={[styles.overviewTime, { color: colors.textSecondary }]}>
@@ -471,7 +476,7 @@ export default function ScheduleDetail() {
       <AppDialog
         visible={pendingDialog === 'repeat'}
         title="반복 일정 전체 수정"
-        message="변경 사항이 이 일정의 모든 반복에 적용됩니다. 날짜를 바꾸면 반복 기준일도 변경됩니다."
+        message={detail.data.excludedStarts?.length ? '변경 사항은 남아 있는 반복 회차에 적용합니다. 개별 변경 이력을 보존하기 위해 기준일·주기는 변경할 수 없습니다. 분리된 독립 일정은 바뀌지 않습니다.' : '변경 사항이 이 일정의 모든 반복에 적용됩니다. 날짜를 바꾸면 반복 기준일도 변경됩니다.'}
         confirmLabel="전체 수정"
         onDismiss={() => setPendingDialog(null)}
         onConfirm={() => { setPendingDialog(null); void save(); }}
@@ -479,7 +484,7 @@ export default function ScheduleDetail() {
       <AppDialog
         visible={pendingDialog === 'delete'}
         title={detail.data.repeatType === 'none' ? '일정 삭제' : '전체 반복 일정 삭제'}
-        message={detail.data.repeatType === 'none' ? '일정과 알림을 삭제합니다. 이 작업은 되돌릴 수 없습니다.' : '전체 반복 일정과 모든 알림을 삭제합니다. 이 작업은 되돌릴 수 없습니다.'}
+        message={detail.data.repeatType === 'none' ? '일정과 알림을 삭제합니다. 이 작업은 되돌릴 수 없습니다.' : '전체 반복 일정과 모든 알림을 삭제합니다. 개별 수정·완료로 분리한 독립 일정은 남습니다. 이 작업은 되돌릴 수 없습니다.'}
         confirmLabel="삭제"
         destructive
         onDismiss={() => setPendingDialog(null)}

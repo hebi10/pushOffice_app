@@ -41,7 +41,12 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
       accessibilityState={{ disabled: !schedule.id }}
       disabled={!schedule.id}
       activeOpacity={0.8}
-      onPress={() => { if (schedule.id) router.push(`/schedule/${schedule.id}`); }}
+      onPress={() => {
+        if (!schedule.id) return;
+        if (!search && schedule.repeatType !== 'none' && schedule.completedAt == null) {
+          router.push({ pathname: '/schedule-occurrence', params: { id: schedule.id, at: String(schedule.startAt.toMillis()) } });
+        } else router.push(`/schedule/${schedule.id}`);
+      }}
       style={[styles.container, calendar ? styles.calendarContainer : null, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}
     >
       <View style={[styles.accentRail, { backgroundColor: colors.primary }]} />

@@ -167,7 +167,11 @@ export default function HomeScreen() {
               accessibilityLabel={`${next.title}, ${dayjs(nextAt).format('M월 D일')}, ${next.isAllDay ? '종일' : dayjs(nextAt).format('HH:mm')}${nextEndLabel ? ` ${nextEndLabel}` : ''}, 일정 상세 보기`}
               accessibilityState={{ disabled: !next.id }}
               disabled={!next.id}
-              onPress={() => { if (next.id) router.push(`/schedule/${next.id}`); }}
+              onPress={() => {
+                if (!next.id) return;
+                if (next.repeatType !== 'none') router.push({ pathname: '/schedule-occurrence', params: { id: next.id, at: String(next.startAt.toMillis()) } });
+                else router.push(`/schedule/${next.id}`);
+              }}
               activeOpacity={0.75}
               style={[styles.nextCard, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
             >

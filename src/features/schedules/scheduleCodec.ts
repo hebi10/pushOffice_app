@@ -144,7 +144,7 @@ export function nextOccurrence(record: NativeSchedule, now: number): NativeSched
     if (record.repeatType === 'none') return null;
     const zone = record.anchorZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
     const anchor = zonedFields(record.startAt, zone);
-    const reference = zonedFields(now, zone);
+    const reference = zonedFields(Math.max(now, record.startAt), zone);
     if (record.repeatType === 'daily' || record.repeatType === 'weekly') {
         const daysPerStep = record.repeatType === 'weekly' ? 7 : 1;
         const anchorDay = civilDay(anchor);
