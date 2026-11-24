@@ -17,7 +17,7 @@ test('PO-UI-05 keeps calendar first, selected-date summary, quick entry, then ag
   ];
   assert.ok(indices.every(x => x >= 0), 'Missing calendar stage section');
   assert.ok(indices.every((x, i) => i === 0 || x > indices[i - 1]), 'Calendar hierarchy has changed');
-  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month\)/);
+  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month, mode === 'month'\)/);
   assert.match(calendar, /onMonthChange=\{date =>/);
   assert.match(calendar, /onDayPress=\{date => setSelected\(date\.dateString\)\}/);
   assert.match(calendar, /monthFormat="yyyy년 M월"/);

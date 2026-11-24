@@ -50,7 +50,7 @@ test('UI-12-03 keeps the selected date in view when jumping to its agenda', () =
 
 test('UI-12-03 keeps all genuine schedule states, month query and native entry with selected date', () => {
   for (const value of [
-    'useMonthSchedules(month.year, month.month)',
+    'useMonthSchedules(month.year, month.month, mode === 'month')',
     'markingType="multi-dot"',
     'Math.min(count, 3)',
     'selectedDotColor: colors.onPrimary',

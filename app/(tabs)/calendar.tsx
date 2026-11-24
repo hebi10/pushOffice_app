@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -8,7 +8,8 @@ import { EmptyState } from '@/src/components/EmptyState';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
 import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { useMonthSchedules } from '@/src/features/schedules';
+import { useMonthSchedules, useWeekSchedules } from '@/src/features/schedules';
+import { shiftCivilDate, weekDateKeys } from '@/src/features/schedules/calendarWeek';
 import { retainSelectedDayInMonth } from '@/src/features/schedules/calendarSelection';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
@@ -37,6 +38,8 @@ export default function CalendarScreen() {
   const now = useClock();
   const [selected, setSelected] = useState(() => dayjs(now).format('YYYY-MM-DD'));
   const [month, setMonth] = useState(() => ({ year: dayjs(now).year(), month: dayjs(now).month() + 1 }));
+  const [mode, setMode] = useState<'month' | 'week'>('month');
+  const [calendarRevision, setCalendarRevision] = useState(0);
   const calendarScrollRef = useRef<ScrollView>(null);
   const agendaTop = useRef(0);
   const scrollToSelectedAgenda = () => {
@@ -45,7 +48,18 @@ export default function CalendarScreen() {
       animated: false,
     });
   };
-  const schedules = useMonthSchedules(month.year, month.month);
+  const monthSchedules = useMonthSchedules(month.year, month.month, mode === 'month');
+  const weekSchedules = useWeekSchedules(selected, mode === 'week');
+  const schedules = mode === 'month' ? monthSchedules : weekSchedules;
+  const weekDays = useMemo(() => weekDateKeys(selected), [selected]);
+  const selectDay = (date: string) => {
+    setSelected(date);
+    setMonth({ year: Number(date.slice(0,4)), month: Number(date.slice(5,7)) });
+  };
+  const goToday = () => {
+    selectDay(dayjs(now).format('YYYY-MM-DD'));
+    setCalendarRevision(value => value + 1);
+  };
   const monthStart = dayjs(new Date(month.year, month.month - 1, 1)).format('YYYY-MM-DD');
   const calendarTheme = useMemo(() => ({
     calendarBackground: colors.surface,
@@ -111,12 +125,27 @@ export default function CalendarScreen() {
       ref={calendarScrollRef}
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={s.content}
+      refreshControl={<RefreshControl refreshing={schedules.isRefetching} onRefresh={() => { void schedules.refetch(); }} />}
     >
       <ScreenIntro title="캘린더" compact />
-      <AssistantButton label="전체 일정 검색" icon="search-outline" secondary onPress={() => router.push('/schedule-search')} />
+      <View style={styles.calendarActions}>
+        <View style={styles.searchAction}><AssistantButton label="전체 일정 검색" icon="search-outline" secondary onPress={() => router.push('/schedule-search')} /></View>
+        <AssistantButton label="오늘" icon="today-outline" secondary onPress={goToday} />
+      </View>
+      <View accessibilityRole="radiogroup" style={styles.modeRow}>
+        {(['month', 'week'] as const).map(value => (
+          <TouchableOpacity key={value} accessibilityRole="radio" accessibilityState={{ checked: mode === value }}
+            accessibilityLabel={value === 'month' ? '월간 일정' : '주간 일정'}
+            onPress={() => { setMode(value); setCalendarRevision(n => n+1); }}
+            style={[styles.modeChoice,{borderColor: mode === value ? colors.primary : colors.inputBorder,
+              backgroundColor: mode === value ? colors.primaryLight : colors.surface}]}>
+            <Text style={[s.body,{color:colors.text,fontWeight:mode===value?'700':'400'}]}>{value==='month'?'월간':'주간'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
-        <Calendar
-          key={isDark ? 'dark' : 'light'}
+        {mode === 'month' ? <Calendar
+          key={(isDark ? 'dark' : 'light') + calendarRevision}
           current={monthStart}
           enableSwipeMonths
           markingType="multi-dot"
@@ -128,8 +157,35 @@ export default function CalendarScreen() {
           markedDates={marks}
           monthFormat="yyyy년 M월"
           theme={calendarTheme}
-        />
-        {!schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
+        /> : (
+          <View style={styles.weekPanel}>
+            <View style={styles.weekHeader}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="이전 주" onPress={() => selectDay(shiftCivilDate(selected,-7))} style={styles.weekNav}>
+                <Ionicons name="chevron-back" size={22} color={colors.primary}/>
+              </TouchableOpacity>
+              <Text style={[s.body,{color:colors.text,flex:1,textAlign:'center',fontWeight:'700'}]}>
+                {dayjs(weekDays[0]).format('M월 D일')} – {dayjs(weekDays[6]).format('M월 D일')}
+              </Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="다음 주" onPress={() => selectDay(shiftCivilDate(selected,7))} style={styles.weekNav}>
+                <Ionicons name="chevron-forward" size={22} color={colors.primary}/>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.weekDays}>
+              {weekDays.map(date => {
+                const count = (schedules.data ?? []).filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === date).length;
+                return <TouchableOpacity key={date} accessibilityRole="button" accessibilityState={{ selected: date===selected }}
+                  accessibilityLabel={dayjs(date).format('M월 D일 dddd')+', 일정 '+count+'건'}
+                  onPress={() => selectDay(date)}
+                  style={[styles.weekDay,{backgroundColor:date===selected?colors.primary:colors.surface}]}>
+                  <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{dayjs(date).format('dd')}</Text>
+                  <Text style={[s.body,{color:date===selected?colors.onPrimary:colors.text,fontWeight:'700'}]}>{dayjs(date).date()}</Text>
+                  <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{schedules.isLoading || schedules.isError ? '–' : count+'건'}</Text>
+                </TouchableOpacity>;
+              })}
+            </View>
+          </View>
+        )}
+        {mode === 'month' && !schedules.isError && (schedules.data?.length ?? 0) > 0 ? (
           <Text
             accessibilityLabel="날짜 아래 점은 일정 개수(최대 3개)를 표시합니다. 날짜를 선택해 일정을 확인하세요."
             numberOfLines={1}
@@ -176,7 +232,10 @@ export default function CalendarScreen() {
         {schedules.isLoading ? (
           <Text style={[s.body, { color: colors.textSecondary }]}>일정 목록을 불러오는 중입니다.</Text>
         ) : schedules.isError ? (
-          <Text style={[s.body, { color: colors.danger }]}>일정을 불러오지 못했습니다.</Text>
+          <View style={{gap:uiSpacing.xs}}>
+            <Text style={[s.body, { color: colors.danger }]}>일정을 불러오지 못했습니다.</Text>
+            <AssistantButton label="일정 다시 조회" icon="refresh-outline" secondary onPress={() => { void schedules.refetch(); }} />
+          </View>
         ) : items.length ? (
           items.map(item => (
             <ScheduleItem
@@ -195,6 +254,15 @@ export default function CalendarScreen() {
 }
 
 const styles = StyleSheet.create({
+  calendarActions: { flexDirection: 'row', alignItems: 'center', gap: uiSpacing.xs },
+  searchAction: { flex: 1, minWidth: 0 },
+  modeRow: { flexDirection: 'row', gap: uiSpacing.xs },
+  modeChoice: { flex:1, minHeight: uiSizes.touchMinHeight, justifyContent:'center', alignItems:'center', borderWidth:uiSizes.borderWidth, borderRadius:uiRadii.field, padding:uiSpacing.xs },
+  weekPanel: { padding: uiSpacing.xs, gap: uiSpacing.xxs },
+  weekHeader: { flexDirection:'row',alignItems:'center',gap:uiSpacing.xxs },
+  weekNav: { minWidth:uiSizes.touchMinHeight,minHeight:uiSizes.touchMinHeight,alignItems:'center',justifyContent:'center' },
+  weekDays: { flexDirection:'row', flexWrap:'wrap', gap:uiSpacing.xxs },
+  weekDay: { flex:1, minWidth:36,minHeight:76,alignItems:'center',justifyContent:'center',paddingVertical:uiSpacing.xs,gap:uiSpacing.xxs,borderRadius:uiRadii.field },
   calendarSurface: {
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.card,

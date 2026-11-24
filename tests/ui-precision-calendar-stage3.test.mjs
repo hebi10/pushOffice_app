@@ -33,7 +33,7 @@ test('precision stage 3 reduces calendar week gaps while preserving month/date n
 });
 
 test('precision stage 3 keeps genuine 1 to 3 event dots, count, selection and theme contrast', () => {
-  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month\)/);
+  assert.match(calendar, /useMonthSchedules\(month\.year, month\.month, mode === 'month'\)/);
   assert.match(calendar, /Math\.min\(count, 3\)/);
   assert.match(calendar, /color: dotColors\[index\]/);
   assert.match(calendar, /selectedDotColor: colors\.onPrimary/);
