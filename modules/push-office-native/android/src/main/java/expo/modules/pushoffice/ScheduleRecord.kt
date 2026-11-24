@@ -18,7 +18,9 @@ data class ScheduleRecord(
   val location: String? = null,
   val meetingUrl: String? = null,
   val notes: String? = null,
-  val category: String? = null
+  val category: String? = null,
+  val reminderOffsets: List<Int> = listOf(0),
+  val completedAt: Long? = null
 ) {
   companion object {
     fun fromMap(value: Map<String, Any?>): ScheduleRecord {
@@ -37,7 +39,8 @@ data class ScheduleRecord(
         if(value.containsKey("anchorZone") && value["anchorZone"] != null) ScheduleZone.validate(string("anchorZone")) else null,
         ScheduleExtras.fromMap(value, "location"),
         ScheduleExtras.fromMap(value, "meetingUrl"),
-        ScheduleExtras.fromMap(value, "notes"), ScheduleCategory.fromMap(value))
+        ScheduleExtras.fromMap(value, "notes"), ScheduleCategory.fromMap(value),
+        ScheduleReminders.fromMap(value), ScheduleReminders.completedAt(value["completedAt"]))
     }
   }
 }

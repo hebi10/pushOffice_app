@@ -2,6 +2,7 @@ import { Timestamp } from 'firebase/firestore';
 import type { NativeSchedule } from '../../../modules/push-office-native';
 import type { ScheduleDoc } from '../../types';
 import { normalizeScheduleCategory } from './scheduleCategories.mjs';
+import { normalizeReminderOffsets, normalizeCompletedAt } from './scheduleReminders.mjs';
 type TimestampInput = number | Date | {
     seconds: number;
     nanoseconds?: number;
@@ -33,6 +34,8 @@ export function toNativeSchedule(value: object): NativeSchedule {
         ...(s.meetingUrl === undefined ? {} : { meetingUrl: s.meetingUrl ?? null }),
         ...(s.notes === undefined ? {} : { notes: s.notes ?? null }),
         ...(s.category === undefined ? {} : { category: normalizeScheduleCategory(s.category) }),
+        ...(s.reminderOffsets === undefined ? {} : { reminderOffsets: normalizeReminderOffsets(s.reminderOffsets) }),
+        ...(s.completedAt === undefined ? {} : { completedAt: normalizeCompletedAt(s.completedAt) }),
         repeatType: s.repeatType ?? 'none', notificationEnabled: s.notificationEnabled ?? false,
         notificationId: s.notificationId ?? null, sourceText: s.sourceText ?? '',
         createdAt: epoch(s.createdAt, Date.now()), updatedAt: epoch(s.updatedAt, Date.now()),
@@ -81,8 +84,11 @@ function zonedEpoch(wall: WallTime, zone: string): number {
 export function projectOccurrences(records: NativeSchedule[], start: Date, end: Date): NativeSchedule[] {
     const result: NativeSchedule[] = [];
     const from = start.getTime();
-    const until = end.getTime();
+    const rangeEnd = end.getTime();
     for (const record of records) {
+        const until = record.repeatType !== 'none' && record.completedAt != null
+            ? Math.min(rangeEnd, Math.max(record.startAt, record.completedAt) + 1) : rangeEnd;
+        if (from >= until) continue;
         if (record.repeatType === 'none') {
             if (record.startAt >= from && record.startAt < until) result.push({ ...record });
             continue;
@@ -129,6 +135,7 @@ export function projectOccurrences(records: NativeSchedule[], start: Date, end: 
 
 /** Next card has no view horizon: calculate one occurrence per immutable series anchor. */
 export function nextOccurrence(record: NativeSchedule, now: number): NativeSchedule | null {
+    if (record.completedAt != null) return null;
     if (record.startAt >= now) return { ...record };
     if (record.repeatType === 'none') return null;
     const zone = record.anchorZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;

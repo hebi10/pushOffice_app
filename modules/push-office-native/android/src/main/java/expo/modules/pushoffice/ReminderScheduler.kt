@@ -28,15 +28,27 @@ class ReminderScheduler(private val context: Context) {
     }
     ScheduleStore(context).use { store ->
       store.all().forEach { record ->
-        if (settings.pushEnabled && record.notificationEnabled) {
+        if (settings.pushEnabled && ScheduleReminders.enabled(record)) {
           val version = version(record)
-          val next = ReminderLifecycle.choose(read(record.id, "reminder"), record.id, "reminder", version,
-            ScheduleTime.nextOccurrence(record, now, store.anchorZone(record.id)))
-          next?.let { wanted.add(key(it.id, it.kind)); attempt { reserve(it) } }
-          val snooze = read(record.id, "snooze")
-          if (snooze != null && snooze.version == version) {
+          val compatible = compatibleVersions(record)
+          val zone = store.anchorZone(record.id)
+          for (offset in record.reminderOffsets) {
+            attempt {
+              val kind = ScheduleReminders.kind(offset)
+              val existing = read(record.id, kind)?.takeIf {
+                it.version in compatible && ScheduleReminders.stillUseful(it, offset, now)
+              }?.copy(version = version)
+              val next = ReminderLifecycle.choose(existing, record.id, kind, version,
+                ScheduleReminders.next(record, now, zone, offset))
+              next?.let { wanted.add(key(it.id, it.kind)); reserve(it) }
+            }
+          }
+          val snooze = read(record.id, "snooze")?.takeIf { it.version in compatible }?.copy(version = version)
+          if (snooze != null) {
             wanted.add(key(snooze.id, snooze.kind)); attempt { reserve(snooze) }
           }
+        } else if (record.completedAt != null || !record.notificationEnabled) {
+          attempt { clearDisplayed(record.id) }
         }
       }
     }
@@ -58,14 +70,26 @@ class ReminderScheduler(private val context: Context) {
     // Report partial failure only after attempting all independent reservations.
     failure?.let { throw it }
   }
+  private fun clearDisplayed(id: String) {
+    val notifications = context.getSystemService(android.app.NotificationManager::class.java)
+    notifications.cancel(id, 1)
+    ScheduleReminders.options.filter { it != 0 }.forEach {
+      notifications.cancel(ScheduleReminders.notificationTag(id, ScheduleReminders.kind(it)), 1)
+    }
+  }
   fun cancelSchedule(id: String): Unit = ScheduleSerial.withLock {
-    cancel(id, "reminder"); cancel(id, "snooze")
-    context.getSystemService(android.app.NotificationManager::class.java).cancel(id, 1)
+    var failure: Exception? = null
+    val kinds = ScheduleReminders.options.map(ScheduleReminders::kind) + "snooze"
+    for (kind in kinds) {
+      try { cancel(id, kind) } catch (error: Exception) { if (failure == null) failure = error }
+    }
+    try { clearDisplayed(id) } catch (error: Exception) { if (failure == null) failure = error }
+    failure?.let { throw it }
   }
   fun snooze(id: String, minutes: Int): Long = ScheduleSerial.withLock {
     require(minutes in 1..1440) { "다시 알림은 1분부터 24시간까지 가능합니다." }
     val record = ScheduleStore(context).use { it.get(id) } ?: error("일정을 찾을 수 없습니다.")
-    require(ReminderSettings.load(context).pushEnabled && record.notificationEnabled) { "알림이 꺼져 있습니다." }
+    require(ReminderSettings.load(context).pushEnabled && ScheduleReminders.enabled(record)) { "완료된 일정이거나 알림이 꺼져 있습니다." }
     val at = System.currentTimeMillis() + minutes * 60_000L
     reserve(ReminderReservation(id, "snooze", at, version(record), UUID.randomUUID().toString()))
     at
@@ -76,21 +100,25 @@ class ReminderScheduler(private val context: Context) {
   fun consume(id: String, kind: String, token: String?): ReminderReservation? = ScheduleSerial.withLock {
     val settings = ReminderSettings.load(context)
     if (!settings.pushEnabled) return@withLock null
-    val version = if (kind == "briefing") {
-      if (!settings.dailyBriefingEnabled) return@withLock null
-      version(settings)
+    val versions = if (kind == "briefing") {
+      if (!settings.dailyBriefingEnabled || id != "daily") return@withLock null
+      setOf(version(settings))
     } else {
-      if (kind !in setOf("reminder", "snooze")) return@withLock null
       val record = ScheduleStore(context).use { it.get(id) } ?: return@withLock null
-      if (!record.notificationEnabled) return@withLock null
-      version(record)
+      if (!ScheduleReminders.enabled(record)) return@withLock null
+      val offset = ScheduleReminders.offset(kind)
+      if (kind != "snooze" && (offset == null || offset !in record.reminderOffsets)) return@withLock null
+      compatibleVersions(record)
     }
     val reservation = read(id, kind)
-    if (!ReminderLifecycle.matches(reservation, token, version)) return@withLock null
+    if (versions.none { ReminderLifecycle.matches(reservation, token, it) }) return@withLock null
     cancel(id, kind)
     reservation
   }
   private fun version(record: ScheduleRecord): String = fingerprint(record.toString())
+  /** v2/v3 default records must retain queued legacy alarms across an app upgrade. */
+  private fun compatibleVersions(record: ScheduleRecord): Set<String> =
+    ScheduleReminders.compatibleVersionInputs(record).map(::fingerprint).toSet()
   private fun version(settings: ReminderSettings): String = fingerprint(settings.toString())
   private fun fingerprint(value: String) = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it) }
   private fun key(id: String, kind: String) = ScheduleTime.alarmIdentity(id, kind)

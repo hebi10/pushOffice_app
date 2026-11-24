@@ -1,4 +1,5 @@
 import { normalizeScheduleCategory } from '../schedules/scheduleCategories.mjs';
+import { normalizeReminderOffsets, normalizeCompletedAt } from '../schedules/scheduleReminders.mjs';
 
 const FORMAT = 'pushoffice-local-backup';
 const PACKAGE = 'com.hebi96.pushOffice_app';
@@ -124,6 +125,8 @@ function normalizeSchedule(value) {
     ...(value.meetingUrl === undefined ? {} : { meetingUrl: optionalScheduleExtra(value.meetingUrl, 'meetingUrl', 2048) }),
     ...(value.notes === undefined ? {} : { notes: optionalScheduleExtra(value.notes, 'notes', 2000) }),
     ...(value.category === undefined ? {} : { category: normalizeScheduleCategory(value.category) }),
+    ...(value.reminderOffsets === undefined ? {} : { reminderOffsets: normalizeReminderOffsets(value.reminderOffsets) }),
+    ...(value.completedAt === undefined ? {} : { completedAt: normalizeCompletedAt(value.completedAt) }),
   };
   return {
     id: value.id, userId: value.userId, type: value.type, title: value.title,

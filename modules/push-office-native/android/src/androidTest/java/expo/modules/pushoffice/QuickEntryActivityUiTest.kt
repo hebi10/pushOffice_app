@@ -350,6 +350,13 @@ class QuickEntryActivityUiTest {
           assertEquals("미분류", category.selectedItem.toString())
           category.setSelection(ScheduleCategory.options.indexOfFirst { it.first == "work" })
           assertEquals("업무", category.selectedItem.toString())
+          views(activity).filterIsInstance<Button>().single {
+            it.contentDescription?.toString()?.startsWith("알림 시점 설정 · ") == true
+          }.performClick()
+          val advance = views(activity).filterIsInstance<android.widget.CheckBox>()
+            .single { it.contentDescription == "알림 30분 전" }
+          advance.performClick()
+          assertTrue(advance.isChecked)
           val location = fields.single { it.contentDescription == "장소" }
           val meeting = fields.single { it.contentDescription == "회의 링크 (HTTPS)" }
           val notes = fields.single { it.contentDescription == "메모" }
@@ -373,6 +380,7 @@ class QuickEntryActivityUiTest {
       val saved = ScheduleStore(context).use { store -> store.all().single { it.title == title } }
       savedId = saved.id
       assertEquals("work", saved.category)
+      assertEquals(listOf(0, 30), saved.reminderOffsets)
       assertEquals("회의실 A", saved.location)
       assertEquals("https://meet.example.org/room", saved.meetingUrl)
       assertEquals("준비물\\n노트북", saved.notes)

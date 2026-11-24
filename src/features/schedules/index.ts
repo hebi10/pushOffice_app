@@ -1,3 +1,3 @@
-export { countNotificationsForDate, createSchedule, deleteSchedule, getSchedule, getSchedulesByRange, getSchedulesByTitle, getSchedulesByUser, updateSchedule } from './scheduleService';
-export { useCreateSchedule, useDeleteSchedule, useMonthSchedules, useRelatedSchedules, useScheduleDetail, useSchedules, useUpdateSchedule } from './useScheduleQueries';
+export { countNotificationsForDate, createSchedule, deleteSchedule, getSchedule, getSchedulesByRange, getSchedulesByTitle, getSchedulesByUser, updateSchedule, setScheduleCompleted } from './scheduleService';
+export { useCreateSchedule, useDeleteSchedule, useMonthSchedules, useRelatedSchedules, useScheduleDetail, useSchedules, useUpdateSchedule, useSetScheduleCompleted } from './useScheduleQueries';
 
