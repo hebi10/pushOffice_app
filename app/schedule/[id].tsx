@@ -18,6 +18,8 @@ import { dayjs } from '@/src/lib/time';
 import { showError, showToast, showNotice } from '@/src/components/ui/toast';
 import type { RepeatType } from '@/src/types';
 import { isSafeMeetingUrl, normalizeScheduleExtras } from '@/src/features/schedules/scheduleExtras';
+import { normalizeScheduleCategory, scheduleCategoryLabel, type ScheduleCategory } from '@/src/features/schedules/scheduleCategories.mjs';
+import { ScheduleCategoryOptions } from '@/src/components/schedule/ScheduleCategoryOptions';
 
 LocaleConfig.locales.ko = {
   monthNames: Array.from({ length: 12 }, (_, i) => `${i + 1}월`),
@@ -41,6 +43,7 @@ export default function ScheduleDetail() {
   const [location, setLocation] = useState('');
   const [meetingUrl, setMeetingUrl] = useState('');
   const [notes, setNotes] = useState('');
+  const [category, setCategory] = useState<ScheduleCategory | null>(null);
   const [allDay, setAllDay] = useState(false);
   const [notification, setNotification] = useState(true);
   const [repeat, setRepeat] = useState<RepeatType>('none');
@@ -61,6 +64,7 @@ export default function ScheduleDetail() {
     setLocation(record.location ?? '');
     setMeetingUrl(record.meetingUrl ?? '');
     setNotes(record.notes ?? '');
+    setCategory(record.category ?? null);
     setAllDay(!!record.isAllDay);
     setNotification(record.notificationEnabled);
     setRepeat(record.repeatType);
@@ -88,7 +92,7 @@ export default function ScheduleDetail() {
           title, startAt: Timestamp.fromDate(start),
           endAt: finish ? Timestamp.fromDate(finish) : null,
           isAllDay: allDay, repeatType: repeat, notificationEnabled: notification,
-          ...extras,
+          ...extras, category: normalizeScheduleCategory(category),
         },
       });
       if (!result.alarmsReady || !result.widgetsReady) {
@@ -192,10 +196,13 @@ export default function ScheduleDetail() {
             <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
               {notification ? '알림 사용' : '알림 끔'}
             </Text>
+            <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>{scheduleCategoryLabel(category)}</Text>
           </View>
         </View>
         <AssistantCard title="일정 제목 수정" icon="create-outline">
           {field('제목', title, setTitle)}
+          <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>일정 카테고리</Text>
+          <ScheduleCategoryOptions value={category} onChange={value => { if (value !== 'all') setCategory(value); }} />
         </AssistantCard>
 
         <AssistantCard title="날짜와 시간" icon="calendar-outline">

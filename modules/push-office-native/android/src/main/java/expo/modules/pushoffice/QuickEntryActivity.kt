@@ -518,6 +518,36 @@ class QuickEntryActivity : Activity() {
     }
     root.addView(localizedSummary)
     val titleField=field("일정 제목","일정 제목",title,compact=true)
+    sectionLabel("일정 카테고리", "선택 사항 · 기존 일정은 미분류로 유지됩니다.")
+    val categories = ScheduleCategory.options
+    val categorySpinner = Spinner(this).apply {
+      contentDescription = "일정 카테고리 선택"
+      adapter = object : ArrayAdapter<String>(
+        this@QuickEntryActivity, android.R.layout.simple_spinner_item, categories.map { it.second }
+      ) {
+        override fun getView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getView(position, convertView, parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            textSize = 15f
+          }
+        override fun getDropDownView(position: Int, convertView: View?, parent: android.view.ViewGroup): View =
+          (super.getDropDownView(position, convertView, parent) as TextView).apply {
+            setTextColor(foregroundColor)
+            setBackgroundColor(surface)
+            textSize = 15f
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+          }
+      }
+      setSelection(categories.indexOfFirst { it.first == original?.category }.coerceAtLeast(0))
+      minimumHeight = dp(50)
+      setPadding(dp(10), 0, dp(10), 0)
+      background = GradientDrawable().apply {
+        setColor(fieldBackground)
+        cornerRadius = dp(6).toFloat()
+        setStroke(dp(1), inputBorder)
+      }
+    }
+    root.addView(categorySpinner, LinearLayout.LayoutParams(-1, -2))
     val dateField=field("날짜 (YYYY-MM-DD)","날짜 YYYY-MM-DD",dateTime?.toLocalDate()?.toString() ?: preferredDate?.toString().orEmpty(),compact=true)
     val timeField=field("시간 (HH:mm)","시간 HH:mm",dateTime?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm")).orEmpty(),compact=true)
     val manualDateCard=dateField.parent as View
@@ -821,12 +851,13 @@ class QuickEntryActivity : Activity() {
         val location=ScheduleExtras.location(locationField.text.toString())
         val meetingUrl=ScheduleExtras.meetingUrl(meetingUrlField.text.toString())
         val notes=ScheduleExtras.notes(notesField.text.toString())
+        val category=categories[categorySpinner.selectedItemPosition.coerceIn(categories.indices)].first
         val now=System.currentTimeMillis()
         val draft=original?.copy(title=titleField.text.toString().trim(), startAt=start,
           endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now,
-          location=location,meetingUrl=meetingUrl,notes=notes)
+          location=location,meetingUrl=meetingUrl,notes=notes,category=category)
           ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id,
-            location=location,meetingUrl=meetingUrl,notes=notes)
+            location=location,meetingUrl=meetingUrl,notes=notes,category=category)
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.

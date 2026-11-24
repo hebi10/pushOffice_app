@@ -321,5 +321,5 @@ fun ScheduleRecord.toMap(): Map<String, Any?> = mapOf(
   "endAt" to endAt, "isAllDay" to isAllDay, "repeatType" to repeatType,
   "notificationEnabled" to notificationEnabled, "notificationId" to notificationId,
   "sourceText" to sourceText, "createdAt" to createdAt, "updatedAt" to updatedAt, "anchorZone" to anchorZone,
-  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes
+  "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category
 )

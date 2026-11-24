@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/LocalBackup*.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleCategory.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleStore.kt'
+      - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ScheduleCategoryMigrationTest.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/PushOfficeNativeModule.kt'
       - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/LocalBackup*.kt'
       - 'src/features/storage/localBackup*'

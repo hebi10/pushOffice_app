@@ -17,7 +17,8 @@ data class ScheduleRecord(
   val anchorZone: String? = null,
   val location: String? = null,
   val meetingUrl: String? = null,
-  val notes: String? = null
+  val notes: String? = null,
+  val category: String? = null
 ) {
   companion object {
     fun fromMap(value: Map<String, Any?>): ScheduleRecord {
@@ -36,7 +37,7 @@ data class ScheduleRecord(
         if(value.containsKey("anchorZone") && value["anchorZone"] != null) ScheduleZone.validate(string("anchorZone")) else null,
         ScheduleExtras.fromMap(value, "location"),
         ScheduleExtras.fromMap(value, "meetingUrl"),
-        ScheduleExtras.fromMap(value, "notes"))
+        ScheduleExtras.fromMap(value, "notes"), ScheduleCategory.fromMap(value))
     }
   }
 }

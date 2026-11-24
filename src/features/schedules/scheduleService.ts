@@ -6,6 +6,7 @@ import { localCreateSchedule, localUpdateSchedule, localDeleteSchedule } from '.
 import { getDeviceSchedules } from '../storage/nativeStore';
 import { hydrateSchedule, projectOccurrences, toNativeSchedule } from './scheduleCodec';
 import { normalizeScheduleExtras } from './scheduleExtras';
+import type { ScheduleCategory } from './scheduleCategories.mjs';
 import { showNotice } from '../../components/ui/toast';
 export interface CreateScheduleInput {
     userId: string;
@@ -15,6 +16,7 @@ export interface CreateScheduleInput {
     location?: string | null;
     meetingUrl?: string | null;
     notes?: string | null;
+    category?: ScheduleCategory | null;
     isAllDay?: boolean;
     repeatType: RepeatType;
     notificationEnabled: boolean;

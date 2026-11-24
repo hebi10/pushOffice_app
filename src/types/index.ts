@@ -1,4 +1,5 @@
 import { Timestamp } from 'firebase/firestore';
+import type { ScheduleCategory } from '../features/schedules/scheduleCategories.mjs';
 
 // ─── 저장 모드 ───
 export type StorageMode = 'firebase' | 'local';
@@ -50,6 +51,7 @@ export interface ScheduleDoc {
   location?: string | null;
   meetingUrl?: string | null;
   notes?: string | null;
+  category?: ScheduleCategory | null;
   /** Native canonical IANA zone of the immutable recurrence anchor. */
   anchorZone?: string;
   id?: string;

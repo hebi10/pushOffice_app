@@ -1,6 +1,7 @@
 import { Timestamp } from 'firebase/firestore';
 import type { NativeSchedule } from '../../../modules/push-office-native';
 import type { ScheduleDoc } from '../../types';
+import { normalizeScheduleCategory } from './scheduleCategories.mjs';
 type TimestampInput = number | Date | {
     seconds: number;
     nanoseconds?: number;
@@ -31,6 +32,7 @@ export function toNativeSchedule(value: object): NativeSchedule {
         ...(s.location === undefined ? {} : { location: s.location ?? null }),
         ...(s.meetingUrl === undefined ? {} : { meetingUrl: s.meetingUrl ?? null }),
         ...(s.notes === undefined ? {} : { notes: s.notes ?? null }),
+        ...(s.category === undefined ? {} : { category: normalizeScheduleCategory(s.category) }),
         repeatType: s.repeatType ?? 'none', notificationEnabled: s.notificationEnabled ?? false,
         notificationId: s.notificationId ?? null, sourceText: s.sourceText ?? '',
         createdAt: epoch(s.createdAt, Date.now()), updatedAt: epoch(s.updatedAt, Date.now()),
