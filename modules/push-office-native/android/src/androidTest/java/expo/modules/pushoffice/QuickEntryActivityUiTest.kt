@@ -345,6 +345,11 @@ class QuickEntryActivityUiTest {
             .first { it.text.toString() == "내용 확인" && it.isClickable }.performClick()
 
           val fields = views(activity).filterIsInstance<EditText>()
+          val category = views(activity).filterIsInstance<android.widget.Spinner>()
+            .single { it.contentDescription == "일정 카테고리 선택" }
+          assertEquals("미분류", category.selectedItem.toString())
+          category.setSelection(ScheduleCategory.options.indexOfFirst { it.first == "work" })
+          assertEquals("업무", category.selectedItem.toString())
           val location = fields.single { it.contentDescription == "장소" }
           val meeting = fields.single { it.contentDescription == "회의 링크 (HTTPS)" }
           val notes = fields.single { it.contentDescription == "메모" }
@@ -367,6 +372,7 @@ class QuickEntryActivityUiTest {
       }
       val saved = ScheduleStore(context).use { store -> store.all().single { it.title == title } }
       savedId = saved.id
+      assertEquals("work", saved.category)
       assertEquals("회의실 A", saved.location)
       assertEquals("https://meet.example.org/room", saved.meetingUrl)
       assertEquals("준비물\\n노트북", saved.notes)
