@@ -50,7 +50,7 @@ export function useLiveNotificationSuggestions() {
       setItems([]); setStatus(null); setError(false); setRefreshing(false);
     };
     const resume = () => {
-      if (AppState.currentState !== 'active') { clear(); return; }
+      if (AppState.currentState === 'background' || AppState.currentState === 'inactive') { clear(); return; }
       active.current = true;
       revision.current++;
       void refresh();

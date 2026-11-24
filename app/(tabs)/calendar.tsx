@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
   weekHeader: { flexDirection:'row',alignItems:'center',gap:uiSpacing.xxs },
   weekNav: { minWidth:uiSizes.touchMinHeight,minHeight:uiSizes.touchMinHeight,alignItems:'center',justifyContent:'center' },
   weekDays: { flexDirection:'row', flexWrap:'wrap', gap:uiSpacing.xxs },
-  weekDay: { flex:1, minWidth:36,minHeight:76,alignItems:'center',justifyContent:'center',paddingVertical:uiSpacing.xs,gap:uiSpacing.xxs,borderRadius:uiRadii.field },
+  weekDay: { flex:1, minWidth:uiSizes.touchMinHeight,minHeight:76,alignItems:'center',justifyContent:'center',paddingVertical:uiSpacing.xs,gap:uiSpacing.xxs,borderRadius:uiRadii.field },
   calendarSurface: {
     borderWidth: uiSizes.borderWidth,
     borderRadius: uiRadii.card,
