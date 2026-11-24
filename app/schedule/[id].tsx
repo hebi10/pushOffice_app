@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SchedulePickerDialog } from '@/src/components/schedule/SchedulePickerDialog';
 import { SchedulePickerField } from '@/src/components/schedule/SchedulePickerField';
@@ -13,9 +13,11 @@ import { Timestamp } from 'firebase/firestore';
 import { AssistantButton, AssistantCard, AssistantTextField, SettingRow, assistantStyles as s } from '@/src/components/AssistantUI';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useScheduleDetail, useUpdateSchedule, useDeleteSchedule, useSetScheduleCompleted } from '@/src/features/schedules';
-import { PushOfficeNative } from '@/modules/push-office-native';
+import { PushOfficeNative, isPushOfficeNativeAvailable } from '@/modules/push-office-native';
+import { toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
+import { describeScheduleConflicts } from '@/src/features/schedules/scheduleConflictPresentation';
 import { dayjs } from '@/src/lib/time';
-import { showError, showToast, showNotice } from '@/src/components/ui/toast';
+import { showError, showToast, showNotice, confirmAction } from '@/src/components/ui/toast';
 import type { RepeatType } from '@/src/types';
 import { isSafeMeetingUrl, normalizeScheduleExtras } from '@/src/features/schedules/scheduleExtras';
 import { normalizeScheduleCategory, scheduleCategoryLabel, type ScheduleCategory } from '@/src/features/schedules/scheduleCategories.mjs';
@@ -37,6 +39,8 @@ export default function ScheduleDetail() {
   const update = useUpdateSchedule();
   const remove = useDeleteSchedule();
   const complete = useSetScheduleCompleted();
+  const checkingConflict = useRef(false);
+  const [checking, setChecking] = useState(false);
   const completed = detail.data?.completedAt != null;
   const isSeries = !!detail.data && detail.data.repeatType !== 'none';
   const { colors, isDark } = useTheme();
@@ -88,26 +92,38 @@ export default function ScheduleDetail() {
   };
 
   const save = async () => {
+    if (checkingConflict.current || update.isPending || !detail.data) return;
+    checkingConflict.current = true;
+    setChecking(true);
     try {
       const start = parse(`${date} ${allDay ? '00:00' : time}`);
       const finish = end.trim() ? parse(end.trim()) : null;
       const extras = normalizeScheduleExtras({ location, meetingUrl, notes });
-      const result = await update.mutateAsync({
-        id,
-        data: {
-          title, startAt: Timestamp.fromDate(start),
-          endAt: finish ? Timestamp.fromDate(finish) : null,
-          isAllDay: allDay, repeatType: repeat, notificationEnabled: notification,
-          ...extras, category: normalizeScheduleCategory(category),
-          reminderOffsets: normalizeReminderOffsets(reminderOffsets),
-        },
-      });
-      if (!result.alarmsReady || !result.widgetsReady) {
-        showNotice('일정 수정 완료', '일정은 수정했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.');
-      } else showToast('일정을 수정했습니다.');
-    } catch (error) {
-      showError(error, '저장하지 못했습니다.');
-    }
+      const data = {
+        title, startAt: Timestamp.fromDate(start),
+        endAt: finish ? Timestamp.fromDate(finish) : null,
+        isAllDay: allDay, repeatType: repeat, notificationEnabled: notification,
+        ...extras, category: normalizeScheduleCategory(category),
+        reminderOffsets: normalizeReminderOffsets(reminderOffsets),
+      };
+      const commit = async () => {
+        try {
+          const result = await update.mutateAsync({ id, data });
+          if (!result.alarmsReady || !result.widgetsReady) {
+            showNotice('일정 수정 완료', '일정은 수정했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.');
+          } else showToast('일정을 수정했습니다.');
+        } catch (error) { showError(error, '저장하지 못했습니다.'); }
+      };
+      if (isPushOfficeNativeAvailable) {
+        const overlaps = await PushOfficeNative.checkScheduleConflicts(toNativeSchedule({...detail.data,...data}), null);
+        if (overlaps.length) {
+          confirmAction('겹치는 일정 확인', describeScheduleConflicts(overlaps, repeat !== 'none') + '\n\n확인하면 현재 입력값을 그대로 저장합니다.', () => { void commit(); });
+          return;
+        }
+      }
+      await commit();
+    } catch (error) { showError(error, '저장하지 못했습니다.'); }
+    finally { checkingConflict.current = false; setChecking(false); }
   };
 
   const changeCompletion = async () => {
@@ -349,7 +365,7 @@ export default function ScheduleDetail() {
         <AssistantButton
           label="변경 사항 저장"
           icon="checkmark-outline"
-          busy={update.isPending}
+          busy={update.isPending || checking}
           disabled={remove.isPending || complete.isPending}
           onPress={confirmSave}
         />
@@ -359,7 +375,7 @@ export default function ScheduleDetail() {
           {isSeries ? <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>이 작업은 반복 일정 전체에 적용됩니다.</Text> : null}
           <AssistantButton label={completed ? '완료 취소' : isSeries ? '반복 일정 전체 완료' : '일정 완료'}
             icon={completed ? 'refresh-outline' : 'checkmark-circle-outline'} secondary
-            busy={complete.isPending} disabled={update.isPending || remove.isPending || detail.isFetching}
+            busy={complete.isPending} disabled={checking || update.isPending || remove.isPending || detail.isFetching}
             onPress={() => setPendingDialog('completion')} />
         </AssistantCard>
         <AssistantCard title="재알림" icon="alarm-outline" subtitle="일정 데이터는 유지하고 알림만 다시 예약합니다.">
@@ -377,7 +393,7 @@ export default function ScheduleDetail() {
               icon="trash-outline"
               variant="destructive"
               busy={remove.isPending}
-              disabled={update.isPending || complete.isPending}
+              disabled={checking || update.isPending || complete.isPending}
               onPress={() => setPendingDialog('delete')}
             />
           </AssistantCard>

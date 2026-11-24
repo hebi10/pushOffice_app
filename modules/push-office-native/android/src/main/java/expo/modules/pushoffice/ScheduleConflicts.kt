@@ -51,13 +51,14 @@ internal object ScheduleConflicts {
         val lookback = if (other.isAllDay && duration(other)==0L) DAY_LOOKBACK else duration(other)
         var cursor = (proposed.start - lookback - 1L).coerceAtLeast(-1L)
         // A fixed duration needs at most two candidates; DST all-day lookback at most four.
-        repeat(4) {
-          val at = ScheduleTime.nextOccurrence(other,cursor,zone(other,fallback)) ?: return@repeat
-          if (at > proposed.end) return@repeat
+        for (scan in 0..3) {
+          val at = ScheduleTime.nextOccurrence(other,cursor,zone(other,fallback)) ?: break
+          if (at > proposed.end) break
           if (overlap(proposed,slot(other,at,fallback))) {
             if (result.none { hit -> hit.id == other.id && hit.startAt == at && hit.proposedStart == current })
               result.add(ScheduleConflict(other.id,other.title,at,current))
             if (result.size >= MAX_REPORT) return result
+            break
           }
           cursor = at
         }

@@ -10,7 +10,9 @@ import { useScheduleDetail } from '@/src/features/schedules';
 import { projectOccurrences, toNativeSchedule } from '@/src/features/schedules/scheduleCodec';
 import { PushOfficeNative } from '@/modules/push-office-native';
 import { dayjs } from '@/src/lib/time';
-import { showError, showNotice, showToast } from '@/src/components/ui/toast';
+import { showError, showNotice, showToast, confirmAction } from '@/src/components/ui/toast';
+
+import { describeScheduleConflicts } from '@/src/features/schedules/scheduleConflictPresentation';
 
 type Action = 'edit' | 'delete' | 'complete';
 const FORMAT = 'YYYY-MM-DD HH:mm';
@@ -38,6 +40,7 @@ export default function ScheduleOccurrenceScreen() {
   const [confirm, setConfirm] = useState<Action | null>(null);
   const [editVersion, setEditVersion] = useState<number | null>(null);
   const inFlight = useRef(false);
+  const [checking, setChecking] = useState(false);
   const mutation = useMutation({
     mutationFn: ({action, updated, replacement}: {action: Action; updated: number; replacement: {title?: string;startAt?: number;endAt?: number | null}}) =>
       PushOfficeNative.mutateScheduleOccurrence(id, at, updated, action, replacement),
@@ -54,6 +57,7 @@ export default function ScheduleOccurrenceScreen() {
   const apply = async (action: Action) => {
     if (!detail.data || !occurrence || inFlight.current) return;
     inFlight.current = true;
+    setChecking(true);
     try {
       if (editVersion !== detail.data.updatedAt.toMillis()) throw new Error('일정이 변경되었습니다. 다시 확인해 주세요.');
       const replacement = action === 'edit' ? {
@@ -63,13 +67,29 @@ export default function ScheduleOccurrenceScreen() {
         throw new Error('일정 제목과 시작·종료 시간을 확인해 주세요.');
       }
       if (action === 'edit' && occurrence.isAllDay && !start.trim().endsWith(' 00:00')) throw new Error('종일 일정의 시작 시간은 00:00으로 입력해 주세요.');
-      const result = await mutation.mutateAsync({action, updated:editVersion, replacement});
-      if (!result.alarmsReady || !result.widgetsReady) showNotice('회차 변경 완료', '일정은 저장했습니다. 설정에서 알림과 위젯을 다시 확인해 주세요.');
-      else showToast(action === 'delete' ? '이 회차를 삭제했습니다.' : action === 'complete' ? '이 회차를 완료했습니다.' : '이 회차를 독립 일정으로 저장했습니다.');
-      if (result.detachedId) router.replace(`/schedule/${result.detachedId}`);
-      else router.back();
+      const updated = editVersion;
+      const commit = async () => {
+        try {
+          const result = await mutation.mutateAsync({action, updated, replacement});
+          if (!result.alarmsReady || !result.widgetsReady) showNotice('회차 변경 완료', '일정은 저장했습니다. 설정에서 알림과 위젯을 다시 확인해 주세요.');
+          else showToast(action === 'delete' ? '이 회차를 삭제했습니다.' : action === 'complete' ? '이 회차를 완료했습니다.' : '이 회차를 독립 일정으로 저장했습니다.');
+          if (result.detachedId) router.replace(`/schedule/${result.detachedId}`);
+          else router.back();
+        } catch(error) { showError(error,'회차를 변경하지 못했습니다.'); }
+      };
+      if (action === 'edit' && replacement.title && replacement.startAt !== undefined) {
+        const overlaps = await PushOfficeNative.checkScheduleConflicts({
+          ...occurrence, title: replacement.title, startAt: replacement.startAt,
+          endAt: replacement.endAt ?? null, repeatType: 'none', excludedStarts: [], updatedAt: updated,
+        }, at);
+        if (overlaps.length) {
+          confirmAction('겹치는 일정 확인', describeScheduleConflicts(overlaps, false) + '\n\n확인하면 현재 입력값을 그대로 저장합니다.', () => { void commit(); });
+          return;
+        }
+      }
+      await commit();
     } catch(error) { showError(error,'회차를 변경하지 못했습니다.'); }
-    finally { inFlight.current = false; }
+    finally { inFlight.current = false; setChecking(false); }
   };
 
   return (
@@ -82,20 +102,20 @@ export default function ScheduleOccurrenceScreen() {
             <Text style={[s.body,{color:colors.text}]}>{occurrence.title}</Text>
             <Text style={[s.caption,{color:colors.textSecondary}]}>{dayjs(at).format('YYYY년 M월 D일 (ddd) HH:mm')}</Text>
             <Text style={[s.caption,{color:colors.textSecondary}]}>개별 수정 또는 완료 시 원본 반복 회차를 제외하고 독립 일정으로 분리합니다. 다른 회차에는 영향을 주지 않습니다.</Text>
-            <AssistantButton label="전체 반복 일정 관리" icon="repeat-outline" secondary disabled={mutation.isPending} onPress={() => router.push(`/schedule/${id}`)} />
+            <AssistantButton label="전체 반복 일정 관리" icon="repeat-outline" secondary disabled={mutation.isPending || checking} onPress={() => router.push(`/schedule/${id}`)} />
           </AssistantCard>
           <AssistantCard title="이 회차만 수정" icon="create-outline">
             <AssistantTextField label="제목" value={title} onChangeText={setTitle} maxLength={500}/>
             <AssistantTextField label="시작 (YYYY-MM-DD HH:mm)" value={start} onChangeText={setStart} maxLength={16}/>
             <AssistantTextField label="종료 (선택)" value={end} onChangeText={setEnd} placeholder="YYYY-MM-DD HH:mm" maxLength={16}/>
             <Text style={[s.caption,{color:colors.textSecondary}]}>장소·메모·카테고리·알림 설정은 그대로 유지됩니다. 분리 후 일정 상세에서 변경할 수 있습니다.</Text>
-            <AssistantButton label="이 회차만 저장" icon="checkmark-outline" busy={mutation.isPending} onPress={() => setConfirm('edit')}/>
+            <AssistantButton label="이 회차만 저장" icon="checkmark-outline" busy={mutation.isPending || checking} onPress={() => setConfirm('edit')}/>
           </AssistantCard>
-          <AssistantButton label="이 회차만 완료" icon="checkmark-circle-outline" secondary disabled={mutation.isPending} onPress={() => setConfirm('complete')}/>
-          <AssistantButton label="이 회차만 삭제" icon="trash-outline" variant="destructive" disabled={mutation.isPending} onPress={() => setConfirm('delete')}/>
+          <AssistantButton label="이 회차만 완료" icon="checkmark-circle-outline" secondary disabled={mutation.isPending || checking} onPress={() => setConfirm('complete')}/>
+          <AssistantButton label="이 회차만 삭제" icon="trash-outline" variant="destructive" disabled={mutation.isPending || checking} onPress={() => setConfirm('delete')}/>
         </>
       )}
-      <AssistantButton label="돌아가기" icon="arrow-back-outline" secondary disabled={mutation.isPending} onPress={() => router.back()}/>
+      <AssistantButton label="돌아가기" icon="arrow-back-outline" secondary disabled={mutation.isPending || checking} onPress={() => router.back()}/>
       <AppDialog visible={confirm !== null}
         title={confirm === 'delete' ? '이 회차만 삭제' : confirm === 'complete' ? '이 회차만 완료' : '이 회차만 수정'}
         message={confirm === 'delete' ? '선택한 회차와 해당 알림만 제외합니다. 나머지 반복 일정은 유지됩니다.' : confirm === 'complete' ? '선택한 회차를 완료된 독립 일정으로 분리합니다. 편집 중인 내용은 적용하지 않습니다.' : '선택한 회차를 수정한 독립 일정으로 분리합니다. 이후 전체 반복 일정을 수정해도 분리한 일정은 바뀌지 않습니다.'}
