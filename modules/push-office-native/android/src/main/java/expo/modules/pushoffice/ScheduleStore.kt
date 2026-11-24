@@ -121,6 +121,6 @@ class ScheduleStore(context: Context) : SQLiteOpenHelper(context.applicationCont
     private val listeners = CopyOnWriteArraySet<() -> Unit>()
     fun addListener(listener: () -> Unit) { listeners.add(listener) }
     fun removeListener(listener: () -> Unit) { listeners.remove(listener) }
-    fun notifyChanged() { listeners.forEach { it() } }
+    fun notifyChanged() { listeners.forEach { listener -> runCatching { listener() } } }
   }
 }

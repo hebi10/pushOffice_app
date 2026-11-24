@@ -1,0 +1,86 @@
+name: Push Office notification and reminder PR QA
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/*Notification*.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/Reminder*.kt'
+      - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleRuntime.kt'
+      - 'modules/push-office-native/android/src/main/AndroidManifest.xml'
+      - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/ReminderSchedulerRecoveryTest.kt'
+      - 'modules/push-office-native/android/src/androidTest/java/expo/modules/pushoffice/NotiAi01PersistenceTest.kt'
+      - '.github/workflows/po-reminder-pr-qa.yml'
+      - 'tools/ui/run_po_reminder_qa.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pushoffice-reminder-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  targeted:
+    name: Android API 29 notification privacy and reminder recovery
+    runs-on: ubuntu-24.04
+    timeout-minutes: 80
+    env:
+      CI: "1"
+      EXPO_NO_TELEMETRY: "1"
+      EXPO_NO_DOTENV: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - name: Restore checksum-verified Gradle distribution cache
+        id: gradle-zip-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - name: Bootstrap Gradle from verified mirrors
+        run: bash .github/ci/bootstrap-gradle.sh
+      - name: Cache verified Gradle distribution
+        if: steps.gradle-zip-cache.outputs.cache-hit != 'true'
+        continue-on-error: true
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - name: Set up emulator virtualization
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run targeted notification and reminder tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: bash tools/ui/run_po_reminder_qa.sh
+      - name: Keep Android instrumentation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: PushOffice-reminder-privacy-targeted-qa
+          path: |
+            android/**/build/reports/androidTests/connected/**
+            android/**/build/outputs/androidTest-results/connected/**
+          if-no-files-found: warn
+          retention-days: 14

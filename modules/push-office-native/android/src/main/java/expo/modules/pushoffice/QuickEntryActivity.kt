@@ -826,7 +826,7 @@ class QuickEntryActivity : Activity() {
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
-        ScheduleSerial.withLock {
+        val result = ScheduleSerial.withLock {
           if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
           val suggestionId = intent.getStringExtra("suggestionId")
           if (suggestionId != null) {
@@ -834,10 +834,19 @@ class QuickEntryActivity : Activity() {
             val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
             require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
           }
-          ScheduleRuntime.save(this,draft)
-          if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
+          val saved = ScheduleRuntime.save(this,draft)
+          val dismissed = runCatching {
+            if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
+          }.isSuccess
+          saved.sync to dismissed
         }
-        Toast.makeText(this,"일정을 저장했습니다.",Toast.LENGTH_SHORT).show(); finish()
+        val message = when {
+          !result.first.alarmsReady -> "일정은 저장했습니다. 알림 예약을 확인하지 못했습니다. 설정에서 다시 예약해 주세요."
+          !result.first.widgetsReady -> "일정은 저장했습니다. 위젯 갱신을 다시 확인해 주세요."
+          !result.second -> "일정은 저장했습니다. 일정 후보 삭제는 다시 확인해 주세요."
+          else -> "일정을 저장했습니다."
+        }
+        Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
       } catch(e: Exception) {
         saving=false
         error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }

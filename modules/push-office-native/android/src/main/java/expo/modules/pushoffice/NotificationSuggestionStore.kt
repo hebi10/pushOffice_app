@@ -1,6 +1,11 @@
 package expo.modules.pushoffice
 
 import android.app.NotificationManager
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Intent
+import java.util.UUID
 import android.content.ComponentName
 import android.content.Context
 import android.os.Build
@@ -50,6 +55,7 @@ object NotificationSuggestionStore {
   private const val ENABLED = "enabled"
   private const val CONSENT_VERSION = "consent_version"
   private const val CURRENT_CONSENT_VERSION = 2
+  private const val SESSION = "capture_session"
   private const val ITEMS = "items"
   private const val SEEN = "seen"
   private const val LIMIT = 24
@@ -72,14 +78,57 @@ object NotificationSuggestionStore {
     prefs(context).getBoolean(ENABLED, false) &&
       prefs(context).getInt(CONSENT_VERSION, 0) == CURRENT_CONSENT_VERSION
 
+  /** A revoked grant clears candidates and invalidates all in-flight snapshots. */
+  fun captureSession(context: Context): String? = synchronized(lock) {
+    if (!enabled(context) || !accessGranted(context)) {
+      if (prefs(context).all.isNotEmpty()) {
+        check(prefs(context).edit().clear().commit()) { "수집 기록을 삭제하지 못했습니다." }
+      }
+      scheduleCleanup(context, emptyList())
+      return@synchronized null
+    }
+    prefs(context).getString(SESSION, null) ?: UUID.randomUUID().toString().also {
+      check(prefs(context).edit().putString(SESSION, it).commit())
+    }
+  }
+
+  private fun scheduleCleanup(context: Context, items: List<NotificationSuggestion>) {
+    // Inexact housekeeping is independent of exact reminder permission.
+    runCatching {
+      val alarms = context.getSystemService(AlarmManager::class.java)
+      val operation = PendingIntent.getBroadcast(context, 0,
+        Intent(context, NotificationCandidateCleanupReceiver::class.java).setAction("expo.modules.pushoffice.CLEANUP_CANDIDATES"),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+      if (items.isEmpty()) {
+        alarms.cancel(operation)
+        operation.cancel()
+      } else {
+        val expiry = items.minOf { it.receivedAt } + RETAIN_MS + 1
+        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, expiry, operation)
+      }
+    }
+  }
+
+  fun invalidatePendingCapture(context: Context) = synchronized(lock) {
+    if (captureSession(context) != null) {
+      check(prefs(context).edit().putString(SESSION, UUID.randomUUID().toString()).commit())
+    }
+  }
+
+  fun reconcile(context: Context) = synchronized(lock) {
+    scheduleCleanup(context, retained(context))
+  }
+
   fun setEnabled(context: Context, enabled: Boolean) = synchronized(lock) {
     if (enabled) {
       require(accessGranted(context)) { "Android 알림 접근 권한을 먼저 허용해 주세요." }
+      val session = captureSession(context) ?: UUID.randomUUID().toString()
       check(prefs(context).edit().putBoolean(ENABLED, true)
-        .putInt(CONSENT_VERSION, CURRENT_CONSENT_VERSION).commit()) { "설정을 저장하지 못했습니다." }
+        .putInt(CONSENT_VERSION, CURRENT_CONSENT_VERSION).putString(SESSION, session).commit()) { "설정을 저장하지 못했습니다." }
     } else {
       // Explicit opt-out immediately removes all captured candidates and deduplication keys.
       check(prefs(context).edit().clear().commit()) { "수집 기록을 삭제하지 못했습니다." }
+      scheduleCleanup(context, emptyList())
     }
   }
 
@@ -99,8 +148,10 @@ object NotificationSuggestionStore {
     val editor = prefs(context).edit().putString(ITEMS, JSONArray(items.map(NotificationSuggestion::toJson)).toString())
     if (seen != null) editor.putString(SEEN, JSONArray(seen).toString())
     check(editor.commit()) { "일정 후보를 저장하지 못했습니다." }
+    scheduleCleanup(context, items)
   }
   private fun retained(context: Context): List<NotificationSuggestion> {
+    if (captureSession(context) == null) return emptyList()
     val now = System.currentTimeMillis()
     val current = readItems(context)
     val valid = current.filter { it.receivedAt in (now - RETAIN_MS)..now }
@@ -115,8 +166,8 @@ object NotificationSuggestionStore {
     else { write(context, existing.filterNot { it.id == id }); true }
   }
   /** User-initiated foreground ML Kit refinement; stale/disabled candidates are not resurrected. */
-  fun refine(context: Context, id: String, title: String, startAt: Long): NotificationSuggestion = synchronized(lock) {
-    require(enabled(context) && accessGranted(context)) { "알림 분석 기능과 접근 권한을 확인해 주세요." }
+  fun refine(context: Context, id: String, title: String, startAt: Long, session: String): NotificationSuggestion = synchronized(lock) {
+    require(captureSession(context) == session) { "알림 분석 기능과 접근 권한을 확인해 주세요." }
     val now = System.currentTimeMillis()
     require(title.isNotBlank() && startAt > now && startAt <= now + 366L * 24 * 60 * 60 * 1000) { "일정 제목과 미래 날짜를 확인해 주세요." }
     val current = retained(context)
@@ -129,9 +180,10 @@ object NotificationSuggestionStore {
     write(context, current.map { if (it.id == id) updated else it })
     updated
   }
-  fun add(context: Context, suggestion: NotificationSuggestion): Boolean = synchronized(lock) {
-    if (!enabled(context) || !accessGranted(context)) return@synchronized false
+  fun add(context: Context, suggestion: NotificationSuggestion, session: String): Boolean = synchronized(lock) {
+    if (captureSession(context) != session) return@synchronized false
     val now = System.currentTimeMillis()
+    if (suggestion.receivedAt !in (now - RETAIN_MS)..now) return@synchronized false
     if (suggestion.triage !in listOf("confirmed_candidate", "needs_confirmation")) return@synchronized false
     val start = suggestion.startAt
     if (suggestion.triage == "confirmed_candidate" &&
@@ -146,9 +198,17 @@ object NotificationSuggestionStore {
       val existing = ScheduleStore(context).use { it.all().any { row -> row.startAt == start && row.title == suggestion.title } }
       if (existing) return@synchronized false
     }
+    if (captureSession(context) != session) return@synchronized false
     val seen = (readSeen(context) + suggestion.id).takeLast(SEEN_LIMIT)
     write(context, (current + suggestion).takeLast(LIMIT), seen)
     true
+  }
+}
+
+/** Reconcile on expiry and after reboot/time changes; never read notification contents here. */
+class NotificationCandidateCleanupReceiver : BroadcastReceiver() {
+  override fun onReceive(context: Context, intent: Intent) {
+    runCatching { NotificationSuggestionStore.reconcile(context) }
   }
 }
 
