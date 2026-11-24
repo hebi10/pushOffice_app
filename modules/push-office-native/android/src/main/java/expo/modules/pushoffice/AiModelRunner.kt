@@ -103,11 +103,11 @@ internal object AiModelRunner {
   suspend fun parse(context: Context, id: String, text: String, now: ZonedDateTime,
     onRawSchedule: ((String) -> Unit)? = null, calendarDate: LocalDate? = null,
     onMetrics: ((AiInferenceMetrics) -> Unit)? = null): ParsedSchedule {
-    if (id == "gemini-nano") return NanoClient.parse(text, now, calendarDate)
     val ground = ScheduleParser.parse(text, now, calendarDate)
     require(ground.error == null && ground.start != null && ground.shiftMinutes == null) {
       ground.error ?: "원문에서 날짜와 시각을 확인할 수 없습니다. 직접 입력해 주세요."
     }
+    if (id == "gemini-nano") return NanoClient.parse(text, now, calendarDate)
     val trustedDate = requireNotNull(ground.start).toLocalDate().toString()
     val trustedTime = requireNotNull(ground.start).toLocalTime()
       .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))

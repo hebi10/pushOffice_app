@@ -366,7 +366,7 @@ class QuickEntryActivity : Activity() {
           if(availability["status"]=="available") {
             val now=ZonedDateTime.now(zone)
             val basic=ScheduleParser.parse(request.source,now,calendarDate)
-            val parsed=if(basic.shiftMinutes!=null) basic else AiModelRunner.parse(
+            val parsed=if(basic.shiftMinutes!=null || basic.error!=null || basic.start==null) basic else AiModelRunner.parse(
               this@QuickEntryActivity,selectedModel,request.source,now,calendarDate=calendarDate)
             ensureActive(); if(current()) preview(parsed,request.source)
           }
@@ -410,6 +410,10 @@ class QuickEntryActivity : Activity() {
   }
   private fun preview(parsed: ParsedSchedule, source: String) {
     stopSpeech(); cancelModel()
+    if (parsed.error != null && ScheduleLanguage.isChange(source)) {
+      status.text=parsed.error
+      return
+    }
     if(parsed.shiftMinutes != null && parsed.error==null) {
       val candidates=ScheduleStore(this).use { ScheduleParser.targets(parsed,it.all()) }
       if(candidates.isEmpty()) { status.text="일치하는 일정이 없습니다. 제목을 확인해 주세요."; return }

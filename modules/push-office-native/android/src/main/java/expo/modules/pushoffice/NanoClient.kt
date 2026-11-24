@@ -102,6 +102,11 @@ object NanoClient {
     } finally { client.close() }
   }
   suspend fun parse(text: String, now: ZonedDateTime, calendarDate: LocalDate? = null): ParsedSchedule {
+    val ground = ScheduleParser.parse(text, now, calendarDate)
+    require(ground.error == null && ground.start != null && ground.shiftMinutes == null) {
+      ground.error ?: "원문에서 날짜와 시각을 확인할 수 없습니다. 직접 입력해 주세요."
+    }
+    val trusted = requireNotNull(ground.start)
     val calendarHint = calendarDate?.let {
       "Calendar selected default date: $it. Use this ONLY when user text has no date. Explicit user dates always win. Never invent a time. "
     }.orEmpty()
@@ -111,7 +116,9 @@ object NanoClient {
       "localDate (YYYY-MM-DD), localTime (HH:mm 24-hour time), " +
       "repeatType (none|daily|weekly|monthly|yearly), or error if date/time missing, ambiguous " +
       "or request changes existing event. Do not calculate Unix timestamps. Never guess. Keep the event title in Korean when user text is Korean. " +
-      calendarHint + "User text: " + JSONObject.quote(text)
+      calendarHint + "Verified localDate=" + trusted.toLocalDate() +
+      ", localTime=" + trusted.toLocalTime().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) +
+      ", repeatType=" + ground.repeatType + ". Copy these fields exactly. Only improve the title. User text: " + JSONObject.quote(text)
     val obj = json(prompt)
     val error = obj.opt("error")
     require(error == null || error == JSONObject.NULL || (error is String && error.isBlank())) {
