@@ -18,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class PushOfficeNativeModule : Module() {
   private val context get() = appContext.reactContext ?: error("앱 컨텍스트가 준비되지 않았습니다.")
@@ -38,14 +39,15 @@ class PushOfficeNativeModule : Module() {
         return@runOnUiThread
       }
       try {
-        if (create) require(text != null && text.length <= LocalBackupDocuments.MAX_BYTES) {
+        if (create) require(text != null && text.length <= (if (LocalBackupCrypto.isEncryptedFamily(text)) LocalBackupDocuments.MAX_ENCRYPTED_BYTES else LocalBackupDocuments.MAX_BYTES)) {
           "백업 데이터가 너무 큽니다."
         }
+        val encrypted = create && text != null && LocalBackupCrypto.isEncryptedFamily(text)
         val intent = Intent(if (create) Intent.ACTION_CREATE_DOCUMENT else Intent.ACTION_OPEN_DOCUMENT)
           .addCategory(Intent.CATEGORY_OPENABLE)
-          .setType(if (create) "application/json" else "*/*")
+          .setType(if (!create) "*/*" else if (encrypted) "application/octet-stream" else "application/json")
         if (create) intent.putExtra(Intent.EXTRA_TITLE,
-          "PushOffice-" + java.time.LocalDate.now().toString() + ".json")
+          "PushOffice-" + java.time.LocalDate.now().toString() + if (encrypted) ".pobak" else ".json")
         backupPromise = promise
         pendingExport = text
         activity.startActivityForResult(intent, if (create) 59301 else 59302)
@@ -97,6 +99,18 @@ class PushOfficeNativeModule : Module() {
             }
           }
         }
+      }
+    }
+    AsyncFunction("encryptLocalBackup") Coroutine { text: String, password: String ->
+      withContext(Dispatchers.Default) {
+        try { LocalBackupCrypto.encrypt(text, password) }
+        catch (_: Exception) { throw IllegalArgumentException("암호화 백업을 만들지 못했습니다. 비밀번호와 파일 크기를 확인해 주세요.") }
+      }
+    }
+    AsyncFunction("decryptLocalBackup") Coroutine { text: String, password: String ->
+      withContext(Dispatchers.Default) {
+        try { LocalBackupCrypto.decrypt(text, password) }
+        catch (_: Exception) { throw IllegalArgumentException("비밀번호가 올바르지 않거나 백업 파일이 손상됐습니다.") }
       }
     }
     AsyncFunction("createLocalBackupDocument") { text: String, promise: Promise ->

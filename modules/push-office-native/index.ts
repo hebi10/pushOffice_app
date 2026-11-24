@@ -103,6 +103,8 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   openQuickEntryForDate(date: string): Promise<void>;
   /** Android SAF: user chooses the location. A cancelled picker returns false. */
   createLocalBackupDocument(text: string): Promise<boolean>;
+  encryptLocalBackup(text: string, password: string): Promise<string>;
+  decryptLocalBackup(text: string, password: string): Promise<string>;
   /** Android SAF: user chooses the file. A cancelled picker returns null. */
   pickLocalBackupDocument(): Promise<string | null>;
   /** Atomic, existing IDs are never overwritten; alarm refresh failure is reported separately. */
@@ -156,6 +158,8 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   openQuickEntry: unavailable,
   openQuickEntryForDate: unavailable,
   createLocalBackupDocument: unavailable,
+  encryptLocalBackup: unavailable,
+  decryptLocalBackup: unavailable,
   pickLocalBackupDocument: unavailable,
   importBackupSchedules: unavailable,
   getNotificationSuggestionStatus: async () => ({ enabled: false, accessGranted: false, pendingCount: 0 }),
