@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd android
-./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle \
+bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle \
   :push-office-native:connectedDebugAndroidTest \
   --no-daemon --max-workers=2 \
   '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \

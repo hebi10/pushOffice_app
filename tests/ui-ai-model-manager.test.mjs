@@ -27,7 +27,7 @@ test('model downloads are explicit, verified and app-owned, with delete and reco
     'setAllowedOverMetered(false)', 'setDestinationInExternalFilesDir',
     'X-Linked-Etag', 'X-Linked-Size', 'AiModelIntegrity.matches',
     'expectedSize(ctx, model.id)', 'remote.sha',
-    'StatFs(folder.path).availableBytes', 'synchronized(lock)',
+    'StatFs(folder.path).availableBytes', 'operations.withLock',
     'expectedSha(ctx, model.id)', 'downloadId(ctx, id)',
     'DownloadManager.STATUS_SUCCESSFUL', 'DownloadManager.STATUS_FAILED',
     'setNotificationVisibility', 'getExternalFilesDir(null)',
@@ -85,7 +85,7 @@ test('local inference never creates schedules or falls back silently to cloud', 
   assert.match(integrity, /MessageDigest\.getInstance\("SHA-256"\)/);
   assert.match(integrity, /MessageDigest\.isEqual\(digest\.digest\(\), bytes\)/);
   assert.match(manager, /verifiedInstalledFile\(ctx, model\)/);
-  assert.match(runner, /verifiedInstalledFile\(context, model\)/);
+  assert.match(runner, /withVerifiedInstalledFile\(context, model\)/);
   assert.match(manager, /suspend fun verify\(ctx: Context, id: String\)/);
   assert.match(native, /AsyncFunction\("verifyAiModel"\)/);
   assert.match(screen, /PushOfficeNative\.verifyAiModel\(model\.id\)/);
@@ -105,7 +105,9 @@ test('AI model responses accept null error but reject hallucinated dates and dam
   assert.match(nano, /error == JSONObject\.NULL/);
   assert.match(time, /require\(ground\.error == null && ground\.start != null/);
   assert.match(time, /getValidOffsets\(localDateTime\)/);
-  assert.match(manager, /verifiedInstalledFile\(ctx,model\) != null\) "installed"/);
+  assert.match(manager, /verifyLocked\(ctx, model, listOnly = true\) != null -> mapOf\("state" to "installed"\)/);
+  assert.match(manager, /if \(listOnly && statusCache\.fresh/);
+  assert.match(manager, /val file = verifyLocked\(ctx, model\)/);
   assert.doesNotMatch(manager, /else if \(available\(ctx,model\)\) "installed"/);
 });
 

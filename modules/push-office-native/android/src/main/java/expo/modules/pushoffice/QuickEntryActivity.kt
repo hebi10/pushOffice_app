@@ -69,7 +69,7 @@ class QuickEntryActivity : Activity() {
     }
     super.onCreate(state)
     window.setBackgroundDrawableResource(android.R.color.transparent)
-    window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(boundedEntryWidth(), WindowManager.LayoutParams.WRAP_CONTENT)
     when(intent.getStringExtra("entryMode")) {
       "text" -> editor(false)
       "sharedText" -> {
@@ -105,13 +105,15 @@ class QuickEntryActivity : Activity() {
     }
     return resources.displayMetrics.widthPixels.coerceAtLeast(1) to resources.displayMetrics.heightPixels.coerceAtLeast(1)
   }
+  private fun boundedEntryWidth(full: Boolean = false, inset: Int = 0): Int =
+    QuickEntryViewport.width(availableViewport().first - inset, dp(400), full)
+
   override fun onConfigurationChanged(newConfig: Configuration) {
     super.onConfigurationChanged(newConfig)
     // The existing views and unsaved input survive window resizing/folding.
-    val (width, _) = availableViewport()
     window.setGravity(if (chooserVisible) Gravity.BOTTOM else Gravity.CENTER)
     window.setLayout(
-      (if (chooserVisible) width else (width*.94).toInt()).coerceIn(1,dp(400)),
+      boundedEntryWidth(full = chooserVisible),
       if (fullHeightEntry) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
     )
     if (::root.isInitialized) root.requestLayout()
@@ -127,7 +129,7 @@ class QuickEntryActivity : Activity() {
     val scroll=object: ScrollView(this) {
       override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val viewport = availableViewport().second
-        val limit=(viewport-dp(if(confirmationPage) 200 else 80)).coerceAtLeast(dp(48)).coerceAtMost(viewport)
+        val limit=QuickEntryViewport.scrollHeight(viewport, dp(if(confirmationPage) 200 else 80), dp(48))
         val height=if(MeasureSpec.getMode(heightMeasureSpec)==MeasureSpec.UNSPECIFIED) limit
           else MeasureSpec.getSize(heightMeasureSpec).coerceAtMost(limit)
         super.onMeasure(widthMeasureSpec,MeasureSpec.makeMeasureSpec(height,MeasureSpec.AT_MOST))
@@ -149,7 +151,7 @@ class QuickEntryActivity : Activity() {
     root.addView(TextView(this).apply { text=subtitle; textSize=13f; setTextColor(secondary); setPadding(0,0,0,dp(10)) })
     window.setGravity(Gravity.CENTER)
     window.setLayout(
-      (availableViewport().first*.94).toInt().coerceIn(1,dp(400)),
+      boundedEntryWidth(),
       if(confirmationPage) WindowManager.LayoutParams.MATCH_PARENT else WindowManager.LayoutParams.WRAP_CONTENT
     )
   }
@@ -158,7 +160,6 @@ class QuickEntryActivity : Activity() {
     chooserVisible=true
     fullHeightEntry=false
     exitEditor()
-    val availableWidth=availableViewport().first
     root=LinearLayout(this).apply {
       orientation=LinearLayout.VERTICAL
       setPadding(dp(20),dp(12),dp(20),dp(22))
@@ -303,7 +304,7 @@ class QuickEntryActivity : Activity() {
     choice(R.string.quick_entry_text,R.string.quick_entry_text_detail,R.string.quick_entry_text_accessibility,android.R.drawable.ic_menu_edit,true) { editor(false) }
     choice(R.string.quick_entry_voice,R.string.quick_entry_voice_detail,R.string.quick_entry_voice_accessibility,android.R.drawable.ic_btn_speak_now,false) { editor(true) }
     window.setGravity(Gravity.BOTTOM)
-    window.setLayout(availableWidth.coerceAtMost(dp(400)).coerceAtLeast(1),WindowManager.LayoutParams.WRAP_CONTENT)
+    window.setLayout(boundedEntryWidth(full = true),WindowManager.LayoutParams.WRAP_CONTENT)
   }
   private fun stepHint(step: Int, name: String) {
     root.addView(TextView(this).apply {
@@ -1170,7 +1171,7 @@ class QuickEntryActivity : Activity() {
     dialog.show()
     dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
     dialog.window?.setLayout(
-      (resources.displayMetrics.widthPixels-dp(32)).coerceAtMost(dp(400)),
+      boundedEntryWidth(full = true, inset = dp(32)),
       WindowManager.LayoutParams.WRAP_CONTENT
     )
   }

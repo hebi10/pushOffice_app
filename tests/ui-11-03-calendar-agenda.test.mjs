@@ -17,7 +17,9 @@ test('UI-11-03 keeps month, selected-day summary, action and agenda in order', (
 
 test('UI-11-03 preserves genuine date selection, count, multi-dot and schedule navigation', () => {
   for (const value of [
-    'useMonthSchedules(month.year, month.month)',
+    "useMonthSchedules(month.year, month.month, mode === 'month')",
+    "useWeekSchedules(selected, mode === 'week')",
+    "const schedules = mode === 'month' ? monthSchedules : weekSchedules;",
     'onDayPress={date => setSelected(date.dateString)}',
     'markingType="multi-dot"',
     'selectedDotColor: colors.onPrimary',

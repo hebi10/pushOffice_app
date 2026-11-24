@@ -20,9 +20,11 @@ test('precision stage 7 keeps full-width phones and centers tablet main routes',
   assert.match(history, /pageHeading:\s*\{ width: '100%', maxWidth: 720, alignSelf: 'center'/);
   assert.match(history, /listContent:\s*\{ width: '100%', maxWidth: 720, alignSelf: 'center'/);
   assert.match(history, /emptyContainer:\s*\{\s*flex: 1,\s*width: '100%',\s*maxWidth: 720,\s*alignSelf: 'center'/);
-  for (const screen of [home, calendar, settings, detail]) {
-    assert.match(screen, /contentContainerStyle=\{s\.content\}/);
+  for (const screen of [home, calendar]) {
+    assert.match(screen, /contentContainerStyle=\{\[s\.content,\s*\{\s*maxWidth:\s*layout\.contentMaxWidth\s*\}\]\}/);
+    assert.match(screen, /const layout = useAdaptiveLayout\(\)/);
   }
+  for (const screen of [settings, detail]) assert.match(screen, /contentContainerStyle=\{s\.content\}/);
 });
 
 test('precision stage 7 makes 130 percent font screenshots mandatory', () => {
