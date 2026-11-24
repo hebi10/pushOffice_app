@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import struct
+import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2] / "ui-captures"
@@ -81,6 +84,11 @@ def verify() -> None:
     manifest = ROOT / "capture-manifest.json"
     report = json.loads(manifest.read_text(encoding="utf-8"))
     errors: list[str] = []
+    expected_commit = os.environ.get("GITHUB_SHA") or subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True, cwd=ROOT.parent
+    ).strip()
+    if not re.fullmatch(r"[0-9a-f]{40}", expected_commit) or report.get("source_commit") != expected_commit:
+        errors.append("capture manifest is not tied to the exact QA source commit")
 
     warnings = report.get("warnings")
     if not isinstance(warnings, list):

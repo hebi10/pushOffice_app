@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import struct
 import zlib
@@ -11,6 +12,13 @@ import time
 from datetime import date, datetime, timedelta
 import xml.etree.ElementTree as ET
 from pathlib import Path
+from calendar_capture_target import day_label, exact_clickable_center, week_shift
+
+SOURCE_COMMIT = os.environ.get("GITHUB_SHA") or subprocess.check_output(
+    ["git", "rev-parse", "HEAD"], text=True
+).strip()
+if not re.fullmatch(r"[0-9a-f]{40}", SOURCE_COMMIT):
+    raise RuntimeError("Invalid source commit for Android capture evidence")
 
 APP = "com.hebi96.pushOffice_app"
 OUT = Path("ui-captures")
@@ -145,6 +153,20 @@ def tap(label: str, bottom: bool = False, scroll: bool = False) -> None:
     adb("shell", "input", "tap", str(target[0]), str(target[1]))
     time.sleep(4)
     print(f"Tapped {label}: {target}")
+
+
+def tap_exact(label: str) -> None:
+    for attempt in range(4):
+        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
+        root = ET.fromstring(adb("exec-out", "cat", "/sdcard/ui.xml").decode("utf-8", errors="replace"))
+        target = exact_clickable_center(root, label, APP)
+        if target is not None:
+            adb("shell", "input", "tap", str(target[0]), str(target[1]))
+            time.sleep(4)
+            print(f"Tapped exact app action {label}: {target}")
+            return
+        time.sleep(2)
+    raise RuntimeError(f"Could not locate exact app action: {label}")
 
 
 def focus_field(label: str, scroll: bool = False) -> None:
@@ -328,6 +350,7 @@ assert_native_mono_surface("12-native-editor-dark", 100, 300)
     json.dumps(
         {
             "source": "Android 29 emulator, new local installation",
+            "source_commit": SOURCE_COMMIT,
             "timezone": EMULATOR_TIMEZONE,
             "utc_offset": EMULATOR_UTC_OFFSET,
             "screens": REPORT,
@@ -353,33 +376,18 @@ try:
     tap("일정", bottom=True)
     screenshot("02c-calendar-compact", "monthly calendar on compact portrait screen")
     try:
-        # The isolated fixture is scheduled for tomorrow, not the selected current day.
-        # Open it via the calendar rather than relying on the compact home card scroll position.
+        # Resolve the actual fixture day using the new weekly accessibility controls.
+        # This avoids old pixel coordinates and ambiguous adjacent-month day numbers.
         fixture_day = date.fromisoformat(tomorrow)
+        tap_exact("오늘")
+        tap_exact("주간 일정")
         current_day = date.fromisoformat(adb("shell", "date", "+%Y-%m-%d").decode().strip())
-        if (fixture_day.year, fixture_day.month) != (current_day.year, current_day.month):
-            # The next-month arrow is on the right side of the visible calendar heading.
-            adb("shell", "input", "tap", "547", "330")
-            time.sleep(3)
-        # Refresh the accessibility tree after selecting the displayed month.
-        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
-        root = ET.fromstring(adb("exec-out", "cat", "/sdcard/ui.xml").decode("utf-8", errors="replace"))
-        day_positions = []
-        for node in root.iter("node"):
-            if node.get("text") != str(fixture_day.day):
-                continue
-            bounds = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.get("bounds", ""))
-            if not bounds:
-                continue
-            x1, y1, x2, y2 = map(int, bounds.groups())
-            if y1 < 180 or y2 > 850 or x2 <= x1 or y2 <= y1:
-                continue
-            day_positions.append(((x1 + x2) // 2, (y1 + y2) // 2))
-        if len(day_positions) != 1:
-            raise RuntimeError(f"Cannot identify a unique fixture calendar day: {tomorrow}")
-        x, y = day_positions[0]
-        adb("shell", "input", "tap", str(x), str(y))
-        time.sleep(4)
+        shift = week_shift(current_day, fixture_day)
+        if abs(shift) > 1:
+            raise RuntimeError("Unexpected date drift for the disposable tomorrow fixture")
+        if shift:
+            tap_exact("다음 주" if shift > 0 else "이전 주")
+        tap_exact(day_label(fixture_day, 1))
         tap("UITest", scroll=True)
         if find("일정 제목 수정") is None:
             raise RuntimeError("Compact fixture action did not open the actual schedule detail")
@@ -653,6 +661,7 @@ except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, 
 (OUT / "capture-manifest.json").write_text(
     json.dumps({
         "source": "Android 29 emulator, 720x1600 default and 640x1360 compact mode",
+        "source_commit": SOURCE_COMMIT,
         "timezone": EMULATOR_TIMEZONE,
         "utc_offset": EMULATOR_UTC_OFFSET,
         "screens": REPORT,
