@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 장소·회의 링크·메모 | `ScheduleRecord.kt`, `ScheduleStore.kt`, `QuickEntryActivity.kt`, `scheduleExtras.ts`; 앱 전용 SQLite에 저장하고 상세에서 수정·삭제 | 앱 서버로 자동 전송하는 코드가 확인되지 않음. **기기 내 저장 자체는 Play의 ‘수집(기기 밖으로 전송)’ 정의와 구분**. 실제 출시 AAB에서 타 SDK·외부 환경 설정을 재검증 |
 | 홈 위젯·아침 브리핑 | `ScheduleWidgetProvider.kt`, `ReminderReceiver.kt`; **저장된 장소**를 사용자 위젯과 활성 브리핑에 조건부 표시 | 회의 링크·메모는 알림·위젯에 추가하지 않음. 다만 위젯·잠금화면에 장소가 보일 수 있으므로 개인정보처리방침에 명시 |
-| 선택형 JSON 백업·복원 | `localBackupCodec.mjs`, `localBackupService.ts`, Android `LocalBackupDocuments.kt`; 사용자가 직접 파일 제공자/저장 위치 선택 | 파일에는 일정 제목·장소·회의 링크·메모·원문·설정이 포함될 수 있고 **암호화되지 않음**. 체크섬은 손상 검출용이며 암호화가 아님. 사용자가 Drive 등 원격 저장소 제공자를 선택한 경우 해당 제공자가 파일을 처리할 수 있음. 앱 자체 자동 업로드와 구별하여 실제 사용자 선택 경로를 Play 답변 검토 시 확인 |
+| 2026-11-16 당시 선택형 JSON 백업·복원 | `localBackupCodec.mjs`, `localBackupService.ts`, Android `LocalBackupDocuments.kt`; 사용자가 직접 파일 제공자/저장 위치 선택 | 파일에는 일정 제목·장소·회의 링크·메모·원문·설정이 포함될 수 있고 **암호화되지 않음**. 체크섬은 손상 검출용이며 암호화가 아님. 사용자가 Drive 등 원격 저장소 제공자를 선택한 경우 해당 제공자가 파일을 처리할 수 있음. 앱 자체 자동 업로드와 구별하여 실제 사용자 선택 경로를 Play 답변 검토 시 확인 |
 | 외부 브리핑·기존 Firebase 복원 | `README.md`, `src/features/digest/digestService.ts`, `src/features/storage/legacyRecovery.ts` | CI의 `EXPO_NO_DOTENV=1`·실제 릴리스 빌드의 환경 변수/리소스·선택 기능 활성화 상태를 재검증해야 함. 기능이 활성화된 경우 기존 ‘진단·기기 ID만 수집’ 선언을 그대로 사용하는 것은 부정확할 수 있음 |
 | ML Kit GenAI | `NanoClient.kt`와 Google ML Kit 공식 데이터 공개 | 사용 분석·진단 및 식별자 수집에 대한 기존 신고 필요성 유지. 본문·메모 원문을 ML Kit가 원격 수집한다고 **추측하지 않음** |
 
@@ -108,3 +108,7 @@ GitHub Actions 실행 [41588844929](https://github.com/hebi10/pushOffice_app/act
 4. 기존 활성 배포 버전 전체의 데이터 관행. 외부 백엔드·Firebase를 나중에 활성화하면 실제 URL·처리자 관계·서버/인프라 로그·이전 기록의 보관·삭제도 다시 확인해야 한다.
 
 개인정보처리방침 공개 원본은 `docs/privacy/index.html`이고 `store-assets/privacy-policy-draft.ko.html`은 동일 내용의 **최종본** 복사본이다. 파일명만 이전 호환을 위해 유지한다. 초안 표시·미입력 연락처는 없으며, 공개 URL과 지원 이메일은 이미 저장·게시했다.
+
+## PO-SEC-02 신규 암호화 백업 (2026-11-24)
+
+일반 JSON 기존 호환은 유지되며, 별도 선택 시 Android 네이티브 PBKDF2-HMAC-SHA256/AES-256-GCM 기반 암호화 백업을 사용한다. 비밀번호는 영구 저장·외부 전송하지 않고 최근 성공한 수동 저장 시각/종류만 로컬에 기록한다. 외부 저장소 위치는 사용자가 직접 선택하며 기기 전체 DB 암호화·자동 업로드·Google Drive 동기화 기능을 뜻하지 않는다. 이전 배포의 JSON-only 처리와 새 코드 및 실제 릴리스 AAB는 구분하여 Play 신고를 다시 확인한다.

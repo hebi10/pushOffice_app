@@ -4,6 +4,7 @@ import type { UserSettings } from '../../types';
 import { localGetSettings, withSettingsLock, writeLocalSettings } from './localStore';
 import { getLegacyCloudState } from './storageMode';
 import { effectiveSchedulingSettings } from './settingsRecoveryPolicy';
+import { restoreWithSettings } from './backupFlow';
 import { store } from '../../store/store';
 import { updateSettings } from '../../store/slices/settingsSlice';
 const marker = (uid: string) => `@pushoffice/native-cloud-settings-v1/${uid}`;
@@ -43,5 +44,23 @@ export function commitRecoveredSettings(uid: string, remote: Partial<UserSetting
         await configure(merged, false);
         await writeLocalSettings(merged);
         await AsyncStorage.setItem(marker(uid), 'done');
+    });
+}
+
+/** Keep recovery/ordinary writes out of the rollback window. Never roll back after a committed import. */
+export function withBackupSettingsRestore<T>(restored: UserSettings, restore: () => Promise<T>): Promise<T> {
+    return withSettingsLock(async () => {
+        const persisted = await localGetSettings();
+        const previous = store.getState().settings;
+        const unresolved = await settingsUnresolved();
+        return restoreWithSettings(async () => {
+            await writeLocalSettings(restored);
+            await configure(restored, unresolved);
+            store.dispatch(updateSettings(restored));
+        }, restore, async () => {
+            await writeLocalSettings(persisted);
+            await configure({...persisted, themeMode: previous.themeMode}, unresolved);
+            store.dispatch(updateSettings(previous));
+        });
     });
 }
