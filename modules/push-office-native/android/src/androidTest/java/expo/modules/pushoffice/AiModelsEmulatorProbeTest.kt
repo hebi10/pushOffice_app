@@ -102,6 +102,42 @@ class AiModelsEmulatorProbeTest {
     assertFalse("An available, installed model failed the Android inference probe", unexpectedFailure)
   }
 
+  @Test fun verifiedFileLeaseRechecksEveryUseEvenWithTheSameLength() = runBlocking {
+    val id = "po-ai-02-probe-" + java.util.UUID.randomUUID().toString()
+    val directory = File(requireNotNull(context.getExternalFilesDir(null)), "ai_models")
+    check(directory.isDirectory || directory.mkdirs())
+    val file = File(directory, id + ".litertlm")
+    val bytes = "synthetic-model-test-fixture".toByteArray(Charsets.UTF_8)
+    val sha = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+    val model = AiModelDefinition(id, "Synthetic fixture", "QA only", "local", "fixture.litertlm", 1, 1, sha)
+    val prefs = context.getSharedPreferences("push_office_ai_models", Context.MODE_PRIVATE)
+    try {
+      file.writeBytes(bytes)
+      check(prefs.edit().putLong(id + "_bytes", bytes.size.toLong()).putString(id + "_sha", sha).commit())
+      val result = AiModelDownloadStore.withVerifiedInstalledFile(context, model) { verified, elapsed ->
+        assertEquals(file.absolutePath, verified.absolutePath)
+        assertTrue(elapsed >= 0L)
+        true
+      }
+      assertTrue(result)
+      val originalTime = file.lastModified()
+      bytes[0] = (bytes[0].toInt() xor 1).toByte()
+      file.writeBytes(bytes)
+      file.setLastModified(originalTime)
+      assertEquals(null, AiModelDownloadStore.verifiedInstalledFile(context, model))
+      var executed = false
+      try {
+        AiModelDownloadStore.withVerifiedInstalledFile(context, model) { _, _ -> executed = true }
+        throw AssertionError("Corrupt file lease was not rejected")
+      } catch (_: IllegalStateException) { assertFalse(executed) }
+      val capacity = AiModelDownloadStore.memoryCapacity(context)
+      assertTrue(capacity.totalRamBytes > 0 && capacity.availableRamBytes >= 0)
+    } finally {
+      file.delete()
+      prefs.edit().remove(id + "_bytes").remove(id + "_sha").remove(id + "_corrupt").commit()
+    }
+  }
+
   private fun verifyAndroidShaFixture(): Boolean {
     val file = File.createTempFile("ai-model-sha-probe", ".bin", context.cacheDir)
     return try {

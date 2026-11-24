@@ -76,6 +76,14 @@ export interface AiModelInfo {
   bytesDownloaded: number;
   totalBytes: number;
   message: string;
+  /** Resource estimates, not measured per-model RAM consumption or guaranteed speed. */
+  minAvailableMb?: number;
+  availableMemoryMb?: number;
+  totalMemoryMb?: number;
+  freeStorageMb?: number;
+  memoryReady?: boolean;
+  storageReady?: boolean;
+  recommended?: boolean;
 }
 export interface AiModelTestResult {
   modelId: string;
@@ -85,6 +93,11 @@ export interface AiModelTestResult {
   repeatType?: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   message?: string;
   durationMs: number;
+  verifyMs?: number;
+  initializeMs?: number;
+  generationMs?: number;
+  availableRamBeforeMb?: number;
+  availableRamAfterMb?: number;
 }
 export interface AiModelActionResult {
   state?: string;
