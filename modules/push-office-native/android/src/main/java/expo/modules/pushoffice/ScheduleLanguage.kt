@@ -20,7 +20,7 @@ internal object ScheduleLanguage {
   private val timeCue = Regex("""오전|오후|아침|저녁|새벽|밤|점심|정오|자정|퇴근|(?<!\d)\d{1,3}\s*(?:시|시간|분)|(?<!\d)\d{1,2}:\d{1,2}""")
   private val approximate = Regex("""^\s*(?:쯤|정도|무렵|전후|경(?=\s|$)|부터|까지|이후|이전)""")
   private val shortRange = Regex("""\d{1,2}\s*(?:~|～|–|—|-|에서|부터)\s*\d{1,2}\s*(?:시|분)""")
-  private val change = Regex("""취소|무산|연기|철회|(?:일정|시간|날짜|예약)\s*(?:변경|수정|조정)|(?:으로|로)\s*변경|변경(?:됐|되었|해|합니다)|바뀌|바꿔|바꾸|미뤄|미루|앞당|늦춰|늦추|당겨|뒤로\s*옮|앞으로\s*옮""")
+  private val change = Regex("""취소|무산|연기|철회|(?:일정|시간|날짜|예약|회의|미팅|약속|면접|수업|모임)\s*(?:변경|수정|조정)|(?:으로|로)\s*변경|변경(?:됐|되었|해|합니다|됨|\s*안내)|바뀌|바꿔|바꾸|미뤄|미루|앞당|늦춰|늦추|당겨|뒤로\s*옮|앞으로\s*옮""")
   private val repeatPattern = Regex("""매주말|평일마다|주말마다|매일|매주|매월|매달|매년|매해|격주""")
 
   fun dates(text: String): List<MatchResult> = datePattern.findAll(text).toList()
@@ -99,7 +99,7 @@ internal object ScheduleLanguage {
 
   fun resolveTime(token: MatchResult): LocalTime {
     if (token.value == "정오") return LocalTime.NOON
-    if (token.value == "자정") return LocalTime.MIDNIGHT
+    require(token.value != "자정") { "자정이 어느 날짜의 00:00인지 직접 확인해 주세요." }
     val period = token.groupValues[1]
     val colon = token.groupValues[2]
     val hourToken = colon.ifEmpty { token.groupValues[4] }
@@ -109,9 +109,14 @@ internal object ScheduleLanguage {
       else if (minuteText == "반") 30 else minuteText.removeSuffix("분").toIntOrNull() ?: 0
     if (period.isNotEmpty()) {
       require(hour in 1..12)
-      require(!(hour == 12 && period in setOf("밤", "새벽", "아침", "저녁"))) {
-        "12시의 오전·오후를 직접 확인해 주세요."
+      val colloquialRange = when (period) {
+        "밤" -> 8..11
+        "새벽" -> 1..6
+        "아침" -> 5..11
+        "저녁" -> 5..11
+        else -> 1..12
       }
+      require(hour in colloquialRange) { "오전·오후와 날짜를 직접 확인해 주세요." }
       hour = hour % 12 + if (period in setOf("오후", "저녁", "밤")) 12 else 0
     } else {
       require(hour == 0 || hour >= 13 || (hourToken.length == 2 &&

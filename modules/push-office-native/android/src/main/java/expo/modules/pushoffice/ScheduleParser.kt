@@ -61,19 +61,22 @@ object ScheduleParser {
       if (ScheduleLanguage.hasDate(titlePart))
         return ParsedSchedule(error="날짜 표현이 명확하지 않습니다. 날짜를 직접 확인해 주세요.")
       if (time == null) return ParsedSchedule(error="시간을 입력하거나 아래에서 직접 지정해 주세요.")
-      if (Regex("""\d+\s*(?:시간|분)\s*(?:뒤|후|동안)|\d+:\d+""").containsMatchIn(titlePart))
+      if (Regex("""\d+\s*(?:시(?!간)|분(?!기)|시간)|\d+:\d+""").containsMatchIn(titlePart))
         return ParsedSchedule(error="시간 표현을 직접 확인해 주세요.")
       if (date == null && repeat == "daily") date = calendarDate ?: now.toLocalDate()
       if(date == null) date = calendarDate
       if(date == null) return ParsedSchedule(error="날짜를 입력하거나 아래에서 직접 지정해 주세요.")
+      require(date.year in 1970..9999) { "날짜 범위를 확인해 주세요." }
       val clock = ScheduleLanguage.resolveTime(time)
-      var start = ScheduleLanguage.strictStart(date, clock, now.zone)
-      if (repeat == "daily" || repeat == "weekly") {
-        var nextDate: LocalDate = date
-        while (!start.toInstant().isAfter(now.toInstant())) {
-          nextDate = if (repeat == "daily") nextDate.plusDays(1) else nextDate.plusWeeks(1)
-          start = ScheduleLanguage.strictStart(nextDate, clock, now.zone)
-        }
+      var nextDate: LocalDate = date
+      if ((repeat == "daily" || repeat == "weekly") && nextDate.isBefore(now.toLocalDate())) {
+        val days = java.time.temporal.ChronoUnit.DAYS.between(nextDate, now.toLocalDate())
+        nextDate = nextDate.plusDays(if (repeat == "daily") days else (days / 7) * 7)
+      }
+      var start = ScheduleLanguage.strictStart(nextDate, clock, now.zone)
+      if (!start.toInstant().isAfter(now.toInstant()) && repeat in setOf("daily", "weekly")) {
+        nextDate = if (repeat == "daily") nextDate.plusDays(1) else nextDate.plusWeeks(1)
+        start = ScheduleLanguage.strictStart(nextDate, clock, now.zone)
       }
       val title = titlePart.replace(Regex("""^(?:에|에는)\s+"""), "")
         .replace(Regex("""\s*(?:일정\s*)?(?:등록|추가|예약)\s*해\s*(?:줘|주세요|줘요)[.!]?$"""), "").trim()

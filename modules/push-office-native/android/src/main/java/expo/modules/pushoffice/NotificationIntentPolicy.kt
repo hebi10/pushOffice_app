@@ -56,7 +56,7 @@ internal object NotificationIntentPolicy {
       return NotificationDecision(NotificationTriage.NEEDS_CONFIRMATION,
         excerpt = source, title = body.take(120), startAt = null)
     }
-    if (hasDate && hasTime) {
+    if (ScheduleLanguage.dates(combined).isNotEmpty() && ScheduleLanguage.times(combined).isNotEmpty()) {
       return NotificationDecision(NotificationTriage.NEEDS_CONFIRMATION,
         excerpt = source, title = body.take(120), startAt = null)
     }
