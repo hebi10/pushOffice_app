@@ -7,4 +7,4 @@ cd android
   '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
   -Pkotlin.compiler.execution.strategy=in-process \
   -PreactNativeArchitectures=x86_64 \
-  -Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.LocalBackupCryptoDeviceTest,expo.modules.pushoffice.LocalBackupRestoreTest,expo.modules.pushoffice.ScheduleImportAtomicityTest,expo.modules.pushoffice.ScheduleCategoryMigrationTest,expo.modules.pushoffice.ScheduleRemindersDeviceTest,expo.modules.pushoffice.QuickEntryActivityUiTest#optionalExtrasAreEditableAndOnlySaveAfterValidUserConfirmation
+  -Pandroid.testInstrumentationRunnerArguments.class=expo.modules.pushoffice.LocalBackupCryptoDeviceTest,expo.modules.pushoffice.LocalBackupRestoreTest,expo.modules.pushoffice.ScheduleImportAtomicityTest,expo.modules.pushoffice.ScheduleCategoryMigrationTest,expo.modules.pushoffice.ScheduleRemindersDeviceTest,expo.modules.pushoffice.ScheduleOccurrencesDeviceTest,expo.modules.pushoffice.QuickEntryActivityUiTest#optionalExtrasAreEditableAndOnlySaveAfterValidUserConfirmation

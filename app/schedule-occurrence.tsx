@@ -36,6 +36,7 @@ export default function ScheduleOccurrenceScreen() {
   const [start, setStart] = useState('');
   const [end, setEnd] = useState('');
   const [confirm, setConfirm] = useState<Action | null>(null);
+  const [editVersion, setEditVersion] = useState<number | null>(null);
   const inFlight = useRef(false);
   const mutation = useMutation({
     mutationFn: ({action, updated, replacement}: {action: Action; updated: number; replacement: {title?: string;startAt?: number;endAt?: number | null}}) =>
@@ -43,16 +44,18 @@ export default function ScheduleOccurrenceScreen() {
     onSuccess: async () => { await query.invalidateQueries({queryKey:['schedules']}); },
   });
   useEffect(() => {
-    if (!occurrence) return;
+    if (!occurrence || !detail.data) return;
+    setEditVersion(detail.data.updatedAt.toMillis());
     setTitle(occurrence.title);
     setStart(dayjs(occurrence.startAt).format(FORMAT));
     setEnd(occurrence.endAt == null ? '' : dayjs(occurrence.endAt).format(FORMAT));
-  }, [occurrence]);
+  }, [occurrence, detail.data]);
 
   const apply = async (action: Action) => {
     if (!detail.data || !occurrence || inFlight.current) return;
     inFlight.current = true;
     try {
+      if (editVersion !== detail.data.updatedAt.toMillis()) throw new Error('일정이 변경되었습니다. 다시 확인해 주세요.');
       const replacement = action === 'edit' ? {
         title: title.trim(), startAt: parseLocal(start.trim()), endAt: end.trim() ? parseLocal(end.trim()) : null,
       } : {};
@@ -60,7 +63,7 @@ export default function ScheduleOccurrenceScreen() {
         throw new Error('일정 제목과 시작·종료 시간을 확인해 주세요.');
       }
       if (action === 'edit' && occurrence.isAllDay && !start.trim().endsWith(' 00:00')) throw new Error('종일 일정의 시작 시간은 00:00으로 입력해 주세요.');
-      const result = await mutation.mutateAsync({action, updated:detail.data.updatedAt.toMillis(), replacement});
+      const result = await mutation.mutateAsync({action, updated:editVersion, replacement});
       if (!result.alarmsReady || !result.widgetsReady) showNotice('회차 변경 완료', '일정은 저장했습니다. 설정에서 알림과 위젯을 다시 확인해 주세요.');
       else showToast(action === 'delete' ? '이 회차를 삭제했습니다.' : action === 'complete' ? '이 회차를 완료했습니다.' : '이 회차를 독립 일정으로 저장했습니다.');
       if (result.detachedId) router.replace(`/schedule/${result.detachedId}`);
