@@ -1,3 +1,5 @@
+import { normalizeScheduleCategory } from '../schedules/scheduleCategories.mjs';
+
 const FORMAT = 'pushoffice-local-backup';
 const PACKAGE = 'com.hebi96.pushOffice_app';
 const VERSION = 1;
@@ -121,6 +123,7 @@ function normalizeSchedule(value) {
     ...(value.location === undefined ? {} : { location: optionalScheduleExtra(value.location, 'location', 160) }),
     ...(value.meetingUrl === undefined ? {} : { meetingUrl: optionalScheduleExtra(value.meetingUrl, 'meetingUrl', 2048) }),
     ...(value.notes === undefined ? {} : { notes: optionalScheduleExtra(value.notes, 'notes', 2000) }),
+    ...(value.category === undefined ? {} : { category: normalizeScheduleCategory(value.category) }),
   };
   return {
     id: value.id, userId: value.userId, type: value.type, title: value.title,

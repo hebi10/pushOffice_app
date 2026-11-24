@@ -36,6 +36,7 @@ object ScheduleTime {
   fun validate(record: ScheduleRecord, now: Long, allowPast: Boolean = false) {
     record.anchorZone?.let(ScheduleZone::validate)
     ScheduleExtras.validate(record)
+    ScheduleCategory.validate(record.category)
     require(record.id.isNotBlank() && record.id.length <= 256) { "일정 ID가 올바르지 않습니다." }
     require(record.userId.isNotBlank()) { "사용자 ID가 필요합니다." }
     require(record.title.isNotBlank() && record.title.length <= 500) { "일정 제목을 입력해 주세요 (500자 이하)." }

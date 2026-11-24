@@ -1,5 +1,6 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
+import type { ScheduleCategory } from '../../src/features/schedules/scheduleCategories.mjs';
 
 export interface NativeSchedule {
   id: string;
@@ -14,6 +15,7 @@ export interface NativeSchedule {
   location?: string | null;
   meetingUrl?: string | null;
   notes?: string | null;
+  category?: ScheduleCategory | null;
   isAllDay: boolean;
   repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   notificationEnabled: boolean;
