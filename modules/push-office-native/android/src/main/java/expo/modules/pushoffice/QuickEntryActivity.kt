@@ -919,28 +919,28 @@ class QuickEntryActivity : Activity() {
         ScheduleTime.validate(draft,now)
         fun persistDraft() {
           try {
-        // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
-        val result = ScheduleSerial.withLock {
-          if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
-          val suggestionId = intent.getStringExtra("suggestionId")
-          if (suggestionId != null) {
-            require(NotificationSuggestionStore.get(this, suggestionId) != null) { "일정 후보가 만료됐습니다. 다시 확인해 주세요." }
-            val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
-            require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
-          }
-          val saved = ScheduleRuntime.save(this,draft)
-          val dismissed = runCatching {
-            if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
-          }.isSuccess
-          saved.sync to dismissed
-        }
-        val message = when {
-          !result.first.alarmsReady -> "일정은 저장했습니다. 알림 예약을 확인하지 못했습니다. 설정에서 다시 예약해 주세요."
-          !result.first.widgetsReady -> "일정은 저장했습니다. 위젯 갱신을 다시 확인해 주세요."
-          !result.second -> "일정은 저장했습니다. 일정 후보 삭제는 다시 확인해 주세요."
-          else -> "일정을 저장했습니다."
-        }
-        Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
+            // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
+            val result = ScheduleSerial.withLock {
+              if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
+              val suggestionId = intent.getStringExtra("suggestionId")
+              if (suggestionId != null) {
+                require(NotificationSuggestionStore.get(this, suggestionId) != null) { "일정 후보가 만료됐습니다. 다시 확인해 주세요." }
+                val duplicate = ScheduleStore(this).use { it.all().any { row -> row.title == draft.title && row.startAt == draft.startAt } }
+                require(!duplicate) { "이미 같은 제목과 시각의 일정이 있습니다. 다시 확인해 주세요." }
+              }
+              val saved = ScheduleRuntime.save(this,draft)
+              val dismissed = runCatching {
+                if (suggestionId != null) NotificationSuggestionStore.dismiss(this, suggestionId)
+              }.isSuccess
+              saved.sync to dismissed
+            }
+            val message = when {
+              !result.first.alarmsReady -> "일정은 저장했습니다. 알림 예약을 확인하지 못했습니다. 설정에서 다시 예약해 주세요."
+              !result.first.widgetsReady -> "일정은 저장했습니다. 위젯 갱신을 다시 확인해 주세요."
+              !result.second -> "일정은 저장했습니다. 일정 후보 삭제는 다시 확인해 주세요."
+              else -> "일정을 저장했습니다."
+            }
+            Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
           } catch (e: Exception) {
             saving=false
             error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }

@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const root='modules/push-office-native/android/src/main/java/expo/modules/pushoffice/';
+test('share is opt-in bounded text only and no exported direct schedule editor',()=>{
+  const manifest=read('modules/push-office-native/android/src/main/AndroidManifest.xml');
+  const share=read(root+'ShareTextActivity.kt'),quick=read(root+'QuickEntryActivity.kt');
+  assert.match(manifest,/android:name="\.ShareTextActivity" android:exported="true"/);
+  assert.match(manifest,/android:name="\.QuickEntryActivity" android:exported="false"/);
+  assert.match(manifest,/android:mimeType="text\/plain"/);
+  assert.match(share,/MAX_LENGTH = 4096/);
+  assert.match(share,/intent\.getCharSequenceExtra\(Intent\.EXTRA_TEXT\)/);
+  assert.doesNotMatch(share,/EXTRA_STREAM|openInputStream|grantUriPermission|ScheduleRuntime\.save/);
+  assert.match(quick,/"sharedText" ->/);
+  assert.match(quick,/transcript\.setText\(shared\)/);
+});
+test('local conflict preview precedes user-approved save in all active edit flows',()=>{
+  const quick=read(root+'QuickEntryActivity.kt');
+  const detail=read('app/schedule/[id].tsx'),occ=read('app/schedule-occurrence.tsx');
+  const engine=read(root+'ScheduleConflicts.kt');
+  assert.match(quick,/ScheduleConflicts\.find\(draft/);
+  assert.match(quick,/setPositiveButton\("그대로 저장"\)/);
+  assert.match(detail,/PushOfficeNative\.checkScheduleConflicts/);
+  assert.match(occ,/PushOfficeNative\.checkScheduleConflicts/);
+  assert.match(detail,/confirmAction\('겹치는 일정 확인'/);
+  assert.match(occ,/confirmAction\('겹치는 일정 확인'/);
+  assert.match(engine,/ScheduleTime\.nextOccurrence/);
+  assert.match(engine,/record\.copy\(excludedStarts/);
+  assert.match(engine,/MAX_REPORT = 8/);
+  assert.doesNotMatch(engine,/https?:|Log\.|ScheduleRuntime\.save/);
+});
