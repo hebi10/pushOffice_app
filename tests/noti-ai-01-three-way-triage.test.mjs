@@ -30,7 +30,8 @@ test('NOTI-AI-01 exposes three-way decisions and never fills a missing date/time
   assert.match(classifier, /enum class NotificationTriage \{ CONFIRMED_CANDIDATE, NEEDS_CONFIRMATION, DISCARD \}/);
   assert.match(classifier, /NotificationSuggestionPolicy\.isSensitive\(title, body\)/);
   assert.match(classifier, /irrelevant\.containsMatchIn\(combined\)/);
-  assert.match(classifier, /unambiguousTime\.containsMatchIn\(combined\)/);
+  assert.match(classifier, /ScheduleLanguage\.hasTime\(combined\)/);
+  assert.match(classifier, /ScheduleParser\.parse\(source, now\)/);
   assert.match(classifier, /NotificationTriage\.NEEDS_CONFIRMATION/);
   assert.match(classifier, /startAt = null/);
   assert.match(store, /val startAt: Long\?/);

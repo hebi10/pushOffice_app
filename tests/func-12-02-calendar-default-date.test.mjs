@@ -28,7 +28,7 @@ test('native preview retains explicit dates, does not invent time or bypass user
   assert.match(source, /ScheduleRuntime\.save\(this,draft\)/);
   assert.match(parser, /if\(date == null\) date = calendarDate/);
   assert.match(parser, /fun mentionsDate\(text: String\)/);
-  assert.match(parser, /if\(time == null && colon == null\) return ParsedSchedule\(error=/);
+  assert.match(parser, /if \(time == null\) return ParsedSchedule\(error=/);
 });
 
 test('on-device AI cannot substitute a different date for the selected or explicit date', () => {
