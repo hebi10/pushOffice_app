@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import { AssistantButton, AssistantCard, assistantStyles as s } from '@/src/components/AssistantUI';
 import { EmptyState } from '@/src/components/EmptyState';
 import { ScreenIntro } from '@/src/components/ui/ScreenIntro';
@@ -112,6 +113,7 @@ export default function CalendarScreen() {
       contentContainerStyle={s.content}
     >
       <ScreenIntro title="캘린더" compact />
+      <AssistantButton label="전체 일정 검색" icon="search-outline" secondary onPress={() => router.push('/schedule-search')} />
       <View style={[styles.calendarSurface, { backgroundColor: colors.surface, borderColor: colors.surfaceBorder }]}>
         <Calendar
           key={isDark ? 'dark' : 'light'}

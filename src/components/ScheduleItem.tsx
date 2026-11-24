@@ -2,6 +2,7 @@ import { useTheme } from '@/src/contexts/ThemeContext';
 import { dayjs } from '@/src/lib/time';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
 import type { ScheduleDoc } from '@/src/types';
+import { scheduleCategoryLabel } from '@/src/features/schedules/scheduleCategories.mjs';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import React from 'react';
@@ -15,25 +16,27 @@ const REPEAT_LABEL: Record<string, string> = {
   yearly: '매년 반복',
 };
 
-export function ScheduleItem({ schedule, variant = 'default' }: { schedule: ScheduleDoc; variant?: 'default' | 'calendar' }) {
+export function ScheduleItem({ schedule, variant = 'default' }: { schedule: ScheduleDoc; variant?: 'default' | 'calendar' | 'search' }) {
   const { colors } = useTheme();
   const calendar = variant === 'calendar';
+  const search = variant === 'search';
   const startAt = schedule.startAt?.toDate?.() ?? new Date();
   const endAt = schedule.endAt?.toDate?.();
   const time = schedule.isAllDay ? '종일' : dayjs(startAt).format('HH:mm');
-  const dateStr = dayjs(startAt).format('M월 D일 (ddd)');
+  const dateStr = dayjs(startAt).format(search ? 'YYYY년 M월 D일 (ddd)' : 'M월 D일 (ddd)');
+  const categoryLabel = scheduleCategoryLabel(schedule.category);
   const repeatLabel = REPEAT_LABEL[schedule.repeatType] ?? '';
   const hasEnd = !schedule.isAllDay && !!endAt && endAt.getTime() > startAt.getTime();
   const sameDayEnd = !!endAt && dayjs(startAt).isSame(dayjs(endAt), 'day');
   const endLabel = hasEnd && endAt
     ? sameDayEnd ? `~ ${dayjs(endAt).format('HH:mm')}` : `~ ${dayjs(endAt).format('M/D HH:mm')}`
     : '';
-  const showMeta = !calendar || Boolean(schedule.location) || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
+  const showMeta = !calendar || Boolean(schedule.category) || Boolean(schedule.location) || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
 
   return (
     <TouchableOpacity
       accessibilityRole="button"
-      accessibilityLabel={`${schedule.title}, ${dateStr} ${time}${endLabel ? ` ${endLabel}` : ''}, 일정 상세`}
+      accessibilityLabel={`${schedule.title}, ${dateStr} ${time}${endLabel ? ` ${endLabel}` : ''}, ${categoryLabel}, 일정 상세`}
       accessibilityState={{ disabled: !schedule.id }}
       disabled={!schedule.id}
       activeOpacity={0.8}
@@ -50,7 +53,8 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
       <View style={styles.content}>
         <Text style={[styles.title, calendar ? styles.calendarTitle : null, { color: colors.text }]} numberOfLines={calendar ? 3 : 2}>{schedule.title}</Text>
         {showMeta ? <View style={styles.metaRow}>
-          {!calendar ? <Text style={[styles.date, { color: colors.textSecondary }]}>{dateStr}</Text> : null}
+          {!calendar ? <Text style={[styles.date, { color: colors.textSecondary }]}>{search && repeatLabel ? '반복 기준일 · ' : ''}{dateStr}</Text> : null}
+          {schedule.category || search ? <Text style={[styles.date, { color: colors.textSecondary }]}>{categoryLabel}</Text> : null}
           {endLabel && !sameDayEnd ? (
             <Text style={[styles.date, { color: colors.textSecondary }]}>{endLabel}</Text>
           ) : null}
