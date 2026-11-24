@@ -41,6 +41,14 @@ object ScheduleRuntime {
     val now = System.currentTimeMillis()
     save(context, current.copy(completedAt = if (completed) now else null, updatedAt = maxOf(now, current.updatedAt + 1)), allowPast = true)
   }
+  internal fun mutateOccurrence(context: Context, id: String, at: Long, expectedUpdatedAt: Long,
+    action: String, replacement: Map<String, Any?>): Pair<OccurrenceMutation, ScheduleSyncResult> = ScheduleSerial.withLock {
+    val mutation = ScheduleStore(context).use { it.mutateOccurrence(id, at, expectedUpdatedAt, action, replacement) }
+    mutation to changed(context) {
+      // The previous series token and displayed notification are no longer valid.
+      ReminderScheduler(context).cancelSchedule(id)
+    }
+  }
   fun delete(context: Context, id: String): ScheduleSyncResult = ScheduleSerial.withLock {
     ScheduleStore(context).use { it.delete(id) }
     changed(context) { ReminderScheduler(context).cancelSchedule(id) }

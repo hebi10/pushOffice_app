@@ -36,10 +36,12 @@ internal object ScheduleReminders {
 
   fun compatibleVersionInputs(record: ScheduleRecord): Set<String> {
     val current = record.toString()
-    if (record.completedAt != null || record.reminderOffsets != defaults) return setOf(current)
-    val v3 = current.removeSuffix(", reminderOffsets=[0], completedAt=null)") + ")"
-    return if (record.category == null) setOf(current, v3, v3.removeSuffix(", category=null)") + ")")
-      else setOf(current, v3)
+    if (record.excludedStarts.isNotEmpty()) return setOf(current)
+    val v4 = current.removeSuffix(", excludedStarts=[])") + ")"
+    if (record.completedAt != null || record.reminderOffsets != defaults) return setOf(current, v4)
+    val v3 = v4.removeSuffix(", reminderOffsets=[0], completedAt=null)") + ")"
+    return if (record.category == null) setOf(current, v4, v3, v3.removeSuffix(", category=null)") + ")")
+      else setOf(current, v4, v3)
   }
 
   fun label(offset: Int): String = when (offset) {

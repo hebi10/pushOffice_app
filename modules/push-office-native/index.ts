@@ -18,6 +18,7 @@ export interface NativeSchedule {
   category?: ScheduleCategory | null;
   reminderOffsets?: number[];
   completedAt?: number | null;
+  excludedStarts?: number[];
   isAllDay: boolean;
   repeatType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
   notificationEnabled: boolean;
@@ -145,6 +146,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   importSchedules(records: NativeSchedule[]): Promise<number>;
   deleteSchedule(id: string): Promise<ScheduleSyncResult>;
   setScheduleCompleted(id: string, completed: boolean): Promise<ScheduleSyncResult>;
+  mutateScheduleOccurrence(id: string, at: number, expectedUpdatedAt: number, action: 'edit' | 'delete' | 'complete', replacement: {title?: string; startAt?: number; endAt?: number | null}): Promise<ScheduleSyncResult & {detachedId: string | null}>;
   retryScheduleSync(): Promise<ScheduleSyncResult>;
   configure(settings: Partial<NativeSettings>): Promise<ReminderCapabilities>;
   snoozeSchedule(id: string, minutes: number): Promise<number>;
@@ -195,6 +197,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   importSchedules: unavailable,
   deleteSchedule: unavailable,
   setScheduleCompleted: unavailable,
+  mutateScheduleOccurrence: unavailable,
   retryScheduleSync: unavailable,
   configure: unavailable,
   snoozeSchedule: unavailable,

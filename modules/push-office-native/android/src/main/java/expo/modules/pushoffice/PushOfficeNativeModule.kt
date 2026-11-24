@@ -281,7 +281,7 @@ class PushOfficeNativeModule : Module() {
       val draft = ScheduleRecord.fromMap(value)
       val previous = ScheduleStore(context).use { it.get(draft.id) }
       // A normal form save may not reopen a completed row from a stale UI snapshot.
-      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt))
+      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt, excludedStarts = previous?.excludedStarts ?: emptyList()))
       saved.record.toMap() + saved.sync.toMap()
     } }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
@@ -298,6 +298,12 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
+    AsyncFunction("mutateScheduleOccurrence") { id: String, at: Double, expectedUpdatedAt: Double,
+      action: String, replacement: Map<String, Any?> ->
+      val (mutation, sync) = ScheduleRuntime.mutateOccurrence(context, id, ScheduleOccurrences.epoch(at),
+        ScheduleOccurrences.epoch(expectedUpdatedAt), action, replacement)
+      sync.toMap() + mapOf("detachedId" to mutation.detached?.id)
+    }
     AsyncFunction("setScheduleCompleted") { id: String, completed: Boolean ->
       ScheduleRuntime.setCompleted(context, id, completed).sync.toMap()
     }
@@ -328,5 +334,5 @@ fun ScheduleRecord.toMap(): Map<String, Any?> = mapOf(
   "notificationEnabled" to notificationEnabled, "notificationId" to notificationId,
   "sourceText" to sourceText, "createdAt" to createdAt, "updatedAt" to updatedAt, "anchorZone" to anchorZone,
   "location" to location, "meetingUrl" to meetingUrl, "notes" to notes, "category" to category,
-  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt
+  "reminderOffsets" to reminderOffsets, "completedAt" to completedAt, "excludedStarts" to excludedStarts
 )
