@@ -34,6 +34,7 @@ export interface NativeSettings {
   timezone: string;
 }
 export interface ScheduleSyncResult { alarmsReady: boolean; widgetsReady: boolean }
+export interface ScheduleConflict { id: string; title: string; startAt: number; proposedStart: number }
 
 export interface ReminderCapabilities {
   exactAlarmAllowed: boolean;
@@ -141,6 +142,7 @@ export declare class PushOfficeNativeModule extends NativeModule<PushOfficeNativ
   refreshWidgets(): Promise<void>;
   setUiTheme(mode: 'system' | 'light' | 'dark'): Promise<void>;
   getSchedules(): Promise<NativeSchedule[]>;
+  checkScheduleConflicts(record: NativeSchedule, ignoreOccurrenceAt: number | null): Promise<ScheduleConflict[]>;
   saveSchedule(record: NativeSchedule): Promise<NativeSchedule & ScheduleSyncResult>;
   /** Import without overwriting existing ids, retaining history without reserving past alarms. */
   importSchedules(records: NativeSchedule[]): Promise<number>;
@@ -194,6 +196,7 @@ export const PushOfficeNative: PushOfficeNativeModule = native ?? ({
   setUiTheme: unavailable,
   getSchedules: async () => [],
   saveSchedule: unavailable,
+  checkScheduleConflicts: unavailable,
   importSchedules: unavailable,
   deleteSchedule: unavailable,
   setScheduleCompleted: unavailable,

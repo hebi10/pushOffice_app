@@ -70,6 +70,14 @@ class QuickEntryActivity : Activity() {
     window.setLayout((resources.displayMetrics.widthPixels*.94).toInt(), WindowManager.LayoutParams.WRAP_CONTENT)
     when(intent.getStringExtra("entryMode")) {
       "text" -> editor(false)
+      "sharedText" -> {
+        val shared = SharedScheduleText.accept(Intent.ACTION_SEND, "text/plain", intent.getStringExtra(SharedScheduleText.EXTRA))
+        if (shared == null) chooser() else {
+          editor(false)
+          transcript.setText(shared)
+          status.text = "공유한 텍스트를 확인하고 내용을 수정한 뒤 직접 저장해 주세요."
+        }
+      }
       "voice" -> editor(true)
       "notificationSuggestion" -> {
         val suggestion = intent.getStringExtra("suggestionId")?.let { NotificationSuggestionStore.get(this, it) }
@@ -909,6 +917,8 @@ class QuickEntryActivity : Activity() {
             location=location,meetingUrl=meetingUrl,notes=notes,category=category,reminderOffsets=ScheduleReminders.validate(selectedOffsets.toList()))
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
+        fun persistDraft() {
+          try {
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.
         val result = ScheduleSerial.withLock {
           if(original!=null) require(ScheduleStore(this).use { it.get(original.id) }==original) { "일정이 변경되었습니다. 다시 입력해 주세요." }
@@ -931,6 +941,27 @@ class QuickEntryActivity : Activity() {
           else -> "일정을 저장했습니다."
         }
         Toast.makeText(this,message,Toast.LENGTH_LONG).show(); finish()
+          } catch (e: Exception) {
+            saving=false
+            error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }
+              ?: "일정을 저장하지 못했습니다. 다시 확인해 주세요."
+            error.visibility=View.VISIBLE
+          }
+        }
+        val overlaps = ScheduleSerial.withLock {
+          ScheduleStore(this).use { ScheduleConflicts.find(draft, it.all(), now, formZone) }
+        }
+        if (overlaps.isEmpty()) persistDraft()
+        else {
+          val lines = overlaps.joinToString("\n") { hit ->
+            "${Instant.ofEpochMilli(hit.startAt).atZone(formZone).format(FORMAT)} · ${hit.title}"
+          }
+          AlertDialog.Builder(this).setTitle("겹치는 일정 확인")
+            .setMessage(lines + "\n\n최대 8건 표시 · 반복 일정은 첫 예정 회차부터 30일 범위를 확인합니다. 종료 미지정 일정은 시작 시각만 비교합니다.")
+            .setNegativeButton("다시 확인") { _, _ -> saving=false }
+            .setPositiveButton("그대로 저장") { _, _ -> persistDraft() }
+            .setOnCancelListener { saving=false }.show()
+        }
       } catch(e: Exception) {
         saving=false
         error.text=e.message?.takeIf { it.contains("주세요") || it.contains("일정") }

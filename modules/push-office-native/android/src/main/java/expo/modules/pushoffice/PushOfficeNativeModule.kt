@@ -277,6 +277,24 @@ class PushOfficeNativeModule : Module() {
         .edit().putString("themeMode",mode).apply()
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
+    AsyncFunction("checkScheduleConflicts") Coroutine { value: Map<String, Any?>, ignoreOccurrenceAt: Double? ->
+      withContext(Dispatchers.IO) {
+        ScheduleSerial.withLock {
+          val draft = ScheduleRecord.fromMap(value)
+          val now = System.currentTimeMillis()
+          ScheduleTime.validate(draft, now, true)
+          val zone = ScheduleZone.fallback(ReminderSettings.load(context).timezone, java.time.ZoneId.systemDefault())
+          ScheduleStore(context).use { store ->
+            val ignore = ignoreOccurrenceAt?.let(ScheduleOccurrences::epoch)
+            if (ignore != null) {
+              val original = store.get(draft.id) ?: error("반복 일정을 찾을 수 없습니다.")
+              ScheduleOccurrences.requireEditable(original, ignore, draft.updatedAt, store.anchorZone(draft.id))
+            }
+            ScheduleConflicts.find(draft, store.all(), now, zone, ignore).map(ScheduleConflict::toMap)
+          }
+        }
+      }
+    }
     AsyncFunction("saveSchedule") { value: Map<String, Any?> -> ScheduleSerial.withLock {
       val draft = ScheduleRecord.fromMap(value)
       val previous = ScheduleStore(context).use { it.get(draft.id) }
