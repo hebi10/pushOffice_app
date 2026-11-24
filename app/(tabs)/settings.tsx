@@ -13,7 +13,8 @@ import { BRIEFING_CITIES, isTrustedBriefingEndpoint } from '@/src/features/diges
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
-import { chooseLocalBackup, exportLocalBackup, restoreLocalBackup, type LocalBackupPreview } from '@/src/features/storage/localBackupService';
+import { chooseLocalBackup, exportLocalBackup, getLastLocalBackup, restoreLocalBackup, unlockLocalBackup, type LocalBackupPreview } from '@/src/features/storage/localBackupService';
+import { validateBackupPassword, type BackupHistory } from '@/src/features/storage/backupFlow';
 import { requestNotificationPermission } from '@/src/features/notifications/permission';
 import { reminderCapabilities } from '@/src/features/notifications/useNativeAssistant';
 import { PushOfficeNative, type AiStatus, type AiDownloadProgress, type ReminderCapabilities, type NotificationSuggestion, type NotificationSuggestionStatus } from '@/modules/push-office-native';
@@ -30,6 +31,13 @@ export default function SettingsScreen() {
     const [legacy, setLegacy] = useState<LegacyCloudState | null>(null);
     const [recovering, setRecovering] = useState(false);
     const [backupBusy, setBackupBusy] = useState(false);
+    const backupInFlight = useRef(false);
+    const backupSession = useRef(0);
+    const [backupMode, setBackupMode] = useState<'encrypt' | 'decrypt' | null>(null);
+    const [backupPassword, setBackupPassword] = useState('');
+    const [backupConfirmation, setBackupConfirmation] = useState('');
+    const [encryptedBackup, setEncryptedBackup] = useState<string | null>(null);
+    const [lastBackup, setLastBackup] = useState<BackupHistory | null>(null);
     const [backupPreview, setBackupPreview] = useState<LocalBackupPreview | null>(null);
     const [restoreSchedules, setRestoreSchedules] = useState(true);
     const [restoreSettings, setRestoreSettings] = useState(false);
@@ -81,6 +89,23 @@ export default function SettingsScreen() {
     }, []);
     const refresh = useCallback(() => { void getLegacyCloudState().then(setLegacy).catch(console.warn); reminderCapabilities().then(setCap).catch(() => setCap(null)); void checkAiStatus(); PushOfficeNative.getQuickTileEnabled().then(setTileEnabled).catch(() => setTileEnabled(null)); PushOfficeNative.getNotificationSuggestionStatus().then(setNotificationStatus).catch(() => setNotificationStatus(null)); PushOfficeNative.getNotificationSuggestions().then(setSuggestions).catch(() => setSuggestions([])); }, [checkAiStatus]);
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+    useFocusEffect(useCallback(() => {
+      let active = true;
+      void getLastLocalBackup().then(value => { if (active) setLastBackup(value); }).catch(() => {});
+      return () => {
+        active = false;
+        backupSession.current++;
+        setBackupPassword(''); setBackupConfirmation(''); setBackupMode(null);
+        setEncryptedBackup(null); setBackupPreview(null);
+      };
+    }, []));
+    useEffect(() => {
+      if (section !== 'advanced') {
+        backupSession.current++;
+        setBackupPassword(''); setBackupConfirmation(''); setBackupMode(null);
+        setEncryptedBackup(null); setBackupPreview(null);
+      }
+    }, [section]);
     useEffect(() => subscribeOnActive(AppState, refresh), [refresh]);
     useEffect(() => {
       const sub = PushOfficeNative.addListener('schedulesChanged', refresh);
@@ -126,42 +151,82 @@ export default function SettingsScreen() {
     const backupFailure = (error: unknown) => {
       setNotice({ title: '백업·복원 오류', message: error instanceof Error ? error.message : '파일을 처리하지 못했습니다. 다시 확인해 주세요.' });
     };
-    const saveBackupFile = async () => {
-      if (backupBusy) return;
-      setBackupBusy(true);
-      try {
-        const result = await exportLocalBackup();
-        if (result.saved) setNotice({ title: '백업 저장 완료', message: '일정 ' + result.count + '건과 사용자 설정을 선택한 파일에 저장했습니다. 파일은 암호화되지 않으므로 안전한 위치에 보관해 주세요.' });
-      } catch (error) { backupFailure(error); }
-      finally { setBackupBusy(false); }
+    const clearBackupInput = () => {
+      setBackupPassword(''); setBackupConfirmation(''); setBackupMode(null); setEncryptedBackup(null);
     };
-    const chooseBackupFile = async () => {
-      if (backupBusy) return;
+    const beginBackup = () => {
+      if (backupInFlight.current) return null;
+      backupInFlight.current = true;
       setBackupBusy(true);
+      return backupSession.current;
+    };
+    const finishBackup = () => { backupInFlight.current = false; setBackupBusy(false); };
+    const showBackupPreview = (preview: LocalBackupPreview) => {
+      clearBackupInput();
+      setBackupPreview(preview);
+      setRestoreSchedules(true);
+      setRestoreSettings(false);
+    };
+    const saveBackupFile = async (password?: string) => {
+      const session = beginBackup();
+      if (session === null) return;
+      clearBackupInput();
       setBackupPreview(null);
       try {
-        const preview = await chooseLocalBackup();
-        if (preview) {
-          setBackupPreview(preview);
-          setRestoreSchedules(true);
-          setRestoreSettings(false);
+        const result = await exportLocalBackup(password);
+        if (session !== backupSession.current) return;
+        if (result.saved) {
+          setLastBackup(result.history);
+          setNotice({ title: '백업 저장 완료', message: '일정 ' + result.count + '건과 사용자 설정을 저장했습니다. ' +
+            (result.mode === 'encrypted' ? '암호화 백업 비밀번호는 복구할 수 없으므로 안전하게 보관해 주세요.' :
+              '일반 JSON 파일은 암호화되지 않으므로 안전한 위치에 보관해 주세요.') +
+            (result.historyRecorded ? '' : '\n최근 백업 기록을 저장하지 못했습니다. 파일 저장은 완료되었습니다.') });
         }
-      } catch (error) { backupFailure(error); }
-      finally { setBackupBusy(false); }
+      } catch (error) { if (session === backupSession.current) backupFailure(error); }
+      finally { finishBackup(); }
+    };
+    const chooseBackupFile = async () => {
+      const session = beginBackup();
+      if (session === null) return;
+      clearBackupInput();
+      setBackupPreview(null);
+      try {
+        const chosen = await chooseLocalBackup();
+        if (session !== backupSession.current || !chosen) return;
+        if (chosen.kind === 'encrypted') {
+          setEncryptedBackup(chosen.text); setBackupMode('decrypt');
+        } else showBackupPreview(chosen.preview);
+      } catch (error) { if (session === backupSession.current) backupFailure(error); }
+      finally { finishBackup(); }
+    };
+    const unlockBackupFile = async () => {
+      if (encryptedBackup === null) return;
+      const password = backupPassword;
+      try { validateBackupPassword(password); } catch (error) { backupFailure(error); return; }
+      const session = beginBackup();
+      if (session === null) return;
+      setBackupPassword('');
+      try {
+        const preview = await unlockLocalBackup(encryptedBackup, password);
+        if (session === backupSession.current) showBackupPreview(preview);
+      } catch (error) { if (session === backupSession.current) backupFailure(error); }
+      finally { finishBackup(); }
     };
     const applyBackupFile = async () => {
-      if (!backupPreview || backupBusy) return;
-      setBackupBusy(true);
+      if (!backupPreview) return;
+      const session = beginBackup();
+      if (session === null) return;
       try {
         const result = await restoreLocalBackup(backupPreview, { schedules: restoreSchedules, settings: restoreSettings });
+        if (session !== backupSession.current) return;
         setBackupPreview(null);
         refresh();
         const details = '새 일정 ' + result.imported + '건 복원 · 기존 ID ' + result.skipped +
           '건 건너뜀 · 설정 ' + (result.settingsRestored ? '적용' : '유지');
         setNotice({ title: '백업 복원 결과', message: details +
           (result.alarmsReady ? '' : '\n알림 재예약을 확인하지 못했습니다. 알림 권한과 예약 상태를 다시 확인해 주세요.') });
-      } catch (error) { backupFailure(error); }
-      finally { setBackupBusy(false); }
+      } catch (error) { if (session === backupSession.current) backupFailure(error); }
+      finally { finishBackup(); }
     };
     const save = async (patch: Partial<UserSettings>, success?: string): Promise<boolean> => {
         setSaveFeedback(null);
@@ -557,10 +622,18 @@ export default function SettingsScreen() {
                 ) : null}
               </SettingsGroup>
               <SettingsGroup title="로컬 백업과 복원" icon="save-outline" description="일정·설정 파일 직접 관리">
+                <SettingsNote>{lastBackup ? '최근 백업: ' + new Date(lastBackup.savedAt).toLocaleString('ko-KR') + (lastBackup.mode === 'encrypted' ? ' · 암호화' : ' · 일반 JSON') : '최근 백업 기록 없음'}</SettingsNote>
+                <SettingsActionRow
+                  icon="lock-closed-outline"
+                  title="암호화 백업 (권장)"
+                  description="비밀번호로 보호된 .pobak 파일 저장"
+                  busy={backupBusy}
+                  onPress={() => { clearBackupInput(); setBackupPreview(null); setBackupMode('encrypt'); }}
+                />
                 <SettingsActionRow
                   icon="download-outline"
-                  title="일정·설정 파일로 백업"
-                  description="기기에서 JSON 파일 저장 위치 선택"
+                  title="일반 JSON 백업"
+                  description="암호화되지 않는 기존 형식"
                   busy={backupBusy}
                   onPress={() => { void saveBackupFile(); }}
                 />
@@ -571,10 +644,27 @@ export default function SettingsScreen() {
                   busy={backupBusy}
                   onPress={() => { void chooseBackupFile(); }}
                 />
-                <SettingsNote>사용자가 파일을 저장한 경우에만 백업됩니다. 파일은 암호화되지 않으며 일정 제목·시각·설정이 포함됩니다. 로그인 정보·미승인 알림 후보·AI 모델은 제외됩니다. 승인된 일정의 원본 입력 문장은 포함됩니다.</SettingsNote>
+                <SettingsNote>일정 제목·시각·설정과 승인한 일정의 원본 입력 문장이 포함됩니다. 로그인 정보·미승인 알림 후보·AI 모델·백업 비밀번호는 저장하지 않습니다. 일반 JSON은 암호화되지 않습니다.</SettingsNote>
+                {backupMode ? (
+                  <View style={{ gap: uiSpacing.xs, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm }}>
+                    <SettingsNote>{backupMode === 'encrypt' ? '12자 이상의 고유 비밀번호를 사용해 주세요. 잊어버리면 암호화 백업을 복구할 수 없습니다.' : '암호화 백업의 비밀번호를 입력해야 내용을 확인할 수 있습니다.'}</SettingsNote>
+                    <AssistantTextField label="백업 비밀번호" value={backupPassword} onChangeText={setBackupPassword}
+                      secureTextEntry autoCapitalize="none" maxLength={128} editable={!backupBusy} />
+                    {backupMode === 'encrypt' ? <AssistantTextField label="비밀번호 확인" value={backupConfirmation}
+                      onChangeText={setBackupConfirmation} secureTextEntry autoCapitalize="none" maxLength={128} editable={!backupBusy} /> : null}
+                    <AssistantButton label={backupMode === 'encrypt' ? '암호화하여 저장' : '잠금 해제 및 내용 확인'}
+                      icon="lock-open-outline" busy={backupBusy} onPress={() => {
+                        if (backupMode === 'decrypt') { void unlockBackupFile(); return; }
+                        try { validateBackupPassword(backupPassword, backupConfirmation); }
+                        catch (error) { backupFailure(error); return; }
+                        void saveBackupFile(backupPassword);
+                      }} />
+                    <AssistantButton label="취소" icon="close-outline" secondary disabled={backupBusy} onPress={clearBackupInput} />
+                  </View>
+                ) : null}
                 {backupPreview ? (
                   <View style={{ gap: uiSpacing.xs, paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm }}>
-                    <SettingsNote>백업 날짜: {new Date(backupPreview.payload.exportedAt).toLocaleString('ko-KR')}</SettingsNote>
+                    <SettingsNote>백업 날짜: {new Date(backupPreview.payload.exportedAt).toLocaleString('ko-KR')} · {backupPreview.mode === 'encrypted' ? '암호화 검증 완료' : '일반 JSON 체크섬 확인'}</SettingsNote>
                     <SettingsNote>파일 일정 {backupPreview.payload.schedules.length}건 · 신규 {backupPreview.newCount}건 · 기존 ID 중복 {backupPreview.existingCount}건</SettingsNote>
                     <SettingsToggleRow
                       icon="calendar-outline"
