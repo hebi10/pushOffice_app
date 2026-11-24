@@ -20,6 +20,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
   const { colors } = useTheme();
   const calendar = variant === 'calendar';
   const search = variant === 'search';
+  const completed = schedule.completedAt != null;
   const startAt = schedule.startAt?.toDate?.() ?? new Date();
   const endAt = schedule.endAt?.toDate?.();
   const time = schedule.isAllDay ? '종일' : dayjs(startAt).format('HH:mm');
@@ -31,12 +32,12 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
   const endLabel = hasEnd && endAt
     ? sameDayEnd ? `~ ${dayjs(endAt).format('HH:mm')}` : `~ ${dayjs(endAt).format('M/D HH:mm')}`
     : '';
-  const showMeta = !calendar || Boolean(schedule.category) || Boolean(schedule.location) || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
+  const showMeta = !calendar || completed || Boolean(schedule.category) || Boolean(schedule.location) || Boolean(repeatLabel) || Boolean(endLabel && !sameDayEnd) || (calendar && schedule.notificationEnabled);
 
   return (
     <TouchableOpacity
       accessibilityRole="button"
-      accessibilityLabel={`${schedule.title}, ${dateStr} ${time}${endLabel ? ` ${endLabel}` : ''}, ${categoryLabel}, 일정 상세`}
+      accessibilityLabel={`${schedule.title}, ${dateStr} ${time}${endLabel ? ` ${endLabel}` : ''}, ${categoryLabel}${completed ? ", 완료" : ""}, 일정 상세`}
       accessibilityState={{ disabled: !schedule.id }}
       disabled={!schedule.id}
       activeOpacity={0.8}
@@ -55,6 +56,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
         {showMeta ? <View style={styles.metaRow}>
           {!calendar ? <Text style={[styles.date, { color: colors.textSecondary }]}>{search && repeatLabel ? '반복 기준일 · ' : ''}{dateStr}</Text> : null}
           {schedule.category || search ? <Text style={[styles.date, { color: colors.textSecondary }]}>{categoryLabel}</Text> : null}
+          {completed ? <Text style={[styles.date, { color: colors.textSecondary }]}>{repeatLabel ? '전체 완료' : '완료'}</Text> : null}
           {endLabel && !sameDayEnd ? (
             <Text style={[styles.date, { color: colors.textSecondary }]}>{endLabel}</Text>
           ) : null}
@@ -67,7 +69,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
               <Text style={[styles.date, { color: colors.textSecondary }]}>{repeatLabel}</Text>
             </View>
           ) : null}
-          {calendar && schedule.notificationEnabled ? (
+          {calendar && schedule.notificationEnabled && !completed ? (
             <View style={styles.repeat}>
               <Ionicons name="notifications-outline" size={13} color={colors.textSecondary} />
               <Text style={[styles.date, { color: colors.textSecondary }]}>알림</Text>
@@ -76,7 +78,7 @@ export function ScheduleItem({ schedule, variant = 'default' }: { schedule: Sche
         </View> : null}
       </View>
       <View style={styles.icons}>
-        {!calendar && schedule.notificationEnabled ? (
+        {!calendar && schedule.notificationEnabled && !completed ? (
           <Ionicons
             accessibilityLabel="알림 사용"
             name="notifications-outline"

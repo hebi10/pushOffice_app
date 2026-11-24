@@ -12,7 +12,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Timestamp } from 'firebase/firestore';
 import { AssistantButton, AssistantCard, AssistantTextField, SettingRow, assistantStyles as s } from '@/src/components/AssistantUI';
 import { useTheme } from '@/src/contexts/ThemeContext';
-import { useScheduleDetail, useUpdateSchedule, useDeleteSchedule } from '@/src/features/schedules';
+import { useScheduleDetail, useUpdateSchedule, useDeleteSchedule, useSetScheduleCompleted } from '@/src/features/schedules';
 import { PushOfficeNative } from '@/modules/push-office-native';
 import { dayjs } from '@/src/lib/time';
 import { showError, showToast, showNotice } from '@/src/components/ui/toast';
@@ -20,6 +20,7 @@ import type { RepeatType } from '@/src/types';
 import { isSafeMeetingUrl, normalizeScheduleExtras } from '@/src/features/schedules/scheduleExtras';
 import { normalizeScheduleCategory, scheduleCategoryLabel, type ScheduleCategory } from '@/src/features/schedules/scheduleCategories.mjs';
 import { ScheduleCategoryOptions } from '@/src/components/schedule/ScheduleCategoryOptions';
+import { MAX_REMINDER_OFFSETS, REMINDER_OFFSETS, normalizeReminderOffsets, reminderOffsetLabel, toggleReminderOffset } from '@/src/features/schedules/scheduleReminders.mjs';
 
 LocaleConfig.locales.ko = {
   monthNames: Array.from({ length: 12 }, (_, i) => `${i + 1}월`),
@@ -35,6 +36,9 @@ export default function ScheduleDetail() {
   const detail = useScheduleDetail(id);
   const update = useUpdateSchedule();
   const remove = useDeleteSchedule();
+  const complete = useSetScheduleCompleted();
+  const completed = detail.data?.completedAt != null;
+  const isSeries = !!detail.data && detail.data.repeatType !== 'none';
   const { colors, isDark } = useTheme();
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -46,12 +50,13 @@ export default function ScheduleDetail() {
   const [category, setCategory] = useState<ScheduleCategory | null>(null);
   const [allDay, setAllDay] = useState(false);
   const [notification, setNotification] = useState(true);
+  const [reminderOffsets, setReminderOffsets] = useState<number[]>([0]);
   const [repeat, setRepeat] = useState<RepeatType>('none');
   const [dateOpen, setDateOpen] = useState(false);
   const [timeOpen, setTimeOpen] = useState(false);
   const [hour, setHour] = useState('00');
   const [minute, setMinute] = useState('00');
-  const [pendingDialog, setPendingDialog] = useState<'repeat' | 'delete' | 'invalid-time' | null>(null);
+  const [pendingDialog, setPendingDialog] = useState<'repeat' | 'delete' | 'invalid-time' | 'completion' | null>(null);
   const [pickerTarget, setPickerTarget] = useState<'start' | 'end'>('start');
 
   useEffect(() => {
@@ -67,6 +72,7 @@ export default function ScheduleDetail() {
     setCategory(record.category ?? null);
     setAllDay(!!record.isAllDay);
     setNotification(record.notificationEnabled);
+    setReminderOffsets(normalizeReminderOffsets(record.reminderOffsets));
     setRepeat(record.repeatType);
   }, [detail.data]);
 
@@ -93,6 +99,7 @@ export default function ScheduleDetail() {
           endAt: finish ? Timestamp.fromDate(finish) : null,
           isAllDay: allDay, repeatType: repeat, notificationEnabled: notification,
           ...extras, category: normalizeScheduleCategory(category),
+          reminderOffsets: normalizeReminderOffsets(reminderOffsets),
         },
       });
       if (!result.alarmsReady || !result.widgetsReady) {
@@ -103,6 +110,15 @@ export default function ScheduleDetail() {
     }
   };
 
+  const changeCompletion = async () => {
+    if (!detail.data || complete.isPending || update.isPending || remove.isPending) return;
+    try {
+      const result = await complete.mutateAsync({ id, completed: !completed });
+      if (!result.alarmsReady || !result.widgetsReady) {
+        showNotice('상태 변경 완료', '완료 상태는 저장했습니다. 설정에서 알림 예약 및 위젯을 다시 확인해 주세요.');
+      } else showToast(completed ? '완료를 되돌렸습니다.' : '일정을 완료했습니다.');
+    } catch (error) { showError(error, '완료 상태를 변경하지 못했습니다.'); }
+  };
   const openSavedMeetingUrl = () => {
     const url = detail.data?.meetingUrl;
     if (!url || !isSafeMeetingUrl(url)) {
@@ -194,7 +210,7 @@ export default function ScheduleDetail() {
               {repeat === 'monthly' ? '매월 반복' : repeat === 'yearly' ? '매년 반복' : '반복 없음'}
             </Text>
             <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>
-              {notification ? '알림 사용' : '알림 끔'}
+              {completed ? '완료 · 알림 중지' : notification ? '알림 사용' : '알림 끔'}
             </Text>
             <Text style={[styles.overviewMeta, { color: colors.textSecondary }]}>{scheduleCategoryLabel(category)}</Text>
           </View>
@@ -294,20 +310,58 @@ export default function ScheduleDetail() {
             value={notification}
             onValueChange={setNotification}
           />
+          {notification ? (
+            <>
+              <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>알림 시점 (1~4개 선택)</Text>
+              <View style={styles.repeatOptions}>
+                {REMINDER_OFFSETS.map(offset => {
+                  const checked = reminderOffsets.includes(offset);
+                  const disabled = !checked && reminderOffsets.length >= MAX_REMINDER_OFFSETS || checked && reminderOffsets.length === 1;
+                  return (
+                    <TouchableOpacity key={offset} accessibilityRole="checkbox"
+                      accessibilityLabel={reminderOffsetLabel(offset)}
+                      accessibilityState={{ checked, disabled }}
+                      disabled={disabled}
+                      onPress={() => setReminderOffsets(old => toggleReminderOffset(old, offset))}
+                      style={[styles.repeatChoice, {
+                        borderColor: checked ? colors.primary : colors.inputBorder,
+                        backgroundColor: checked ? colors.primaryLight : colors.surface,
+                      }]}
+                    >
+                      <Text style={[styles.repeatLabel, { color: colors.text }]}>{reminderOffsetLabel(offset)}</Text>
+                      <Ionicons name={checked ? 'checkbox-outline' : 'square-outline'} size={20}
+                        color={checked ? colors.primary : colors.textTertiary} />
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>
+                {completed ? '완료된 일정은 알림 설정을 보존하되 알림을 보내지 않습니다.' : '이미 지난 알림 시점은 새로 예약하지 않습니다.'}
+              </Text>
+            </>
+          ) : null}
         </AssistantCard>
         <AssistantButton
           label="변경 사항 저장"
           icon="checkmark-outline"
           busy={update.isPending}
-          disabled={remove.isPending}
+          disabled={remove.isPending || complete.isPending}
           onPress={confirmSave}
         />
 
+        <AssistantCard title="완료 상태" icon="checkmark-circle-outline"
+          subtitle={completed ? '완료 · 알림과 다음 일정 표시가 중지되었습니다.' : '완료하면 일정은 보존하고 알림을 중지합니다.'}>
+          {isSeries ? <Text style={[styles.groupCaption, { color: colors.textSecondary }]}>이 작업은 반복 일정 전체에 적용됩니다.</Text> : null}
+          <AssistantButton label={completed ? '완료 취소' : isSeries ? '반복 일정 전체 완료' : '일정 완료'}
+            icon={completed ? 'refresh-outline' : 'checkmark-circle-outline'} secondary
+            busy={complete.isPending} disabled={update.isPending || remove.isPending || detail.isFetching}
+            onPress={() => setPendingDialog('completion')} />
+        </AssistantCard>
         <AssistantCard title="재알림" icon="alarm-outline" subtitle="일정 데이터는 유지하고 알림만 다시 예약합니다.">
-          <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary onPress={() =>
+          <AssistantButton label="10분 뒤 다시 알림" icon="alarm-outline" secondary disabled={completed || complete.isPending} onPress={() =>
             PushOfficeNative.snoozeSchedule(id, 10).then(() => showToast('10분 뒤 재알림을 예약했습니다.')).catch(e => showError(e, '예약하지 못했습니다.'))
           } />
-          <AssistantButton label="재알림 취소" icon="close-outline" secondary onPress={() =>
+          <AssistantButton label="재알림 취소" icon="close-outline" secondary disabled={completed || complete.isPending} onPress={() =>
             PushOfficeNative.cancelSnooze(id).then(() => showToast('재알림을 취소했습니다.')).catch(e => showError(e, '취소하지 못했습니다.'))
           } />
         </AssistantCard>
@@ -318,7 +372,7 @@ export default function ScheduleDetail() {
               icon="trash-outline"
               variant="destructive"
               busy={remove.isPending}
-              disabled={update.isPending}
+              disabled={update.isPending || complete.isPending}
               onPress={() => setPendingDialog('delete')}
             />
           </AssistantCard>
@@ -406,6 +460,14 @@ export default function ScheduleDetail() {
         <AssistantButton label="취소" icon="close-outline" secondary onPress={() => setTimeOpen(false)} />
       </SchedulePickerDialog>
 
+      <AppDialog
+        visible={pendingDialog === 'completion'}
+        title={completed ? '완료 취소' : isSeries ? '반복 일정 전체 완료' : '일정 완료'}
+        message={(completed ? '완료를 되돌리고 미래 알림 시점을 다시 예약합니다.' : isSeries ? '반복 일정 전체를 완료 처리하고 이후 회차의 알림을 중지합니다.' : '이 일정의 알림과 재알림을 중지합니다.') + '\n저장된 일정에만 적용하며, 편집 중인 내용은 먼저 저장해 주세요.'}
+        confirmLabel={completed ? '되돌리기' : '완료 처리'}
+        onDismiss={() => setPendingDialog(null)}
+        onConfirm={() => { setPendingDialog(null); void changeCompletion(); }}
+      />
       <AppDialog
         visible={pendingDialog === 'repeat'}
         title="반복 일정 전체 수정"

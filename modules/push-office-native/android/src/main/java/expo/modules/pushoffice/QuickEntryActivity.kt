@@ -804,6 +804,55 @@ class QuickEntryActivity : Activity() {
     }
     repeatCard.addView(spinner,LinearLayout.LayoutParams(-1,-2))
     root.addView(repeatCard,LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(6) })
+    val selectedOffsets = (original?.reminderOffsets ?: ScheduleReminders.defaults).toMutableSet()
+    val reminderChoices = LinearLayout(this).apply {
+      orientation = LinearLayout.VERTICAL
+      visibility = View.GONE
+    }
+    val reminderSummary = Button(this).apply {
+      isAllCaps = false
+      minimumHeight = dp(48)
+      setTextColor(actionColor)
+      stateListAnimator = null
+      background = GradientDrawable().apply {
+        setColor(surface); cornerRadius = dp(8).toFloat(); setStroke(dp(1), inputBorder)
+      }
+    }
+    fun updateReminderSummary() {
+      val labels = selectedOffsets.sorted().joinToString(", ") { ScheduleReminders.label(it) }
+      reminderSummary.text = "알림 시점 · " + labels
+      reminderSummary.contentDescription = "알림 시점 설정 · " + labels
+    }
+    updateReminderSummary()
+    reminderSummary.setOnClickListener {
+      reminderChoices.visibility = if (reminderChoices.visibility == View.VISIBLE) View.GONE else View.VISIBLE
+    }
+    root.addView(reminderSummary, LinearLayout.LayoutParams(-1,-2).apply { topMargin = dp(6) })
+    reminderChoices.addView(TextView(this).apply {
+      text = "시작 기준 1~4개 선택 · 이미 지난 알림 시점은 새로 예약하지 않습니다."
+      textSize = 13f; setTextColor(secondary)
+    })
+    for (offset in ScheduleReminders.options) {
+      reminderChoices.addView(CheckBox(this).apply {
+        text = ScheduleReminders.label(offset)
+        contentDescription = "알림 " + ScheduleReminders.label(offset)
+        setTextColor(foregroundColor)
+        buttonTintList = android.content.res.ColorStateList.valueOf(actionColor)
+        minimumHeight = dp(48)
+        isChecked = offset in selectedOffsets
+        setOnClickListener {
+          val wasSelected = offset in selectedOffsets
+          when {
+            wasSelected && selectedOffsets.size > 1 -> selectedOffsets.remove(offset)
+            !wasSelected && selectedOffsets.size < ScheduleReminders.MAX_COUNT -> selectedOffsets.add(offset)
+            else -> Toast.makeText(this@QuickEntryActivity, "알림 시점을 1~4개 선택해 주세요.", Toast.LENGTH_SHORT).show()
+          }
+          isChecked = offset in selectedOffsets
+          updateReminderSummary()
+        }
+      }, LinearLayout.LayoutParams(-1, -2))
+    }
+    root.addView(reminderChoices)
     val error=TextView(this).apply {
       setTextColor(dangerColor)
       textSize=13f
@@ -855,9 +904,9 @@ class QuickEntryActivity : Activity() {
         val now=System.currentTimeMillis()
         val draft=original?.copy(title=titleField.text.toString().trim(), startAt=start,
           endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,updatedAt=now,
-          location=location,meetingUrl=meetingUrl,notes=notes,category=category)
+          location=location,meetingUrl=meetingUrl,notes=notes,category=category,reminderOffsets=ScheduleReminders.validate(selectedOffsets.toList()))
           ?: ScheduleRecord(UUID.randomUUID().toString(),"local","event",titleField.text.toString().trim(),start,endAt=endAt,repeatType=repeats[spinner.selectedItemPosition],sourceText=source,createdAt=now,updatedAt=now,anchorZone=formZone.id,
-            location=location,meetingUrl=meetingUrl,notes=notes,category=category)
+            location=location,meetingUrl=meetingUrl,notes=notes,category=category,reminderOffsets=ScheduleReminders.validate(selectedOffsets.toList()))
         require(start>now || original!=null && draft.repeatType!="none") { "미래 날짜와 시간을 지정해 주세요." }
         ScheduleTime.validate(draft,now)
         // Re-read under the same global mutation lock; a stale preview must never overwrite another edit.

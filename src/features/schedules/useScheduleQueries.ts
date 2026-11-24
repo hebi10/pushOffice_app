@@ -13,6 +13,7 @@ import {
     getSchedulesByTitle,
     getSchedulesByUser,
     updateSchedule,
+    setScheduleCompleted,
 } from './scheduleService';
 
 const QUERY_KEY = 'schedules';
@@ -72,6 +73,15 @@ export function useUpdateSchedule() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEY] });
     },
+  });
+}
+
+/** 일정 완료/되돌리기: 저장된 행만 수정하고 모든 일정 쿼리를 갱신합니다. */
+export function useSetScheduleCompleted() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({id, completed}: {id: string; completed: boolean}) => setScheduleCompleted(id, completed),
+    onSuccess: () => { void queryClient.invalidateQueries({ queryKey: [QUERY_KEY] }); },
   });
 }
 

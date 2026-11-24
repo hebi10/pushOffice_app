@@ -80,7 +80,7 @@ export async function countNotificationsForDate(userId: string, date: Date): Pro
     start.setHours(0, 0, 0, 0);
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
-    return (await getSchedulesByRange(userId, start, end)).filter(s => s.notificationEnabled).length;
+    return (await getSchedulesByRange(userId, start, end)).filter(s => s.notificationEnabled && s.completedAt == null).length;
 }
 export async function getSchedulesByTitle(userId: string, title: string, excludeId?: string): Promise<ScheduleDoc[]> {
     return (await getSchedulesByUser(userId)).filter(s => s.id !== excludeId && s.title === title);

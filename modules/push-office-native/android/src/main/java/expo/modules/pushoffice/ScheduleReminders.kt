@@ -30,7 +30,7 @@ internal object ScheduleReminders {
     return n.toLong()
   }
   fun kind(offset: Int): String = if (offset == 0) "reminder" else "reminder-before-$offset"
-  fun offset(kind: String): Int? = options.firstOrNull { kind(it) == kind }
+  fun offset(kindName: String): Int? = options.firstOrNull { kind(it) == kindName }
   fun notificationTag(id: String, kind: String): String =
     if (offset(kind)?.let { it > 0 } == true) ScheduleTime.alarmIdentity(id, kind) else id
 

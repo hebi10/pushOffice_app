@@ -106,7 +106,8 @@ class ReminderScheduler(private val context: Context) {
     } else {
       val record = ScheduleStore(context).use { it.get(id) } ?: return@withLock null
       if (!ScheduleReminders.enabled(record)) return@withLock null
-      if (kind != "snooze" && ScheduleReminders.offset(kind) !in record.reminderOffsets) return@withLock null
+      val offset = ScheduleReminders.offset(kind)
+      if (kind != "snooze" && (offset == null || offset !in record.reminderOffsets)) return@withLock null
       compatibleVersions(record)
     }
     val reservation = read(id, kind)
