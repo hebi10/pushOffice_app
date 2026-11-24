@@ -14,8 +14,12 @@ for attempt in 1 2 3; do
   log="$log_dir/attempt-$attempt.log"
   set +e
   "$@" 2>&1 | tee "$log"
-  result=("$PIPESTATUS")
+  result=("${PIPESTATUS[@]}")
   set -e
+  if [[ "${#result[@]}" -ne 2 ]]; then
+    echo "::error::Unable to capture Gradle and log writer exit codes." >&2
+    exit 1
+  fi
   # A logging error is not a successful verification.
   if [[ "${result[1]}" -ne 0 ]]; then exit "${result[1]}"; fi
   if [[ "${result[0]}" -eq 0 ]]; then exit 0; fi

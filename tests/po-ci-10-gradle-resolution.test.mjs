@@ -9,11 +9,15 @@ import { fileURLToPath } from 'node:url';
 const wrapper = fileURLToPath(new URL('../.github/ci/retry-gradle-resolution.sh', import.meta.url));
 const available = spawnSync('bash', ['--version']).status === 0;
 const retryable = "Error resolving plugin [id: 'com.facebook.react.settings']\nCould not resolve com.google.code.gson:gson:2.9.1.\nCould not GET 'https://repo.maven.apache.org/maven2/com/google/code/gson/gson/2.9.1/gson-2.9.1.pom'. Received status code 429 from server: Too Many Requests";
-function run(scenarios) {
+function run(scenarios, {loggerFailure=false}={}) {
   const dir=mkdtempSync(join(tmpdir(),'po-gradle-retry-'));
   try {
     writeFileSync(join(dir,'sleep'),'#!/usr/bin/env bash\nexit 0\n');
     chmodSync(join(dir,'sleep'),0o755);
+    if(loggerFailure){
+      writeFileSync(join(dir,'tee'),'#!/usr/bin/env bash\ncat >/dev/null\nexit 9\n');
+      chmodSync(join(dir,'tee'),0o755);
+    }
     for (const [i,s] of scenarios.entries()) {
       writeFileSync(join(dir,'log'+(i+1)),s.log);
       writeFileSync(join(dir,'code'+(i+1)),String(s.code));
@@ -29,6 +33,12 @@ function run(scenarios) {
   }finally{rmSync(dir,{recursive:true,force:true});}
 }
 
+test('CI preserves successful Gradle exit and rejects log writer failures',{skip:!available},()=>{
+  const success=run([{code:0,log:'BUILD SUCCESSFUL'}]);
+  assert.equal(success.status,0); assert.equal(success.count,1);
+  const failure=run([{code:0,log:'BUILD SUCCESSFUL'}],{loggerFailure:true});
+  assert.equal(failure.status,9); assert.equal(failure.count,1);
+});
 test('CI-only bounded recovery for the exact observed Maven 429', {skip:!available},()=>{
   const result=run([{code:1,log:retryable},{code:0,log:'BUILD SUCCESSFUL'}]);
   assert.equal(result.status,0);assert.equal(result.count,2);
