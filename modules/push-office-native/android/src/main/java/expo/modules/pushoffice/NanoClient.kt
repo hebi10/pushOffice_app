@@ -7,6 +7,7 @@ import com.google.mlkit.genai.prompt.GenerativeModel
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.ZonedDateTime
@@ -90,9 +91,9 @@ object NanoClient {
     } finally { downloadMutex.unlock() }
   }
 
-  private suspend fun json(prompt: String): JSONObject {
+  private suspend fun json(prompt: String): JSONObject = AiInferenceGate.mutex.withLock {
     val client = Generation.getClient()
-    return try {
+    try {
       require(client.checkStatus() == FeatureStatus.AVAILABLE) { "기기 AI 모델이 준비되지 않았습니다." }
       val output=client.generateContent(prompt).candidates.firstOrNull()?.text.orEmpty().trim()
       val body=output.removePrefix("```json").removePrefix("```").removeSuffix("```").trim()
