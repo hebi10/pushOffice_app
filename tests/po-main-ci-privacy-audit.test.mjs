@@ -8,7 +8,7 @@ test('PO-MAIN-CI-FINAL public privacy page and store text are exactly synchroniz
   const publicPolicy = read('docs/privacy/index.html');
   const storeCopy = read('store-assets/privacy-policy-draft.ko.html');
   assert.equal(publicPolicy, storeCopy);
-  assert.match(publicPolicy, /최종 수정일: 2026년 11월 16일/);
+  assert.match(publicPolicy, /최종 수정일: 2026년 11월 24일/);
   assert.match(publicPolicy, /com\.hebi96\.pushOffice_app/);
   assert.match(publicPolicy, /asdlkj0104@gmail\.com/);
 });

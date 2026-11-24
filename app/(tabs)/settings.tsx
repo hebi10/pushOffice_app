@@ -8,6 +8,8 @@ import { AssistantButton, AssistantTextField, assistantStyles as s } from '@/src
 import { SettingsActionRow, SettingsChoiceRow, SettingsGroup, SettingsNote, SettingsStatusRow, SettingsToggleRow } from '@/src/components/settings/SettingsUI';
 import { uiRadii, uiSizes, uiSpacing } from '@/src/lib/designTokens';
 import { ENV } from '@/src/lib/env';
+import { isFirebaseConfigured } from '@/src/lib/firebase';
+import { BRIEFING_CITIES, isTrustedBriefingEndpoint } from '@/src/features/digest/externalBriefingRequest';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAppSelector } from '@/src/store/store';
 import { saveAssistantSettings } from '@/src/features/storage/nativeSettings';
@@ -233,7 +235,7 @@ export default function SettingsScreen() {
       try { await PushOfficeNative.dismissNotificationSuggestion(id); refresh(); }
       catch (error) { showError(error, '일정 후보를 삭제하지 못했습니다.'); }
     };
-    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim());
+    const externalServiceConfigured = Boolean(ENV.FUNCTIONS_BASE_URL.trim()) && isFirebaseConfigured && isTrustedBriefingEndpoint(ENV.FUNCTIONS_BASE_URL.trim());
     const externalTypesSelected = [settings.digestTypes.weather, settings.digestTypes.news, settings.digestTypes.stocks]
       .filter(Boolean).length;
     const pin = async (kind: 'small' | 'agenda') => { try {
@@ -501,7 +503,7 @@ export default function SettingsScreen() {
                 <SettingsToggleRow
                   icon="newspaper-outline"
                   title="뉴스"
-                  description="설정한 키워드의 뉴스를 조회합니다."
+                  description="선택한 뉴스 지역의 주요 뉴스를 조회합니다. 키워드는 로컬에만 보관합니다."
                   value={settings.digestTypes.news}
                   onValueChange={v => { void save({ digestTypes: { ...settings.digestTypes, news: v } }); }}
                 />
@@ -515,15 +517,16 @@ export default function SettingsScreen() {
                 <SettingsActionRow
                   icon="options-outline"
                   title="외부 정보 상세 설정"
-                  description="도시·키워드·종목"
+                  description="도시·뉴스 지역·종목"
                   expanded={editingExternal}
                   onPress={() => { setSaveFeedback(null); setEditingExternal(value => !value); }}
                 />
                 {editingExternal ? (
                   <View style={{ paddingHorizontal: uiSpacing.xs, paddingVertical: uiSpacing.sm, gap: uiSpacing.sm }}>
                     {input('날씨 도시', city, setCity)}
-                    {input('뉴스 키워드 (쉼표 구분)', keywords, setKeywords)}
-                    {input('뉴스 언어', language, setLanguage)}
+                    <Text style={[s.caption, { color: colors.textSecondary }]}>지원 도시: {BRIEFING_CITIES.map(([ko]) => ko).join(', ')}</Text>
+                    {input('뉴스 키워드 (로컬 보관 · 서버 미전송)', keywords, setKeywords)}
+                    {input('뉴스 지역 (ko: 한국, en: 미국)', language, setLanguage)}
                     {input('주식 종목 (쉼표 구분, 최대 5개)', tickers, setTickers)}
                     <AssistantButton label="외부 정보 설정 저장" icon="checkmark-outline" onPress={() => {
                       void save({
