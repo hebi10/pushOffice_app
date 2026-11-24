@@ -22,30 +22,28 @@ internal object NotificationIntentPolicy {
   private val eventIntent = Regex(
     """예약|미팅|회의|약속|만나|만날|보자|면접|치과|병원|검진|예방접종|수업|교육|발표|식사|모임|동창회|운동|행사|기념일|공연|기차\s*출발|회식|영화\s*(?:볼|관람)|여행|상담|전화|결산"""
   )
-  private val weekday = Regex("""(?:이번\s*주|다음\s*주)?\s*[월화수목금토일]요일""")
-  private val recurrenceDate = Regex("""매월\s*\d{1,2}일|매년\s*\d{1,2}월\s*\d{1,2}일""")
-  private val unambiguousTime = Regex("""(?:오전|오후|저녁|아침)\s*\d{1,2}시|(?<!\d)\d{1,2}:\d{2}(?!\d)|(?<!\d)(?:0\d|1[3-9]|2[0-3])시""")
   private val vagueDate = Regex("""이번\s*주|다음\s*주|주말|다음\s*달|이번\s*달|퇴근하고|어제\s*말한|12월\s*중순|다음\s*번""")
 
   fun classify(title: String, text: String, now: ZonedDateTime): NotificationDecision {
-    val body = text.trim().take(480)
-    if (body.isBlank() || NotificationSuggestionPolicy.isSensitive(title, body)) {
+    val body = text.trim()
+    if (body.isBlank() || body.length > 480 || title.length > 480 || NotificationSuggestionPolicy.isSensitive(title, body)) {
       return NotificationDecision(NotificationTriage.DISCARD)
     }
-    val combined = "$title $body".trim().take(480)
-    if (irrelevant.containsMatchIn(combined) || pastReference.containsMatchIn(combined))
+    val combined = "$title $body".trim()
+    if (irrelevant.containsMatchIn(combined) || pastReference.containsMatchIn(combined) || ScheduleLanguage.isChange(combined))
       return NotificationDecision(NotificationTriage.DISCARD)
 
-    val hasDate = NotificationSuggestionPolicy.hasDate(combined) || weekday.containsMatchIn(combined) || recurrenceDate.containsMatchIn(combined)
-    val hasTime = NotificationSuggestionPolicy.hasTime(combined)
+    val hasDate = ScheduleLanguage.hasDate(combined)
+    val hasTime = ScheduleLanguage.hasTime(combined)
     val hasIntent = eventIntent.containsMatchIn(combined)
-    val source = if (NotificationSuggestionPolicy.hasDate(body) && NotificationSuggestionPolicy.hasTime(body)) {
+    val source = if (ScheduleLanguage.hasDate(body) && ScheduleLanguage.hasTime(body) &&
+        !ScheduleLanguage.hasDate(title) && ScheduleLanguage.times(title).isEmpty()) {
       body
     } else {
       combined
     }
 
-    if (hasDate && hasTime && unambiguousTime.containsMatchIn(combined)) {
+    if (hasDate && hasTime) {
       val parsed = ScheduleParser.parse(source, now)
       if (parsed.error == null && parsed.shiftMinutes == null && parsed.start != null &&
           parsed.title.isNotBlank() && hasIntent) {

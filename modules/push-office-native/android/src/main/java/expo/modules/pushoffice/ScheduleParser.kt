@@ -1,108 +1,91 @@
 package expo.modules.pushoffice
 
 import java.time.*
-import java.time.temporal.TemporalAdjusters
 
 data class ParsedSchedule(val title: String = "", val start: ZonedDateTime? = null, val repeatType: String = "none", val shiftMinutes: Int? = null, val error: String? = null)
 
-/** Conservative local Korean grammar. Unknown/missing dates never acquire an implicit date. */
+/** Conservative local Korean grammar; ambiguous and compound input is never committed as one event. */
 object ScheduleParser {
   fun parse(text: String, now: ZonedDateTime): ParsedSchedule = parse(text, now, null)
 
+  private val shift = Regex("""(.+?)\s*(?:(한|\d{1,2})\s*시간(?:\s*(반|\d{1,2}\s*분))?|(\d{1,3})\s*분)\s*(늦춰|늦추|뒤로|당겨|앞으로)(?:\s*(?:줘|주세요|줘요|해 줘))?\s*[.!]?$""")
+
   /** Only a missing date may inherit the calendar selection; explicit user dates always win. */
   fun parse(text: String, now: ZonedDateTime, calendarDate: LocalDate?): ParsedSchedule {
-    var remaining = text.trim()
-    val shift = Regex("(?:한\\s*시간|1\\s*시간)\\s*(늦춰|늦추|뒤로|당겨|앞으로).*$").find(remaining)
-    if (shift != null) {
-      val title = remaining.removeRange(shift.range).trim()
-      return ParsedSchedule(title=title, shiftMinutes=if (shift.groupValues[1] in listOf("당겨","앞으로")) -60 else 60,
-        error=if(title.isBlank()) "변경할 일정 이름을 입력해 주세요." else null)
+    val source = text.trim()
+    if (source.isBlank() || source.length > 4096) return ParsedSchedule(error="일정 문장을 확인해 주세요.")
+    val shiftMatch = shift.matchEntire(source)
+    if (shiftMatch != null) {
+      val title = shiftMatch.groupValues[1].trim()
+      val hours = shiftMatch.groupValues[2].let { if (it == "한") 1 else it.toIntOrNull() ?: 0 }
+      val extra = shiftMatch.groupValues[3].let { if (it == "반") 30 else it.replace(Regex("""\s+"""), "").removeSuffix("분").toIntOrNull() ?: 0 }
+      val onlyMinutes = shiftMatch.groupValues[4].toIntOrNull() ?: 0
+      val minutes = hours * 60 + extra + onlyMinutes
+      if (title.isBlank() || ScheduleLanguage.hasDate(title) || ScheduleLanguage.times(title).isNotEmpty() ||
+          ScheduleLanguage.isChange(title) || extra !in 0..59 || minutes !in 1..1440) {
+        return ParsedSchedule(error="변경할 일정과 시간 간격을 직접 확인해 주세요.")
+      }
+      return ParsedSchedule(title=title, shiftMinutes=if (shiftMatch.groupValues[5] in listOf("당겨", "앞으로")) -minutes else minutes)
     }
+    if (ScheduleLanguage.isChange(source)) return ParsedSchedule(error="취소·변경된 일정은 기존 일정 상세에서 직접 수정하거나 삭제해 주세요.")
+
     try {
-      var repeat = "none"
+      val dates = ScheduleLanguage.dates(source)
+      val times = ScheduleLanguage.times(source)
+      if (dates.size > 1 || times.size > 1 || ScheduleLanguage.hasShortRange(source))
+        return ParsedSchedule(error="여러 날짜·시간 또는 시간 범위가 있습니다. 일정을 하나씩 직접 확인해 주세요.")
+      val dateToken = dates.singleOrNull()
+      val time = times.singleOrNull()
+      if (listOfNotNull(dateToken, time).any { ScheduleLanguage.isApproximate(source, it) })
+        return ParsedSchedule(error="정확한 날짜와 시간을 직접 확인해 주세요.")
       var date: LocalDate? = null
-      fun consume(match: MatchResult) { remaining = remaining.replaceRange(match.range, " ").trim() }
-      val yearly = Regex("매년\\s*(\\d{1,2})월\\s*(\\d{1,2})일").find(remaining)
-      val monthly = Regex("매월\\s*(\\d{1,2})일").find(remaining)
-      val weekly = Regex("매주\\s*([월화수목금토일])요일").find(remaining)
-      val absolute = Regex("(?:(\\d{4})년\\s*)?(\\d{1,2})월\\s*(\\d{1,2})일").find(remaining)
-      val iso = Regex("(\\d{4})-(\\d{2})-(\\d{2})").find(remaining)
-      val weekday = Regex("(다음\\s*주|이번\\s*주)?\\s*([월화수목금토일])요일").find(remaining)
-      when {
-        yearly != null -> {
-          repeat = "yearly"
-          val month = yearly.groupValues[1].toInt(); val day = yearly.groupValues[2].toInt()
-          val md = MonthDay.of(month, day)
-          date = (now.year..now.year+8).mapNotNull { y -> if(md.isValidYear(y)) md.atYear(y) else null }.first { !it.isBefore(now.toLocalDate()) }
-          consume(yearly)
-        }
-        monthly != null -> {
-          repeat = "monthly"; val day = monthly.groupValues[1].toInt()
-          require(day in 1..31)
-          date = (0L..24L).map { YearMonth.from(now).plusMonths(it) }.mapNotNull { if(day <= it.lengthOfMonth()) it.atDay(day) else null }.first { !it.isBefore(now.toLocalDate()) }
-          consume(monthly)
-        }
-        weekly != null -> {
-          repeat = "weekly"
-          val weekday = DayOfWeek.of("월화수목금토일".indexOf(weekly.groupValues[1]) + 1)
-          date = now.toLocalDate().with(TemporalAdjusters.nextOrSame(weekday))
-          consume(weekly)
-        }
-        absolute != null -> { date = LocalDate.of(absolute.groupValues[1].toIntOrNull() ?: now.year, absolute.groupValues[2].toInt(), absolute.groupValues[3].toInt()); consume(absolute) }
-        iso != null -> { date = LocalDate.parse(iso.value); consume(iso) }
-        remaining.contains("모레") -> { date=now.toLocalDate().plusDays(2); remaining=remaining.replace("모레", " ") }
-        remaining.contains("내일") -> { date=now.toLocalDate().plusDays(1); remaining=remaining.replace("내일", " ") }
-        remaining.contains("오늘") -> { date=now.toLocalDate(); remaining=remaining.replace("오늘", " ") }
-        weekday != null -> {
-          val day = DayOfWeek.of("월화수목금토일".indexOf(weekday.groupValues[2])+1)
-          date = when {
-            weekday.groupValues[1].startsWith("다음") -> now.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).plusWeeks(1).with(TemporalAdjusters.nextOrSame(day))
-            weekday.groupValues[1].startsWith("이번") -> now.toLocalDate().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).with(TemporalAdjusters.nextOrSame(day))
-            else -> now.toLocalDate().with(TemporalAdjusters.nextOrSame(day))
-          }; consume(weekday)
+      var repeat = "none"
+      if (dateToken != null) {
+        val resolved = ScheduleLanguage.resolveDate(dateToken.value, now)
+        date = resolved.first; repeat = resolved.second
+      }
+      val extraRepeat = ScheduleLanguage.repeatWords(source).filter { token ->
+        dateToken == null || token.range.first !in dateToken.range
+      }
+      if (extraRepeat.size > 1 || (repeat != "none" && extraRepeat.isNotEmpty()))
+        return ParsedSchedule(error="반복 설정을 하나씩 확인해 주세요.")
+      val repeatToken = extraRepeat.singleOrNull()
+      if (repeatToken != null) {
+        repeat = when (repeatToken.value) {
+          "매일" -> "daily"
+          "매주" -> "weekly"
+          else -> return ParsedSchedule(error="반복 날짜를 직접 확인해 주세요.")
         }
       }
-      if (repeat == "none") {
-        val daily = Regex("매일").find(remaining)
-        val weeklyBare = Regex("매주").find(remaining)
-        if (daily != null) {
-          repeat = "daily"
-          consume(daily)
-          if (date == null) date = calendarDate ?: now.toLocalDate()
-        } else if (weeklyBare != null) {
-          repeat = "weekly"
-          consume(weeklyBare)
-          if (date == null) date = calendarDate
-        }
-      }
-      val time = Regex("(?:(오전|오후|저녁|아침)\\s*)?(\\d{1,2})시(?:\\s*(반|\\d{1,2}분))?").find(remaining)
-      val colon = Regex("(?<!\\d)(\\d{1,2}):(\\d{2})(?!\\d)").find(remaining)
+      val titlePart = ScheduleLanguage.stripTokens(source, listOfNotNull(dateToken, time, repeatToken))
+      if (ScheduleLanguage.hasDate(titlePart))
+        return ParsedSchedule(error="날짜 표현이 명확하지 않습니다. 날짜를 직접 확인해 주세요.")
+      if (time == null) return ParsedSchedule(error="시간을 입력하거나 아래에서 직접 지정해 주세요.")
+      if (Regex("""\d+\s*(?:시간|분)\s*(?:뒤|후|동안)|\d+:\d+""").containsMatchIn(titlePart))
+        return ParsedSchedule(error="시간 표현을 직접 확인해 주세요.")
+      if (date == null && repeat == "daily") date = calendarDate ?: now.toLocalDate()
       if(date == null) date = calendarDate
       if(date == null) return ParsedSchedule(error="날짜를 입력하거나 아래에서 직접 지정해 주세요.")
-      if(time == null && colon == null) return ParsedSchedule(error="시간을 입력하거나 아래에서 직접 지정해 주세요.")
-      val hour: Int; val minute: Int
-      if(time != null) {
-        var h = time.groupValues[2].toInt(); val period=time.groupValues[1]
-        if(period.isNotBlank()) { require(h in 1..12); h=h%12+if(period in listOf("오후","저녁")) 12 else 0 }
-        hour=h; minute=if(time.groupValues[3]=="반") 30 else time.groupValues[3].removeSuffix("분").toIntOrNull() ?: 0
-        consume(time)
-      } else { hour=colon!!.groupValues[1].toInt(); minute=colon.groupValues[2].toInt(); consume(colon) }
-      var start=date.atTime(LocalTime.of(hour,minute)).atZone(now.zone)
+      val clock = ScheduleLanguage.resolveTime(time)
+      var start = ScheduleLanguage.strictStart(date, clock, now.zone)
       if (repeat == "daily" || repeat == "weekly") {
+        var nextDate: LocalDate = date
         while (!start.toInstant().isAfter(now.toInstant())) {
-          start = if (repeat == "daily") start.plusDays(1) else start.plusWeeks(1)
+          nextDate = if (repeat == "daily") nextDate.plusDays(1) else nextDate.plusWeeks(1)
+          start = ScheduleLanguage.strictStart(nextDate, clock, now.zone)
         }
       }
-      val title=remaining.replace(Regex("\\s+")," ").trim().removeSuffix("등록해 줘").removeSuffix("추가해 줘").trim()
+      val title = titlePart.replace(Regex("""^(?:에|에는)\s+"""), "")
+        .replace(Regex("""\s*(?:일정\s*)?(?:등록|추가|예약)\s*해\s*(?:줘|주세요|줘요)[.!]?$"""), "").trim()
       require(title.isNotBlank()) { "일정 제목을 입력해 주세요." }
       require(start.toInstant().isAfter(now.toInstant())) { "미래 날짜와 시간을 지정해 주세요." }
       return ParsedSchedule(title,start,repeat)
-    } catch (e: Exception) { return ParsedSchedule(error=e.message?.takeIf { it.contains("주세요") } ?: "날짜 또는 시간이 올바르지 않습니다. 직접 확인해 주세요.") }
+    } catch (e: Exception) {
+      return ParsedSchedule(error=e.message?.takeIf { it.contains("주세요") } ?: "날짜 또는 시간이 올바르지 않습니다. 직접 확인해 주세요.")
+    }
   }
-  /** If a user mentions a date, an invalid date must not be silently replaced by the calendar day. */
-  fun mentionsDate(text: String): Boolean =
-    Regex("""\d{4}-\d{2}-\d{2}|(?:\d{4}년\s*)?\d{1,2}월\s*\d{1,2}일|매월\s*\d{1,2}일|(?:오늘|내일|모레)|(?:(?:다음|이번)\s*주)?\s*[월화수목금토일]요일""")
-      .containsMatchIn(text)
+
+  fun mentionsDate(text: String): Boolean = ScheduleLanguage.hasDate(text)
 
   fun targets(parsed: ParsedSchedule, schedules: List<ScheduleRecord>): List<ScheduleRecord> {
     if(parsed.error != null || parsed.title.isBlank()) return emptyList()
