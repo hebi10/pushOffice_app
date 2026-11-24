@@ -12,7 +12,7 @@ export function useNativeAssistantSync() {
         const refresh = () => { void query.invalidateQueries({ queryKey: ['schedules'] }); void query.invalidateQueries({ queryKey: ['digests'] }); };
         const native = PushOfficeNative.addListener('schedulesChanged', refresh);
         const app = AppState.addEventListener('change', state => { if (state === 'active') {
-            refresh(); if (isPushOfficeNativeAvailable) void PushOfficeNative.refreshWidgets().catch(console.warn);
+            refresh(); if (isPushOfficeNativeAvailable) void PushOfficeNative.retryScheduleSync().catch(console.warn);
         } });
         return () => { native.remove(); app.remove(); };
     }, [query]);

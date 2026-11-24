@@ -264,12 +264,13 @@ class PushOfficeNativeModule : Module() {
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
     AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
-      ScheduleRuntime.save(context, ScheduleRecord.fromMap(value)).toMap()
+      val saved = ScheduleRuntime.save(context, ScheduleRecord.fromMap(value))
+      saved.record.toMap() + saved.sync.toMap()
     }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
       val records = values.map(ScheduleRecord::fromMap)
       val imported = ScheduleStore(context).use { it.importBackupRecords(records) }
-      val alarmsReady = if (imported > 0) runCatching { ScheduleRuntime.changed(context) }.isSuccess else true
+      val alarmsReady = ScheduleRuntime.changed(context).alarmsReady
       mapOf("imported" to imported, "alarmsReady" to alarmsReady)
     } }
     AsyncFunction("importSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
@@ -280,7 +281,8 @@ class PushOfficeNativeModule : Module() {
       ScheduleRuntime.changed(context)
       records.size
     } }
-    AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id) }
+    AsyncFunction("deleteSchedule") { id: String -> ScheduleRuntime.delete(context, id).toMap() }
+    AsyncFunction("retryScheduleSync") { ScheduleRuntime.changed(context).toMap() }
     AsyncFunction("configure") { value: Map<String, Any?> -> ScheduleSerial.withLock {
       val previous = ReminderSettings.load(context)
       ReminderSettings(

@@ -346,6 +346,17 @@ export default function SettingsScreen() {
                   onPress={() => { void permission(); }}
                 />
                 <SettingsActionRow
+                  icon="refresh-outline"
+                  title="알림 예약 및 위젯 다시 확인"
+                  description="저장된 일정은 유지하고 예약과 위젯을 다시 갱신합니다."
+                  onPress={() => { void PushOfficeNative.retryScheduleSync().then(result => {
+                    setNotice({ title: '예약 상태 확인', message: result.alarmsReady && result.widgetsReady
+                      ? '예약과 위젯 갱신을 완료했습니다. 알림 권한과 절전 설정도 확인해 주세요.'
+                      : '일정은 보존되어 있습니다. 갱신하지 못한 항목을 다시 시도해 주세요.' });
+                    refresh();
+                  }).catch(error => showError(error, '예약 상태를 확인하지 못했습니다.')); }}
+                />
+                <SettingsActionRow
                   icon="settings-outline"
                   title="시스템 앱 설정 열기"
                   description="알림·권한 설정"
