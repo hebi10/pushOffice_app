@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/ci/retry-gradle-resolution.sh'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/*Notification*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/Reminder*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleReminders.kt'

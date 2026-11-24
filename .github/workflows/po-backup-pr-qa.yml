@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - '.github/ci/retry-gradle-resolution.sh'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/LocalBackup*.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleCategory.kt'
       - 'modules/push-office-native/android/src/main/java/expo/modules/pushoffice/ScheduleStore.kt'

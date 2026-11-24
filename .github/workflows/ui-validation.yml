@@ -74,7 +74,7 @@ jobs:
       - name: Test and compile Android module
         working-directory: android
         run: |
-          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :push-office-native:testDebugUnitTest :app:assembleDebug \
+          bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :push-office-native:testDebugUnitTest :app:assembleDebug \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \

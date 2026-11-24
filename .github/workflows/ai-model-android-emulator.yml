@@ -3,6 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - ".github/ci/retry-gradle-resolution.sh"
       - ".github/workflows/ai-model-android-emulator.yml"
       - "tools/ci/run_android_ai_emulator_qa.sh"
       - "tools/ci/check_android_ai_abi.py"
@@ -45,7 +46,7 @@ jobs:
       - name: Build Android debug APK and inspect actual LiteRT JNI ABIs
         working-directory: android
         run: |
-          ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleDebug \
+          bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleDebug \
             --no-daemon --max-workers=2 \
             '-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g' \
             -Pkotlin.compiler.execution.strategy=in-process \
