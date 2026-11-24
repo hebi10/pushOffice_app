@@ -25,7 +25,7 @@ export default function ScheduleSearchScreen() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="on-drag"
-      data={unavailable ? [] : results}
+      data={unavailable || updating ? [] : results}
       keyExtractor={(record, i) => record.id ?? ('local-' + i)}
       initialNumToRender={12}
       refreshing={schedules.isRefetching}
