@@ -277,10 +277,13 @@ class PushOfficeNativeModule : Module() {
         .edit().putString("themeMode",mode).apply()
     }
     AsyncFunction("getSchedules") { ScheduleStore(context).use { it.all().map(ScheduleRecord::toMap) } }
-    AsyncFunction("saveSchedule") { value: Map<String, Any?> ->
-      val saved = ScheduleRuntime.save(context, ScheduleRecord.fromMap(value))
+    AsyncFunction("saveSchedule") { value: Map<String, Any?> -> ScheduleSerial.withLock {
+      val draft = ScheduleRecord.fromMap(value)
+      val previous = ScheduleStore(context).use { it.get(draft.id) }
+      // A normal form save may not reopen a completed row from a stale UI snapshot.
+      val saved = ScheduleRuntime.save(context, draft.copy(completedAt = previous?.completedAt))
       saved.record.toMap() + saved.sync.toMap()
-    }
+    } }
     AsyncFunction("importBackupSchedules") { values: List<Map<String, Any?>> -> ScheduleSerial.withLock {
       val records = values.map(ScheduleRecord::fromMap)
       val imported = ScheduleStore(context).use { it.importBackupRecords(records) }

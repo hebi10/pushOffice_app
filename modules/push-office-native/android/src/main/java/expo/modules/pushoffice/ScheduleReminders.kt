@@ -31,6 +31,17 @@ internal object ScheduleReminders {
   }
   fun kind(offset: Int): String = if (offset == 0) "reminder" else "reminder-before-$offset"
   fun offset(kind: String): Int? = options.firstOrNull { kind(it) == kind }
+  fun notificationTag(id: String, kind: String): String =
+    if (offset(kind)?.let { it > 0 } == true) ScheduleTime.alarmIdentity(id, kind) else id
+
+  fun compatibleVersionInputs(record: ScheduleRecord): Set<String> {
+    val current = record.toString()
+    if (record.completedAt != null || record.reminderOffsets != defaults) return setOf(current)
+    val v3 = current.removeSuffix(", reminderOffsets=[0], completedAt=null)") + ")"
+    return if (record.category == null) setOf(current, v3, v3.removeSuffix(", category=null)") + ")")
+      else setOf(current, v3)
+  }
+
   fun label(offset: Int): String = when (offset) {
     0 -> "시작 시간"; 1440 -> "1일 전"; 120 -> "2시간 전"; 60 -> "1시간 전"
     else -> "${offset}분 전"
