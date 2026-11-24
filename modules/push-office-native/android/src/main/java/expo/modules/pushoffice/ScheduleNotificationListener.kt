@@ -27,8 +27,8 @@ class ScheduleNotificationListener : NotificationListenerService() {
     val context = applicationContext
     for (item in queue.items) {
       try {
-        if (!NotificationSuggestionStore.enabled(context) || !NotificationSuggestionStore.accessGranted(context)) continue
         if (NotificationSuggestionStore.captureSession(context) != item.session) continue
+        if (!NotificationSuggestionStore.enabled(context) || !NotificationSuggestionStore.accessGranted(context)) continue
         val (sourcePackage, key, created, title, body) = item
         val now = ZonedDateTime.ofInstant(Instant.ofEpochMilli(created), ZoneId.systemDefault())
         val decision = NotificationIntentPolicy.classify(title, body, now)
@@ -75,7 +75,8 @@ class ScheduleNotificationListener : NotificationListenerService() {
     runCatching { NotificationSuggestionStore.reconcile(this) }
   }
   override fun onListenerDisconnected() {
-    runCatching { NotificationSuggestionStore.reconcile(this) }
+    queue.discardPending()
+    runCatching { NotificationSuggestionStore.invalidatePendingCapture(this) }
     super.onListenerDisconnected()
   }
   override fun onDestroy() {

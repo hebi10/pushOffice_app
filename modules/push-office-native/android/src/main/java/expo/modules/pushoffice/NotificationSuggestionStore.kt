@@ -109,6 +109,12 @@ object NotificationSuggestionStore {
     }
   }
 
+  fun invalidatePendingCapture(context: Context) = synchronized(lock) {
+    if (captureSession(context) != null) {
+      check(prefs(context).edit().putString(SESSION, UUID.randomUUID().toString()).commit())
+    }
+  }
+
   fun reconcile(context: Context) = synchronized(lock) {
     scheduleCleanup(context, retained(context))
   }
