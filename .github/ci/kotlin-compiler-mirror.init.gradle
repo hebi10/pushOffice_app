@@ -16,3 +16,19 @@ gradle.allprojects { project ->
     addKotlinMirror(project.buildscript.repositories)
     addKotlinMirror(project.repositories)
 }
+
+// React Native's included settings build resolves Foojay and its Gson dependency
+// before project repository hooks run. Add only Gson and its two POM parents.
+gradle.beforeSettings { settings ->
+    if (settings.settingsDir.toPath().endsWith('node_modules/@react-native/gradle-plugin')) {
+        settings.pluginManagement.repositories.maven {
+            name = 'PushOfficeGsonCentralMirror'
+            url = 'https://maven-central.storage-download.googleapis.com/maven2/'
+            content {
+                includeVersion('com.google.code.gson', 'gson', '2.9.1')
+                includeVersion('com.google.code.gson', 'gson-parent', '2.9.1')
+                includeVersion('org.sonatype.oss', 'oss-parent', '9')
+            }
+        }
+    }
+}
