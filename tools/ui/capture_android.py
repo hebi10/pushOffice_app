@@ -12,7 +12,7 @@ import time
 from datetime import date, datetime, timedelta
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from calendar_capture_target import day_label, exact_clickable_center, week_shift
+from calendar_capture_target import agenda_jump_label, day_label, exact_clickable_center, native_scroll_swipe, week_shift
 
 SOURCE_COMMIT = os.environ.get("GITHUB_SHA") or subprocess.check_output(
     ["git", "rev-parse", "HEAD"], text=True
@@ -110,11 +110,15 @@ def assert_native_mono_surface(name: str, x: int, y: int) -> None:
     print(f"Verified native Mono Office dark surface in {name}: RGB {rgb}")
 
 
+def ui_tree() -> ET.Element:
+    adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
+    content = adb("exec-out", "cat", "/sdcard/ui.xml")
+    return ET.fromstring(content.decode("utf-8", errors="replace"))
+
+
 def find(label: str, bottom: bool = False, class_name: str | None = None) -> tuple[int, int] | None:
     try:
-        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
-        content = adb("exec-out", "cat", "/sdcard/ui.xml")
-        root = ET.fromstring(content.decode("utf-8", errors="replace"))
+        root = ui_tree()
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError):
         return None
     matches = []
@@ -155,16 +159,22 @@ def tap(label: str, bottom: bool = False, scroll: bool = False) -> None:
     print(f"Tapped {label}: {target}")
 
 
-def tap_exact(label: str) -> None:
+def scroll_native_confirmation(root: ET.Element) -> None:
+    swipe = tuple(map(str, native_scroll_swipe(root, APP)))
+    adb("shell", "input", "swipe", *swipe, "420")
+
+
+def tap_exact(label: str, *, class_name: str | None = None, scroll_native: bool = False) -> None:
     for attempt in range(4):
-        adb("shell", "uiautomator", "dump", "/sdcard/ui.xml", timeout=45)
-        root = ET.fromstring(adb("exec-out", "cat", "/sdcard/ui.xml").decode("utf-8", errors="replace"))
-        target = exact_clickable_center(root, label, APP)
+        root = ui_tree()
+        target = exact_clickable_center(root, label, APP, class_name=class_name)
         if target is not None:
             adb("shell", "input", "tap", str(target[0]), str(target[1]))
             time.sleep(4)
             print(f"Tapped exact app action {label}: {target}")
             return
+        if scroll_native and attempt < 3:
+            scroll_native_confirmation(root)
         time.sleep(2)
     raise RuntimeError(f"Could not locate exact app action: {label}")
 
@@ -388,7 +398,8 @@ try:
         if shift:
             tap_exact("다음 주" if shift > 0 else "이전 주")
         tap_exact(day_label(fixture_day, 1))
-        tap("UITest", scroll=True)
+        tap_exact(agenda_jump_label(fixture_day))
+        tap("UITest")
         if find("일정 제목 수정") is None:
             raise RuntimeError("Compact fixture action did not open the actual schedule detail")
         screenshot("17a-schedule-detail-compact", "schedule detail on compact portrait screen")
@@ -408,17 +419,20 @@ try:
     screenshot("16-compact-editor", "editor on compact portrait screen")
     tap("직접 날짜와 시간 지정", scroll=True)
     screenshot("17-compact-confirmation", "confirmation form on compact portrait screen")
-    adb("shell", "input", "swipe", "360", "1180", "360", "430", "420")
+    scroll_native_confirmation(ui_tree())
     if find("일정 저장") is None or find("입력으로 돌아가기") is None:
         raise RuntimeError("Compact confirmation footer actions are unreachable after scrolling")
     screenshot("17b-compact-confirmation-actions", "native save button accessible on narrow screen")
-    tap("날짜·시간 직접 입력", scroll=True)
-    focus_field("날짜 (YYYY-MM-DD)", scroll=True)
+    tap_exact("날짜·시간 직접 입력", scroll_native=True)
+    date_label, edit_class = "날짜 (YYYY-MM-DD)", "android.widget.EditText"
+    tap_exact(date_label, class_name=edit_class, scroll_native=True)
+    if exact_clickable_center(ui_tree(), date_label, APP, class_name=edit_class, focused=True) is None:
+        raise RuntimeError("Compact start-date editor did not retain focus")
     if find("일정 저장") is None or find("입력으로 돌아가기") is None:
         raise RuntimeError("Compact confirmation footer is obscured while the keyboard is open")
     screenshot("17c-compact-confirmation-keyboard", "compact confirmation with focused ISO editor and visible fixed footer")
     adb("shell", "input", "keyevent", "4")
-except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+except (RuntimeError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ET.ParseError) as exc:
     WARNINGS.append(f"Compact-screen capture: {exc}")
 finally:
     adb("shell", "wm", "size", "720x1600")
