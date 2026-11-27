@@ -1,0 +1,58 @@
+name: DEX-04 Push Office compact calendar current PR
+
+on:
+  push:
+    branches: [codex/dex04-push-office-compact-replay]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      CANDIDATE: 1b2e2e16a982d7a9f3b4ce689a4dae268130f8cb
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Confirm current PR head, verify checkout and extract probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$CANDIDATE"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/pulls/100" --jq .head.sha)" = "$CANDIDATE"
+          git show "$GITHUB_SHA:.github/ci/dex04-po-compact-probe.py" > "$RUNNER_TEMP/compact.py"
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 45956505412
+          name: push-office-1b2e2e16-qa-x86_64-apk
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/qa-apk
+      - name: Enable runner KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Replay compact weekly calendar selection and saved schedule navigation
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -timezone Asia/Seoul
+          disable-animations: true
+          script: adb install "$RUNNER_TEMP/qa-apk/app-release.apk" && PYTHONPATH="$PWD/tools/ui" python3 "$RUNNER_TEMP/compact.py"
+      - name: Preserve compact calendar screenshots and hierarchy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-office-dex04-current-compact-evidence
+          path: compact-dex-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
