@@ -1,0 +1,80 @@
+name: DEX-02 Push Office compact calendar probe
+
+on:
+  push:
+    branches: [codex/dex02-push-office-compact-qa]
+
+permissions:
+  contents: read
+
+jobs:
+  compact-calendar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_DOTENV: '1'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 1b2e2e16a982d7a9f3b4ce689a4dae268130f8cb
+          persist-credentials: false
+      - name: Fetch the QA-only probe without changing the app checkout
+        run: |
+          git fetch --depth=1 origin "$GITHUB_SHA"
+          git show "$GITHUB_SHA:.github/ci/dex02-compact-probe.py" > "$RUNNER_TEMP/dex02-compact-probe.py"
+          test "$(git rev-parse HEAD)" = '1b2e2e16a982d7a9f3b4ce689a4dae268130f8cb'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: npm ci
+      - run: npx --no-install expo prebuild --platform android --clean --no-install
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - run: bash .github/ci/bootstrap-gradle.sh
+      - name: Build the optimized x86_64 release APK with generated QA signing
+        working-directory: android
+        run: |
+          bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle :app:assembleRelease \
+            --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process -PreactNativeArchitectures=x86_64
+          test -s app/build/outputs/mapping/release/mapping.txt
+      - name: Preserve the disposable APK for installation retries
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-office-1b2e2e16-qa-x86_64-apk
+          path: android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
+          retention-days: 3
+      - name: Enable runner KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and check the exact compact selected-day action
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -timezone Asia/Seoul
+          disable-animations: true
+          script: adb install -r android/app/build/outputs/apk/release/app-release.apk && PYTHONPATH="$PWD/tools/ui" python3 "$RUNNER_TEMP/dex02-compact-probe.py"
+      - name: Preserve compact-screen captures and hierarchy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-office-compact-calendar-evidence
+          path: compact-dex-evidence/
+          if-no-files-found: warn
+          retention-days: 7
