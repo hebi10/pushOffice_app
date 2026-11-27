@@ -55,7 +55,8 @@
       ],
       "expo-background-fetch",
       "expo-task-manager",
-      "./plugins/with-local-assistant"
+      "./plugins/with-local-assistant",
+      "./plugins/with-android-release-optimization"
     ],
     "experiments": {
       "typedRoutes": true,
