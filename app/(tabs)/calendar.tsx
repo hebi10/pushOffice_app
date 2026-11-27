@@ -10,7 +10,7 @@ import { ScheduleItem } from '@/src/components/ScheduleItem';
 import { useTheme } from '@/src/contexts/ThemeContext';
 import { useAdaptiveLayout } from '@/src/lib/useAdaptiveLayout';
 import { useMonthSchedules, useWeekSchedules } from '@/src/features/schedules';
-import { shiftCivilDate, weekDateKeys } from '@/src/features/schedules/calendarWeek';
+import { shiftCivilDate, weekDateKeys, weekDayRows } from '@/src/features/schedules/calendarWeek';
 import { retainSelectedDayInMonth } from '@/src/features/schedules/calendarSelection';
 import { useClock } from '@/src/features/notifications/useNativeAssistant';
 import { uiRadii, uiSizes, uiSpacing, uiTypography } from '@/src/lib/designTokens';
@@ -42,6 +42,7 @@ export default function CalendarScreen() {
   const [month, setMonth] = useState(() => ({ year: dayjs(now).year(), month: dayjs(now).month() + 1 }));
   const [mode, setMode] = useState<'month' | 'week'>('month');
   const [calendarRevision, setCalendarRevision] = useState(0);
+  const [weekRowWidth, setWeekRowWidth] = useState(4 * uiSizes.touchMinHeight + 3 * uiSpacing.xxs);
   const calendarScrollRef = useRef<ScrollView>(null);
   const agendaTop = useRef(0);
   const panelsTop = useRef(0);
@@ -55,6 +56,7 @@ export default function CalendarScreen() {
   const weekSchedules = useWeekSchedules(selected, mode === 'week');
   const schedules = mode === 'month' ? monthSchedules : weekSchedules;
   const weekDays = useMemo(() => weekDateKeys(selected), [selected]);
+  const weekRows = weekDayRows(weekDays, weekRowWidth, uiSizes.touchMinHeight, uiSpacing.xxs);
   const selectDay = (date: string) => {
     setSelected(date);
     setMonth({ year: Number(date.slice(0,4)), month: Number(date.slice(5,7)) });
@@ -175,18 +177,22 @@ export default function CalendarScreen() {
                 <Ionicons name="chevron-forward" size={22} color={colors.primary}/>
               </TouchableOpacity>
             </View>
-            <View style={styles.weekDays}>
-              {weekDays.map(date => {
-                const count = (schedules.data ?? []).filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === date).length;
-                return <TouchableOpacity key={date} accessibilityRole="button" accessibilityState={{ selected: date===selected }}
-                  accessibilityLabel={dayjs(date).format('M월 D일 dddd')+', 일정 '+count+'건'}
-                  onPress={() => selectDay(date)}
-                  style={[styles.weekDay,{backgroundColor:date===selected?colors.primary:colors.surface}]}>
-                  <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{dayjs(date).format('dd')}</Text>
-                  <Text style={[s.body,{color:date===selected?colors.onPrimary:colors.text,fontWeight:'700'}]}>{dayjs(date).date()}</Text>
-                  <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{schedules.isLoading || schedules.isError ? '–' : count+'건'}</Text>
-                </TouchableOpacity>;
-              })}
+            <View style={styles.weekDays} onLayout={event => setWeekRowWidth(event.nativeEvent.layout.width)}>
+              {weekRows.map(row => (
+                <View key={row[0]} style={styles.weekDayRow}>
+                  {row.map(date => {
+                    const count = (schedules.data ?? []).filter(item => dayjs(item.startAt.toDate()).format('YYYY-MM-DD') === date).length;
+                    return <TouchableOpacity key={date} accessibilityRole="button" accessibilityState={{ selected: date===selected }}
+                      accessibilityLabel={dayjs(date).format('M월 D일 dddd')+', 일정 '+count+'건'}
+                      onPress={() => selectDay(date)}
+                      style={[styles.weekDay,{backgroundColor:date===selected?colors.primary:colors.surface}]}>
+                      <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{dayjs(date).format('dd')}</Text>
+                      <Text style={[s.body,{color:date===selected?colors.onPrimary:colors.text,fontWeight:'700'}]}>{dayjs(date).date()}</Text>
+                      <Text style={[s.caption,{color:date===selected?colors.onPrimary:colors.textSecondary}]}>{schedules.isLoading || schedules.isError ? '–' : count+'건'}</Text>
+                    </TouchableOpacity>;
+                  })}
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -270,7 +276,8 @@ const styles = StyleSheet.create({
   weekPanel: { padding: uiSpacing.xs, gap: uiSpacing.xxs },
   weekHeader: { flexDirection:'row',alignItems:'center',gap:uiSpacing.xxs },
   weekNav: { minWidth:uiSizes.touchMinHeight,minHeight:uiSizes.touchMinHeight,alignItems:'center',justifyContent:'center' },
-  weekDays: { flexDirection:'row', flexWrap:'wrap', gap:uiSpacing.xxs },
+  weekDays: { gap:uiSpacing.xxs },
+  weekDayRow: { flexDirection:'row', gap:uiSpacing.xxs },
   weekDay: { flex:1, minWidth:uiSizes.touchMinHeight,minHeight:76,alignItems:'center',justifyContent:'center',paddingVertical:uiSpacing.xs,gap:uiSpacing.xxs,borderRadius:uiRadii.field },
   calendarSurface: {
     borderWidth: uiSizes.borderWidth,

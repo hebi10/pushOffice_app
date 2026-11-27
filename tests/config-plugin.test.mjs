@@ -34,3 +34,17 @@ test('MainActivity persists new intents before RN delivery and the transform is 
  assert.throws(()=>configureMainActivity(baseline.replace('  override fun onCreate','  override fun onNewIntent(intent: android.content.Intent) { super.onNewIntent(intent) }\n  override fun onCreate')),/existing onNewIntent/);
  assert.throws(()=>configureMainActivity('unrecognized Activity template'),/MainActivity/);
 });
+
+test('release optimization keeps the Expo keep rules and installs one compatible R8 classpath', () => {
+ const {configureAppBuildGradle, configureSettingsGradle} = require('../plugins/with-android-release-optimization.js');
+ const appGradle = 'release {\n    proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"\n}\n';
+ const optimized = configureAppBuildGradle(appGradle);
+ assert.equal(optimized, appGradle.replace('proguard-android.txt', 'proguard-android-optimize.txt'));
+ assert.equal(configureAppBuildGradle(optimized), optimized);
+ assert.throws(() => configureAppBuildGradle('unrecognized template'), /release ProGuard/);
+
+ const settings = 'pluginManagement {\n  includeBuild(reactNativeGradlePlugin)\n}\n';
+ const configured = configureSettingsGradle(settings);
+ assert.match(configured, /pluginManagement \{[\s\S]*classpath\('com\.android\.tools:r8:9\.1\.29'\)[\s\S]*includeBuild\(reactNativeGradlePlugin\)/);
+ assert.equal(configureSettingsGradle(configured), configured);
+});
