@@ -17,6 +17,12 @@ export function weekDateKeys(value: string): string[] {
   const first=shiftCivilDate(value,-date.getDay());
   return Array.from({length:7},(_,i)=>shiftCivilDate(first,i));
 }
+export function weekDayRows(days: readonly string[], rowWidth: number, minDayWidth: number, gap: number): string[][] {
+  const maxColumns = Math.max(1, Math.floor((rowWidth + gap) / (minDayWidth + gap)));
+  const rowCount = Math.ceil(days.length / maxColumns);
+  const daysPerRow = Math.ceil(days.length / rowCount);
+  return Array.from({ length: rowCount }, (_, index) => days.slice(index * daysPerRow, (index + 1) * daysPerRow));
+}
 export function weekBounds(value: string): {start: Date; end: Date} {
   const days=weekDateKeys(value);
   const start=parseCivilDate(days[0]); start.setHours(0,0,0,0);
