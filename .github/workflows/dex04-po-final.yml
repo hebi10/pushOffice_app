@@ -1,0 +1,174 @@
+name: DEX-04 Push Office final main release QA
+
+on:
+  push:
+    branches: [codex/dex04-push-office-final-qa]
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  final-release-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      CI: '1'
+      EXPO_NO_TELEMETRY: '1'
+      EXPO_NO_DOTENV: '1'
+      MAIN_SHA: d92cb92c03b72e9ae1de7bb1c8e1bf0c00877b50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.MAIN_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify current main checkout and extract QA tools
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$MAIN_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$MAIN_SHA"
+          git show "$GITHUB_SHA:.github/ci/dex04-po-final-probe.py" > "$RUNNER_TEMP/update-probe.py"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+      - run: sdkmanager --install 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.1.12297006' 'cmake;3.22.1'
+      - run: npm ci
+      - name: Generate Android and confirm release optimization
+        run: |
+          npx --no-install expo prebuild --platform android --clean --no-install
+          grep -Fx 'android.enableMinifyInReleaseBuilds=true' android/gradle.properties
+          grep -Fx 'android.enableShrinkResourcesInReleaseBuilds=true' android/gradle.properties
+          grep -F 'proguard-android-optimize.txt' android/app/build.gradle
+          grep -F "classpath('com.android.tools:r8:9.1.29')" android/settings.gradle
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('android/app/build.gradle')
+          content, replacements = re.subn(r'(?m)^(\s*versionCode\s+)3[ \t]*$', r'\g<1>52', path.read_text())
+          assert replacements == 1, 'Unexpected QA app Gradle version declaration'
+          path.write_text(content + '\nandroid { buildTypes { release { signingConfig null } } }\n')
+          PY
+      - uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/push-office/gradle-8.14.3-bin.zip
+          key: push-office-gradle-8.14.3-bd711022-v1
+      - run: bash .github/ci/bootstrap-gradle.sh
+      - name: Build unsigned Android release for the production ABI set
+        working-directory: android
+        run: |
+          bash ../.github/ci/retry-gradle-resolution.sh ./gradlew -I ../.github/ci/kotlin-compiler-mirror.init.gradle \
+            :app:assembleRelease :app:bundleRelease --no-daemon --max-workers=2 \
+            '-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g' \
+            -Pkotlin.compiler.execution.strategy=in-process -PreactNativeArchitectures=arm64-v8a,armeabi-v7a,x86_64
+          test -s app/build/outputs/apk/release/app-release-unsigned.apk
+          test -s app/build/outputs/bundle/release/app-release.aab
+          test -s app/build/outputs/mapping/release/mapping.txt
+      - uses: actions/download-artifact@v4
+        with:
+          name: PushOffice-build-internal-48-1
+          run-id: 45745834134
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/baseline-artifact
+      - name: Compare historical DEX with latest main and prepare same-key QA APKs
+        id: proof
+        run: |
+          mapfile -d '' bundles < <(find "$RUNNER_TEMP/baseline-artifact" -type f -name '*.aab' -print0)
+          [[ "${#bundles[@]}" -eq 1 ]]
+          printf '%s  %s\n' 2ff3ea8eccb0af502c7aa20b98b37558ba99ab247d0084e5eca51bb1a15ad0ca "${bundles[0]}" | sha256sum --check
+          export BASELINE_AAB="${bundles[0]}"
+          mkdir -p "$RUNNER_TEMP/push-office-dex04-metrics"
+          python3 - <<'PY'
+          import json, os, re, shutil, zipfile
+          from pathlib import Path
+
+          output = Path(os.environ['RUNNER_TEMP']) / 'push-office-dex04-metrics'
+          build = Path('android/app/build/outputs')
+          baseline = Path(os.environ['BASELINE_AAB'])
+          candidate = build / 'bundle/release/app-release.aab'
+          mapping = build / 'mapping/release/mapping.txt'
+
+          def unpack(path):
+              with zipfile.ZipFile(path) as archive:
+                  dex = [info for info in archive.infolist() if re.fullmatch(r'base/dex/classes[0-9]*\.dex', info.filename)]
+                  markers = set()
+                  for info in dex:
+                      for hit in re.finditer(rb'~~(D8|R8)(\{[^\x00]{0,2048}\})', archive.read(info)):
+                          try:
+                              version = json.JSONDecoder().raw_decode(hit[2].decode('utf-8', errors='ignore'))[0].get('version')
+                          except json.JSONDecodeError:
+                              continue
+                          if version:
+                              markers.add((hit[1].decode(), version))
+                  return {'dex_bytes': sum(info.file_size for info in dex), 'dex_count': len(dex), 'compiler_markers': sorted(markers), 'embedded_mapping': 'BUNDLE-METADATA/com.android.tools.build.obfuscation/proguard.map' in archive.namelist(), 'bundle_bytes': path.stat().st_size}
+
+          before, after = unpack(baseline), unpack(candidate)
+          assert ('D8', '8.11.18') in before['compiler_markers'], before
+          assert ('R8', '9.1.29') in after['compiler_markers'] and after['embedded_mapping'], after
+          assert 0 < after['dex_bytes'] < before['dex_bytes']
+          report = {'main_sha': os.environ['MAIN_SHA'], 'baseline_version_code': 51, 'qa_version_code': 52, 'mapping_bytes': mapping.stat().st_size, 'baseline': before, 'optimized': after, 'reduction_percent': round((1 - after['dex_bytes'] / before['dex_bytes']) * 100, 2)}
+          payload = json.dumps(report, indent=2)
+          print(payload)
+          (output / 'dex-metrics.json').write_text(payload + '\n')
+          shutil.copy2(mapping, output / 'mapping.txt')
+          with Path(os.environ['GITHUB_OUTPUT']).open('a') as proof:
+              proof.write(f"before_bytes={before['dex_bytes']}\nafter_bytes={after['dex_bytes']}\n")
+          with Path(os.environ['GITHUB_STEP_SUMMARY']).open('a') as summary:
+              summary.write('```json\n' + payload + '\n```\n')
+          PY
+          curl --fail --silent --show-error --location --retry 2 https://github.com/google/bundletool/releases/download/1.18.3/bundletool-all-1.18.3.jar --output "$RUNNER_TEMP/bundletool.jar"
+          printf '%s  %s\n' a099cfa1543f55593bc2ed16a70a7c67fe54b1747bb7301f37fdfd6d91028e29 "$RUNNER_TEMP/bundletool.jar" | sha256sum --check
+          keytool -genkeypair -noprompt -dname 'CN=DEX-04 Disposable Emulator' -keystore "$RUNNER_TEMP/dex04-qa.jks" -alias qa -storepass android -keypass android -keyalg RSA -keysize 2048 -validity 2
+          java -jar "$RUNNER_TEMP/bundletool.jar" build-apks --bundle="$BASELINE_AAB" --output="$RUNNER_TEMP/baseline.apks" --mode=universal --ks="$RUNNER_TEMP/dex04-qa.jks" --ks-pass=pass:android --ks-key-alias=qa --key-pass=pass:android
+          unzip -p "$RUNNER_TEMP/baseline.apks" universal.apk > "$RUNNER_TEMP/baseline.apk"
+          apksigner="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          "$apksigner" sign --ks "$RUNNER_TEMP/dex04-qa.jks" --ks-key-alias qa --ks-pass pass:android --key-pass pass:android --v4-signing-enabled false \
+            --out "$RUNNER_TEMP/push-office-final-qa.apk" android/app/build/outputs/apk/release/app-release-unsigned.apk
+          "$apksigner" verify "$RUNNER_TEMP/baseline.apk"
+          "$apksigner" verify "$RUNNER_TEMP/push-office-final-qa.apk"
+          rm -f "$RUNNER_TEMP/dex04-qa.jks"
+      - name: Preserve DEX metrics, mapping and QA-only APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-office-${{ steps.proof.outputs.after_bytes }}-dex-bytes-from-${{ steps.proof.outputs.before_bytes }}
+          path: |
+            ${{ runner.temp }}/push-office-dex04-metrics/
+            ${{ runner.temp }}/push-office-final-qa.apk
+          if-no-files-found: error
+          retention-days: 7
+      - name: Enable runner KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify local schedule survives in-place update and opens from compact calendar
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 29
+          arch: x86_64
+          target: default
+          profile: pixel_2
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -timezone Asia/Seoul
+          disable-animations: true
+          script: adb install "$RUNNER_TEMP/baseline.apk" && PYTHONPATH="$PWD/tools/ui" python3 "$RUNNER_TEMP/update-probe.py"
+      - name: Confirm exact main remained current through QA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)" = "$MAIN_SHA"
+      - name: Preserve update screenshots and hierarchy
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: push-office-dex04-update-evidence
+          path: compact-dex-evidence/
+          if-no-files-found: ignore
+          retention-days: 7
